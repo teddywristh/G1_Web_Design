@@ -1,0 +1,23 @@
+# ==============================================================================
+# Repository Code Ownership
+# ==============================================================================
+
+# Global fallback owners
+* @teddywristh
+
+# Frontend application and shared UI
+/apps/web/ @minhnm162 @teddywristh
+/packages/ui/ @minhnm162 @teddywristh
+
+# Backend application & AI services
+/apps/api/ @MinhQuangQu @teddywristh
+
+# Infrastructure, Docker, and Database services
+/infra/ @teddywristh @MinhQuangQu
+
+# Documentation and Development Scripts
+/docs/ @teddywristh @leducminh290506-eng
+/scripts/ @teddywristh @leducminh290506-eng
+
+# GitHub Actions, Workflows, and Repository Config
+/.github/ @teddywristh

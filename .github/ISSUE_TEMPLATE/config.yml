@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Monorepo Guidelines & Architecture
+    url: https://github.com/teddywristh/G1_Web_Design/tree/main/docs
+    about: Read our project architecture, setup, and engineering conventions.
