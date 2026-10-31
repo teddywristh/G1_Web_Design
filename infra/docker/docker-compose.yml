@@ -1,0 +1,17 @@
+services:
+  backend:
+    build:
+      context: ../../apps/api
+      dockerfile: ../../infra/docker/Dockerfile.api
+    ports: ["8001:8000"]
+    env_file: [../../apps/api/.env]
+    environment:
+      FIRESTORE_EMULATOR_HOST: host.docker.internal:8080
+      FIREBASE_AUTH_EMULATOR_HOST: host.docker.internal:9099
+      STORAGE_EMULATOR_HOST: host.docker.internal:9199
+  chroma:
+    image: chromadb/chroma:latest
+    ports: ["8000:8000"]
+    volumes: [chroma_data:/chroma/chroma]
+volumes:
+  chroma_data:

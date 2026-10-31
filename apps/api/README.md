@@ -5,10 +5,8 @@
 
 ## Tech Stack
 - **Framework**: FastAPI (Python 3.11+)
-- **ORM & DB Access**: SQLAlchemy 2.0 (Async) + Alembic migrations
-- **Databases**:
-  - **PostgreSQL + pgvector**: Relational legal metadata, document hierarchy, vector embeddings
-  - **Redis**: Caching, session management, rate limiting
+- **Data access**: Firebase Admin SDK repositories
+- **Data services**: Cloud Firestore + Firebase Storage
 - **AI / Search**: OpenAI / Anthropic / Cohere / HuggingFace embedding & LLM APIs
 - **Validation**: Pydantic v2
 - **Testing & Code Quality**: Pytest, HTTPX, Ruff
@@ -16,9 +14,6 @@
 ## Directory Structure (Planned in Issue #3 & #7)
 ```
 apps/api/
-├── alembic/                # Database migrations
-│   ├── versions/           # Migration revision files
-│   └── env.py              # Alembic environment configuration
 ├── app/
 │   ├── api/
 │   │   └── v1/             # Versioned REST endpoints
@@ -29,10 +24,7 @@ apps/api/
 │   ├── core/               # Application configuration & security
 │   │   ├── config.py       # Pydantic Settings
 │   │   └── security.py     # Auth & token utils
-│   ├── db/                 # Database session and base models
-│   │   ├── session.py      # Async SQLAlchemy session factory
-│   │   └── redis.py        # Redis client pool
-│   ├── models/             # SQLAlchemy ORM models
+│   ├── repositories/       # Firestore access boundary
 │   ├── schemas/            # Pydantic request/response schemas
 │   ├── services/           # Business logic & AI orchestration
 │   └── main.py             # FastAPI entrypoint
@@ -49,8 +41,9 @@ apps/api/
 - **Primary Owner**: Backend & AI Team (@MinhQuangQu, @teddywristh)
 - **Responsibilities**:
   - API architecture, routing, error handling, and request validation.
-  - PostgreSQL schema design and Alembic migration workflows.
-  - pgvector semantic search and ranking pipeline.
+- Firestore schema and repository workflows.
+- Firebase Authentication token verification and authorization.
+- Firebase Storage PDF lifecycle and API security.
   - LLM prompt engineering, source citation retrieval, and RAG verification.
   - Performance, caching with Redis, and API security.
 
@@ -69,7 +62,7 @@ source .venv/bin/activate
 
 pip install -r requirements.txt
 ```
-Run the development server with hot-reload (scaffolded in Issue #3):
+Run the development server with hot-reload:
 ```bash
 uvicorn app.main:app --reload --port 8000
 ```

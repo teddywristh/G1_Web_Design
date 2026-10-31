@@ -16,6 +16,8 @@
 id_rsa
 id_ed25519
 secrets/
+service-account*.json
+.firebaserc
 
 # ------------------------------------------------------------------------------
 # Operating System & IDE Files
@@ -129,6 +131,7 @@ cypress/screenshots/
 # Infrastructure & Local Storage (infra/)
 # ------------------------------------------------------------------------------
 .data/
+chroma_data/
 postgres_data/
 redis_data/
 docker-compose.override.yml
