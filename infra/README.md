@@ -1,40 +1,12 @@
-# `infra/` — Infrastructure & Service Configurations
+# Infrastructure
 
-## Overview
-`infra/` contains Docker Compose configurations, container specifications, and local/production infrastructure setup scripts for the **Legal AI Assistant** platform.
+Current backend MVP: Firebase Authentication, Firestore and private Firebase Storage, with FastAPI behind an Nginx gateway. No PostgreSQL or Redis is required.
 
-## Services Managed
-1. **PostgreSQL 16 + pgvector**:
-   - Stores legal document metadata, structured hierarchies (Laws, Articles, Clauses), and high-dimensional vector embeddings for similarity search.
-   - Persistent volume mounted for local development.
-2. **Redis 7**:
-   - In-memory key-value store for caching legal search queries, user sessions, and rate-limiting counters.
+- `docker/Dockerfile.api`: non-root backend image.
+- `docker/docker-compose.yml`: local backend and gateway, port 8001.
+- `nginx/api.conf`: per-IP rate/connection limits, body limits and structured access logs.
+- `firebase/firestore.rules`, `firebase/storage.rules`: deny client access; backend enforces permissions.
+- `firebase/firestore.indexes.json`: supported backend queries plus existing historical indexes.
+- Root `firebase.json`: loopback emulators; `firebase.docker.json`: explicit all-interface local Docker variant.
 
-## Directory Structure
-```
-infra/
-├── docker/
-│   ├── docker-compose.yml       # Local development multi-container orchestration (Issue #4)
-│   └── Dockerfile.api           # Backend container definition
-├── .env.example                 # Infrastructure environment variables
-└── README.md
-```
-
-## Team Ownership & Responsibility
-- **Primary Owner**: Infrastructure & DevOps Team (@teddywristh, @MinhQuangQu)
-- **Responsibilities**:
-  - Containerization and orchestration of PostgreSQL, pgvector, and Redis.
-  - Ensuring persistent data volumes and reproducible environments.
-  - Health check configurations for automated service readiness verification.
-  - Production deployment manifests and environment configuration management.
-
-## Starting Local Infrastructure (Issue #4)
-```bash
-docker compose -f infra/docker/docker-compose.yml up -d
-docker compose -f infra/docker/docker-compose.yml ps
-docker compose -f infra/docker/docker-compose.yml logs -f
-```
-To stop the services:
-```bash
-docker compose -f infra/docker/docker-compose.yml down
-```
+Follow [backend operations](../docs/backend-operations.md) for commands, network binding, IAM, dev/prod separation, deployment and recovery. Emulators are separate from Docker Compose and must start first. Never use the Docker emulator configuration in production.

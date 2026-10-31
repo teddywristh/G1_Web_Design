@@ -28,4 +28,6 @@ class StorageService:
     def signed_url(self, source: str, expiration_seconds: int = 900) -> str:
         from datetime import timedelta
 
-        return self.bucket.blob(source).generate_signed_url(expiration=timedelta(seconds=expiration_seconds), method="GET")
+        return self.bucket.blob(source).generate_signed_url(
+            expiration=timedelta(seconds=expiration_seconds), method="GET"
+        )

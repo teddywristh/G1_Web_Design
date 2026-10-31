@@ -68,11 +68,11 @@ The project is structured as a modular monorepo:
 G1_Web_Design/
 ├── apps/
 │   ├── web/                     # Next.js 14+ frontend application (TypeScript, App Router)
-│   └── api/                     # FastAPI backend service (Python 3.11+, SQLAlchemy, pgvector)
+│   └── api/                     # FastAPI backend service (Python 3.11+, Firebase Admin SDK)
 ├── packages/
 │   └── ui/                      # Shared reusable UI component library & design tokens
 ├── infra/
-│   ├── docker/                  # Docker Compose and service definitions (PostgreSQL, Redis)
+│   ├── docker/                  # Docker API/gateway, Firebase rules and indexes
 │   ├── .env.example             # Infrastructure environment template
 │   └── README.md                # Infrastructure documentation
 ├── docs/
@@ -98,9 +98,9 @@ G1_Web_Design/
 | Path | Primary Component | Tech Stack | Lead Assignees | Responsibilities |
 | :--- | :--- | :--- | :--- | :--- |
 | `apps/web/` | Web Client | Next.js, React, TypeScript | @minhnm162, @teddywristh | Search interfaces, document viewer, chat UI, responsive layouts |
-| `apps/api/` | Backend & AI Services | FastAPI, Python, SQLAlchemy | @MinhQuangQu, @teddywristh | REST API, database access, vector search, LLM orchestration |
+| `apps/api/` | Backend & AI Services | FastAPI, Python, Firebase | @MinhQuangQu, @teddywristh | REST API, database access, vector search, LLM orchestration |
 | `packages/ui/` | Shared UI Library | React, CSS Tokens | @minhnm162, @teddywristh | Reusable design components, badges, modals, typography |
-| `infra/` | Infrastructure | Docker Compose, PostgreSQL, Redis | @teddywristh, @MinhQuangQu | Database provisioning, vector storage, caching layer |
+| `infra/` | Infrastructure | Docker, Firebase Emulator, Nginx | @teddywristh, @MinhQuangQu | Firebase setup, private file storage, API gateway |
 | `docs/` | Project Docs | Markdown | @teddywristh, @leducminh290506-eng | Architecture, setup guides, conventions, testing strategy |
 | `scripts/` | Tooling & Utilities | Python / Shell | @teddywristh, @leducminh290506-eng | Setup automation, preflight checks, database seeding |
 | `.github/` | Workflows & CI/CD | GitHub Actions YAML | @teddywristh | Automated testing, linting, code quality gates |
@@ -111,7 +111,8 @@ G1_Web_Design/
 
 Before starting local development, ensure your machine has:
 - **Git** (2.30+)
-- **Node.js** (v20 LTS recommended) & **npm**
+- **Node.js** (v22+) & **npm**
+- **Java** (21+, for Firebase Emulator)
 - **Python** (3.11+ recommended) & `venv` / `pip`
 - **Docker Desktop** or **Docker Engine** with Docker Compose v2+
 
@@ -143,11 +144,14 @@ cp infra/.env.example infra/.env
 ```
 
 ### 3. Start Infrastructure (Docker)
-Start PostgreSQL (with `pgvector`) and Redis:
+The backend MVP uses Firebase Emulator Suite for local development:
 ```bash
-docker compose -f infra/docker/docker-compose.yml up -d
-docker compose -f infra/docker/docker-compose.yml ps
+npm install -g firebase-tools@15.12.0
+firebase emulators:start --project demo-legal-api --only auth,firestore,storage
 ```
+Use `apps/api/.env.example` for matching demo configuration. For Docker API/gateway,
+follow [the operations runbook](docs/backend-operations.md), including the separate
+Docker emulator binding configuration.
 
 ### 4. Start Backend API (FastAPI)
 ```bash
@@ -159,10 +163,10 @@ python -m venv .venv
 # On macOS/Linux:
 source .venv/bin/activate
 
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 uvicorn app.main:app --reload --port 8000
 ```
-- API Health Check: `http://localhost:8000/api/v1/health`
+- API Health Check: `http://localhost:8000/health`
 - Interactive Swagger Docs: `http://localhost:8000/docs`
 
 ### 5. Start Frontend Web (Next.js)
@@ -177,7 +181,7 @@ Open `http://localhost:3000` in your browser.
 
 ## Repository Conventions
 
-For detailed guidelines, see [docs/conventions.md](file:///c:/Users/DELL/G1_Web_Design/docs/conventions.md).
+For detailed guidelines, see [docs/conventions.md](docs/conventions.md).
 
 ### Branch Naming
 - Features: `feat/<short-description>` (e.g., `feat/search-bar`)
@@ -208,7 +212,7 @@ docs(root): update architecture and setup documentation
 ---
 
 ## Code Quality & Linting
-- **Editor Configuration**: Consistently enforced by [`.editorconfig`](file:///c:/Users/DELL/G1_Web_Design/.editorconfig).
+- **Editor Configuration**: Consistently enforced by [`.editorconfig`](.editorconfig).
 - **Backend Linting**: `ruff check .` and `ruff format .`
 - **Frontend Linting**: `npm run lint` and TypeScript compilation `tsc --noEmit`.
 - **Automated CI**: GitHub Actions validates linting, type-checking, and test suites on all PRs.
@@ -217,17 +221,14 @@ docs(root): update architecture and setup documentation
 
 ## Documentation & Backlog Roadmap
 
-| Phase / Issue | Description | Status |
-| :--- | :--- | :--- |
-| **Issue #1 (#5)** | **Initialize monorepo structure and repository conventions** | **Completed** |
-| Issue #2 (#6) | Scaffold Next.js frontend and shared UI components | Planned |
-| Issue #3 (#7) | Scaffold FastAPI backend and health endpoint | Planned |
-| Issue #4 (#8) | Configure PostgreSQL, pgvector and Redis via Docker Compose | Planned |
-| Issue #5 (#9) | Add Alembic migrations, environment config, and seed workflow | Planned |
-| Issue #6 (#10) | Add lint, tests, and GitHub Actions CI matrix | Planned |
-| Issue #7 (#11) | Write architecture and local setup documentation | Planned |
-| Issue #12 | Define test strategy and quality gates | Planned |
-| Issue #13 | Add local environment preflight and setup validation | Planned |
+Backend implementation scope follows [backend-plan.md](docs/backend-plan.md),
+not the scope or progress of historical issues. The current backend includes
+Firebase authentication/profile/roles, document metadata and private PDF lifecycle,
+metadata lookup with cursor pagination, admin user controls, atomic audit logs,
+reconciliation, gateway limits and CI tests. LLM/AI endpoints remain outside this work.
+
+See [API contract](docs/api-contract.md), [backend quickstart](apps/api/README.md),
+[architecture](docs/architecture.md) and [operations](docs/backend-operations.md).
 
 ---
 

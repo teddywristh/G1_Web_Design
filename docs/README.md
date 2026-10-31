@@ -1,14 +1,14 @@
-# Documentation Index — Legal AI Assistant
+# Documentation
 
-Welcome to the documentation for **Legal AI Assistant**, an intelligent legal search, analysis, and verification platform for Vietnamese law.
+- [Backend plan — không bao gồm LLM/AI](backend-plan.md): phạm vi và tiêu chí nghiệm thu.
+- [API contract](api-contract.md): endpoint, payload, quyền, query, retry và mã lỗi.
+- [Architecture](architecture.md): kiến trúc backend hiện triển khai.
+- [Database schema](database-schema.md): trường dữ liệu, lifecycle, version và index.
+- [Backend operations](backend-operations.md): local/Docker, admin, đối soát, deploy, backup/restore.
+- [Verification](backend-verification.md): kết quả test/build và giới hạn trước phát hành.
+- [Backend quickstart](../apps/api/README.md): cài đặt và chạy test.
+- [Conventions](conventions.md): branch, commit và review.
+- [Original project plan](plans.md): bối cảnh sản phẩm rộng hơn backend MVP.
+- [Firebase setup](infrastructure/firebase-setup.md): hướng dẫn hạ tầng ban đầu.
 
-## Table of Contents
-1. [Architecture Overview](file:///c:/Users/DELL/G1_Web_Design/docs/architecture.md) — System components, data flows, and directory ownership.
-2. [Repository & Engineering Conventions](file:///c:/Users/DELL/G1_Web_Design/docs/conventions.md) — Branch naming, Conventional Commits, code formatting, and pull request workflows.
-3. [Local Development & Setup Guide](file:///c:/Users/DELL/G1_Web_Design/docs/local-setup.md) *(Scaffolded in Issue #11)*
-4. [Testing Strategy & Quality Gates](file:///c:/Users/DELL/G1_Web_Design/docs/testing.md) *(Scaffolded in Issue #12)*
-
-## Contributing to Documentation
-- Keep documentation up to date as new features, schemas, and endpoints are introduced.
-- Use clear markdown, tables, and Mermaid diagrams where applicable.
-- Do not commit private API keys or real credentials in documentation examples.
+Backend scope follows backend-plan and API contract. Historical issues may cover different team scope and are not used as implementation progress criteria.

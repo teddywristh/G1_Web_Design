@@ -1,3 +1,5 @@
+import pytest
+
 from app.services.firebase_storage import delete_file, download_file, upload_file
 
 
@@ -15,3 +17,6 @@ def test_storage_upload_download_delete(tmp_path):
 
     result = delete_file(storage_path)
     assert result == {"deleted": True, "storage_path": storage_path}
+
+
+pytestmark = pytest.mark.integration
