@@ -3,6 +3,11 @@
 ## Overview
 **Legal AI Assistant** is a modern legal search, analysis, and verification platform designed specifically for Vietnamese legal documents.
 
+> MVP infrastructure decision: Firebase Authentication, Cloud Firestore and
+> Firebase Storage are the source of truth for identity, metadata and files.
+> The PostgreSQL/Redis diagram below is a future-scale option, not part of the
+> Firebase-first MVP described in `docs/plans.md`.
+
 The architecture emphasizes:
 1. **Source Transparency**: Every AI generated response is grounded in traceable legal provisions (Articles, Clauses, Decrees).
 2. **Speed & Scalability**: Fast hybrid search (relational + pgvector embedding similarity) with Redis caching.

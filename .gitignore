@@ -16,6 +16,9 @@
 id_rsa
 id_ed25519
 secrets/
+service-account*.json
+.firebaserc
+apps/api/credentials/
 
 # ------------------------------------------------------------------------------
 # Operating System & IDE Files
@@ -106,6 +109,8 @@ develop-eggs/
 
 # Python tools caches
 .pytest_cache/
+.pytest-tmp/
+.pytest-run-*/
 .mypy_cache/
 .ruff_cache/
 .coverage
@@ -129,6 +134,10 @@ cypress/screenshots/
 # Infrastructure & Local Storage (infra/)
 # ------------------------------------------------------------------------------
 .data/
+chroma_data/
+.emulator-data/
+firebase-debug.log
+firestore-debug.log
 postgres_data/
 redis_data/
 docker-compose.override.yml

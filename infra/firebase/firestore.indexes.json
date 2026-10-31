@@ -1,0 +1,1 @@
+{"indexes":[{"collectionGroup":"conversations","queryScope":"COLLECTION","fields":[{"fieldPath":"userId","order":"ASCENDING"},{"fieldPath":"updatedAt","order":"DESCENDING"}]},{"collectionGroup":"legal_documents","queryScope":"COLLECTION","fields":[{"fieldPath":"status","order":"ASCENDING"},{"fieldPath":"effectiveDate","order":"DESCENDING"}]}],"fieldOverrides":[]}
