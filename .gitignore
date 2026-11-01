@@ -54,6 +54,7 @@ $RECYCLE.BIN/
 # Node.js / JavaScript / TypeScript (apps/web, packages/ui)
 # ------------------------------------------------------------------------------
 node_modules/
+.npm-cache/
 .pnp/
 .pnp.js
 .npm/
