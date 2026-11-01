@@ -20,6 +20,13 @@ class Settings(BaseSettings):
     storage_emulator_host: str | None = Field(default=None, alias="STORAGE_EMULATOR_HOST")
     backend_cors_origins: list[str] = Field(default=["http://localhost:3000"], alias="BACKEND_CORS_ORIGINS")
     max_upload_size_bytes: int = Field(default=20 * 1024 * 1024, alias="MAX_UPLOAD_SIZE_BYTES")
+    openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
+    default_llm_model: str = Field(default="gpt-4o-mini", alias="DEFAULT_LLM_MODEL")
+    default_embedding_model: str = Field(
+        default="text-embedding-3-small", alias="DEFAULT_EMBEDDING_MODEL"
+    )
+    rag_top_k: int = Field(default=5, alias="RAG_TOP_K")
+    rag_min_retrieval_score: float = Field(default=0.15, alias="RAG_MIN_RETRIEVAL_SCORE")
 
     @classmethod
     def parse_env_var(cls, field_name: str, raw_val: str):

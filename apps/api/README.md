@@ -69,3 +69,22 @@ uvicorn app.main:app --reload --port 8000
 API Documentation will be available at:
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
+
+## RAG pipeline
+
+The RAG backend reads prepared legal chunks from the Firestore
+`document_chunks` collection. It does not read PDF files during question
+answering.
+
+- `POST /api/v1/rag/ask`: send `{"question": "...", "top_k": 5}`. The service
+  embeds the Vietnamese question, ranks stored chunks by vector similarity and
+  simple keyword overlap, and asks the LLM to answer only from those chunks.
+- `apps/api/app/core/database.py` is the single database connection entry point.
+  It reuses the Firebase Admin connection and returns the Firestore client.
+
+Each chunk should contain `content` (or `text`), `embedding`, `document_id`,
+`document_title`, and optional legal metadata such as `article`, `clause`,
+`point`, `page_number`, and `source_url`. Set `OPENAI_API_KEY` in
+`apps/api/.env` to enable question embedding and answering. Firestore
+credentials and emulator settings are documented in the repository Firebase
+setup guide.
