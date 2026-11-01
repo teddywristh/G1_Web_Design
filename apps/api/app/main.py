@@ -1,4 +1,4 @@
-"""Non-AI backend entry point."""
+"""Backend entry point with authenticated document and RAG routes."""
 
 import json
 import logging
@@ -6,7 +6,7 @@ import re
 import time
 from uuid import uuid4
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -14,10 +14,12 @@ from firebase_admin.exceptions import FirebaseError
 from google.api_core.exceptions import GoogleAPICallError
 from starlette.exceptions import HTTPException
 
+from app.api.v1.rag import router as rag_router
 from app.api.v1.routes import router
 from app.core.config import get_settings
 from app.core.errors import APIError
 from app.core.firebase import initialize_firebase
+from app.dependencies import current_user
 
 logger = logging.getLogger("legal_api")
 if not logger.handlers:
@@ -147,6 +149,7 @@ def create_app():
         return {"status": "ready"}
 
     api.include_router(router)
+    api.include_router(rag_router, prefix="/api/v1", dependencies=[Depends(current_user)])
     return api
 
 

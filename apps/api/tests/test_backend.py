@@ -407,3 +407,59 @@ def test_cursor_preserves_firestore_nanoseconds():
     decoded, doc_id = decode_cursor(encode_cursor("scope", stamp, "doc"), "scope")
     assert decoded.nanosecond == 123456789
     assert doc_id == "doc"
+
+
+def test_rag_route_uses_backend_auth_and_returns_citations(api, repo, monkeypatch):
+    from app.core.database import get_database
+
+    client, app, _ = api
+    database = Mock()
+    row = Mock()
+    row.id = "chunk-1"
+    row.to_dict.return_value = {
+        "document_id": "doc-1",
+        "document_title": "Luật mẫu",
+        "content": "Điều 1 quy định về hợp đồng.",
+        "embedding": [1.0, 0.0],
+        "article": "1",
+    }
+    database.collection.return_value.limit.return_value.stream.return_value = [row]
+    app.dependency_overrides[get_database] = lambda: database
+    ai = Mock()
+    ai.embed.return_value = [[1.0, 0.0]]
+    ai.answer.return_value = "Căn cứ Điều 1."
+    factory = Mock(return_value=ai)
+    monkeypatch.setattr("app.api.v1.rag.OpenAIService", factory)
+    payload = {"question": "Quy định về hợp đồng?", "top_k": 5}
+    assert client.post("/api/v1/rag/ask", json=payload).status_code == 401
+    factory.assert_not_called()
+    identity(app)
+    profile(repo)
+    repo.rows[("users", "reader")]["isActive"] = False
+    assert client.post("/api/v1/rag/ask", json=payload).status_code == 403
+    factory.assert_not_called()
+    repo.rows[("users", "reader")]["isActive"] = True
+    response = client.post("/api/v1/rag/ask", json=payload)
+    assert response.status_code == 200, response.text
+    assert response.json()["citations"][0]["chunk_id"] == "chunk-1"
+    assert response.json()["has_sufficient_evidence"] is True
+    ai.embed.assert_called_once_with([payload["question"]])
+    ai.answer.assert_called_once()
+
+
+def test_rag_without_api_key_is_503_while_core_backend_still_works(api, repo, monkeypatch):
+    from app.core.database import get_database
+
+    client, app, _ = api
+    identity(app)
+    profile(repo)
+    app.dependency_overrides[get_database] = lambda: Mock()
+    monkeypatch.setattr(
+        "app.api.v1.rag.get_settings",
+        lambda: get_settings().model_copy(update={"openai_api_key": ""}),
+    )
+    response = client.post("/api/v1/rag/ask", json={"question": "Câu hỏi pháp luật"})
+    assert response.status_code == 503
+    assert response.json()["requestId"]
+    assert client.get("/api/v1/users/me").status_code == 200
+    assert client.get("/health").status_code == 200

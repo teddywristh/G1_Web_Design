@@ -1,6 +1,6 @@
 # Backend API
 
-FastAPI + Firebase Authentication + Firestore + Firebase Storage. Backend MVP quản lý tài khoản và văn bản pháp luật; không phụ thuộc tính năng AI.
+FastAPI + Firebase Authentication + Firestore + Firebase Storage. Backend MVP quản lý tài khoản và văn bản pháp luật. Module RAG từ nhánh AI_RAG được tích hợp riêng; các API MVP không cần OpenAI key.
 
 ## Chạy local
 
@@ -42,3 +42,20 @@ Test tự cố định các host 127.0.0.1 và project demo-legal-api. Không c�
 - [Runbook](../../docs/backend-operations.md): admin provisioning, đối soát, triển khai, khôi phục.
 - [Data schema](../../docs/database-schema.md).
 - [Kế hoạch phạm vi](../../docs/backend-plan.md).
+
+## RAG integration
+
+Module từ `AI_RAG` cung cấp `POST /api/v1/rag/ask` với body
+`{"question": "Câu hỏi pháp luật", "top_k": 5}`. Endpoint yêu cầu Firebase ID token
+và profile đã bootstrap, đang active, theo cùng cơ chế xác thực của backend.
+
+RAG đọc tối đa 100 chunk chuẩn bị sẵn từ Firestore `document_chunks`, xếp hạng
+bằng embedding/keyword rồi sinh câu trả lời kèm nguồn; không đọc PDF trực tiếp
+trong request. Chunk gồm `content` (hoặc `text`), `embedding`, `document_id`,
+`document_title`, và metadata tùy chọn `article`, `clause`, `point`, `page_number`,
+`source_url`. `core/database.py` dùng lại kết nối tại `core/firebase.py`.
+
+Cấu hình `OPENAI_API_KEY` trong môi trường backend để sử dụng RAG. Model và
+ngưỡng lấy từ các biến tương ứng trong `.env.example`. Khi thiếu key, request RAG
+đã xác thực trả 503; các endpoint backend khác vẫn hoạt động. Giữ key ngoài Git.
+Các test tích hợp route dùng AI giả lập, không gọi API tính phí.

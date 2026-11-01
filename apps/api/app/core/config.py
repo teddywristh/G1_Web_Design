@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     upload_lease_seconds: int = Field(default=900, ge=300)
     orphan_grace_seconds: int = Field(default=3600, ge=1800)
 
+    openai_api_key: str = ""
+    default_llm_model: str = "gpt-4o-mini"
+    default_embedding_model: str = "text-embedding-3-small"
+    rag_top_k: int = Field(default=5, ge=1, le=20)
+    rag_min_retrieval_score: float = Field(default=0.15, ge=0, le=1)
+
     @model_validator(mode="after")
     def validate_environment(self):
         hosts = (
