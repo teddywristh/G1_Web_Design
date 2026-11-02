@@ -1,10 +1,12 @@
 # Deployment
 
-Run `firebase emulators:start`, then from `apps/api` run
-`uvicorn app.main:app --reload --port 8000`. Optional Docker startup:
-`docker compose -f infra/docker/docker-compose.yml up --build`.
+The current backend deployment and recovery instructions are maintained in
+[backend-operations.md](backend-operations.md). Local setup and verification are
+in [apps/api/README.md](../apps/api/README.md).
 
-Deploy the frontend to Vercel and API to Cloud Run. Configure Firebase project
-ID, Storage bucket and Application Default Credentials as platform secrets.
-Deploy rules separately with Firebase CLI. Do not run ChromaDB on an ephemeral
-container without persistent storage.
+Backend: FastAPI container + Firebase Auth/Firestore/Storage, behind a gateway
+with TLS and shared rate limits. Local Docker Compose includes Nginx. Cloud
+resources and production deployment are operator actions; tests use emulators.
+
+Frontend deployment remains separate from backend. No AI service deployment is
+required for the implemented backend MVP.

@@ -1,15 +1,7 @@
-# `scripts/` — Development Utilities & Scripts
+# Development and operations scripts
 
-## Overview
-`scripts/` houses cross-cutting development automation, data ingestion tools, local environment preflight checks, and seed utilities.
+`backend_admin.py` implements backend admin provisioning and Storage/Firestore reconciliation. Every invocation requires `--project` matching runtime configuration; default is dry-run and `--apply` enables writes. See [backend operations](../docs/backend-operations.md) for usage and recovery semantics.
 
-## Planned Utilities
-- **`preflight.py` / `check-env.sh`** (Issue #13): Validates local developer machine prerequisites (Node.js, Python, Docker, PostgreSQL, Redis connectivity) and environment configuration without printing secrets.
-- **`seed.py`** (Issue #5 / #9): Idempotently seeds initial development data, test accounts, and sample legal documents (e.g. Vietnamese Labor Code, Civil Code provisions).
+`bootstrap_legal_ai_firestore.py` is the existing infrastructure bootstrap utility. Its scope is separate from backend admin provisioning; follow its existing instructions and confirm target project/credentials before cloud writes.
 
-## Team Ownership & Responsibility
-- **Primary Owner**: Tooling & DevOps (@teddywristh, @leducminh290506-eng)
-- **Responsibilities**:
-  - Providing lightweight, cross-platform scripts for setup automation.
-  - Ensuring scripts exit with standard exit codes (0 for success, non-zero for failure).
-  - Preventing data loss or destruction in user environments.
+Backend scope and delivery are tracked against [backend-plan.md](../docs/backend-plan.md), not historical issue scope. Neither backend admin nor reconciliation runs AI processing.

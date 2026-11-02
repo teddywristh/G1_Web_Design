@@ -1,71 +1,68 @@
-# `apps/api` — FastAPI Backend & AI Services
+# Backend API
 
-## Overview
-`apps/api` is the backend REST API service powering the **Legal AI Assistant** platform. It handles legal document ingestion, full-text and vector search, conversational AI research workflows, citation retrieval, and user authentication.
+FastAPI + Firebase Authentication + Firestore + Firebase Storage. Backend MVP quản lý tài khoản và văn bản pháp luật. Module RAG từ nhánh AI_RAG được tích hợp riêng; các API MVP không cần OpenAI key.
 
-## Tech Stack
-- **Framework**: FastAPI (Python 3.11+)
-- **Data access**: Firebase Admin SDK repositories
-- **Data services**: Cloud Firestore + Firebase Storage
-- **AI / Search**: OpenAI / Anthropic / Cohere / HuggingFace embedding & LLM APIs
-- **Validation**: Pydantic v2
-- **Testing & Code Quality**: Pytest, HTTPX, Ruff
+## Chạy local
 
-## Directory Structure (Planned in Issue #3 & #7)
-```
-apps/api/
-├── app/
-│   ├── api/
-│   │   └── v1/             # Versioned REST endpoints
-│   │       ├── __init__.py
-│   │       ├── health.py   # Health check endpoint
-│   │       ├── search.py   # Legal search endpoints
-│   │       └── chat.py     # AI interaction endpoints
-│   ├── core/               # Application configuration & security
-│   │   ├── config.py       # Pydantic Settings
-│   │   └── security.py     # Auth & token utils
-│   ├── repositories/       # Firestore access boundary
-│   ├── schemas/            # Pydantic request/response schemas
-│   ├── services/           # Business logic & AI orchestration
-│   └── main.py             # FastAPI entrypoint
-├── tests/                  # Automated tests (pytest)
-│   ├── conftest.py
-│   └── test_health.py
-├── .env.example            # Environment variables template
-├── requirements.txt        # Python dependencies
-├── pyproject.toml          # Ruff and tool settings
-└── README.md
-```
+Từ thư mục gốc repo, dùng Python 3.11+, Node 22+, Java 21+:
 
-## Team Ownership & Responsibility
-- **Primary Owner**: Backend & AI Team (@MinhQuangQu, @teddywristh)
-- **Responsibilities**:
-  - API architecture, routing, error handling, and request validation.
-- Firestore schema and repository workflows.
-- Firebase Authentication token verification and authorization.
-- Firebase Storage PDF lifecycle and API security.
-  - LLM prompt engineering, source citation retrieval, and RAG verification.
-  - Performance, caching with Redis, and API security.
-
-## Getting Started
-Copy `.env.example` to `.env`:
-```bash
-cp .env.example .env
-```
-Activate your virtual environment and install requirements:
 ```bash
 python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# Linux/macOS:
 source .venv/bin/activate
+pip install -r apps/api/requirements-dev.txt
+cp apps/api/.env.example apps/api/.env
+npm install -g firebase-tools@15.12.0
+firebase emulators:start --project demo-legal-api --only auth,firestore,storage
+```
 
-pip install -r requirements.txt
-```
-Run the development server with hot-reload:
+Terminal khác:
+
 ```bash
-uvicorn app.main:app --reload --port 8000
+source .venv/bin/activate
+uvicorn app.main:app --app-dir apps/api --reload --port 8000
 ```
-API Documentation will be available at:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+
+Health: `/health`; dependency readiness: `/ready`; Swagger: `/docs`. File `.env` luôn đọc theo `apps/api/.env`, không phụ thuộc cwd. Env process có ưu tiên cao hơn file. Demo project bắt buộc đủ ba emulator. Không dùng cấu hình production cho phát triển local.
+
+## Kiểm tra
+
+```bash
+ruff check apps/api scripts/backend_admin.py
+ruff format --check apps/api scripts/backend_admin.py
+python -m compileall apps/api/app scripts/backend_admin.py
+python -m pytest -m 'not integration' -q
+firebase emulators:exec --project demo-legal-api --only auth,firestore,storage 'RUN_FIREBASE_INTEGRATION=1 python -m pytest -m integration -q'
+```
+
+Test tự cố định các host 127.0.0.1 và project demo-legal-api. Không có emulator thì test integration được skip; không fallback sang cloud. CI chạy cả hai bộ test.
+
+## Tài liệu
+
+- [API contract](../../docs/api-contract.md): endpoint, request/response, query, phiên bản và mã lỗi.
+- [Runbook](../../docs/backend-operations.md): admin provisioning, đối soát, triển khai, khôi phục.
+- [Data schema](../../docs/database-schema.md).
+- [Kế hoạch phạm vi](../../docs/backend-plan.md).
+- [Xác thực và quản lý phiên](../../docs/auth-plan.md): đăng ký bcrypt, Google Sign-In, cookie và cấu hình production.
+
+## RAG integration
+
+Module từ `AI_RAG` cung cấp `POST /api/v1/rag/ask` với body
+`{"question": "Câu hỏi pháp luật", "top_k": 5}`. Endpoint yêu cầu phiên ứng dụng hoặc Firebase ID token
+và profile đang active, theo cùng cơ chế xác thực của backend.
+
+RAG đọc tối đa 100 chunk chuẩn bị sẵn từ Firestore `document_chunks`, xếp hạng
+bằng embedding/keyword rồi sinh câu trả lời kèm nguồn; không đọc PDF trực tiếp
+trong request. Chunk gồm `content` (hoặc `text`), `embedding`, `document_id`,
+`document_title`, và metadata tùy chọn `article`, `clause`, `point`, `page_number`,
+`source_url`. `core/database.py` dùng lại kết nối tại `core/firebase.py`.
+
+Cấu hình `OPENAI_API_KEY` trong môi trường backend để sử dụng RAG. Model và
+ngưỡng lấy từ các biến tương ứng trong `.env.example`. Khi thiếu key, request RAG
+đã xác thực trả 503; các endpoint backend khác vẫn hoạt động. Giữ key ngoài Git.
+Các test tích hợp route dùng AI giả lập, không gọi API tính phí.
+
+## AI connection options
+
+Xem [AI connections](../../docs/ai-connections.md) cho key cá nhân/key chung của OpenAI và Anthropic, cấu hình mã hóa, lựa chọn provider/source và trạng thái OAuth cho website hosted. `POST /api/v1/rag/ask` nhận thêm provider, credential_source, model và retrieval_mode; request cũ tiếp tục dùng mặc định OpenAI/auto/hybrid.
+
+Engine OpenCode thử nghiệm cho API RAG bằng OpenAI API key: [cấu hình và giới hạn local](../../docs/ai-connections.md#engine-opencode-thử-nghiệm-local).

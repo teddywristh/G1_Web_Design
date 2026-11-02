@@ -1,101 +1,46 @@
-# System Architecture & Directory Responsibilities
+# System architecture
 
-## Overview
-**Legal AI Assistant** is a modern legal search, analysis, and verification platform designed specifically for Vietnamese legal documents.
+The implemented backend MVP uses FastAPI, Firebase Authentication, Cloud Firestore and Firebase Storage. The product scope and original roadmap are described in `plans.md`; the backend implementation scope is [backend-plan.md](backend-plan.md). Open issue status is not the source of scope for this work.
 
-> MVP infrastructure decision: Firebase Authentication, Cloud Firestore and
-> Firebase Storage are the source of truth for identity, metadata and files.
-> The PostgreSQL/Redis diagram below is a future-scale option, not part of the
-> Firebase-first MVP described in `docs/plans.md`.
-
-The architecture emphasizes:
-1. **Source Transparency**: Every AI generated response is grounded in traceable legal provisions (Articles, Clauses, Decrees).
-2. **Speed & Scalability**: Fast hybrid search (relational + pgvector embedding similarity) with Redis caching.
-3. **Modularity**: Clean monorepo boundaries between the Next.js frontend, FastAPI backend, shared UI packages, and Docker infrastructure.
-
----
-
-## 1. High-Level Architecture Diagram
-
-```
-+--------------------------------------------------------------------------+
-|                              Client Browser                              |
-|                   (Desktop / Tablet / Mobile Viewports)                  |
-+--------------------------------------------------------------------------+
-                                     │
-                                     │ HTTP / HTTPS (REST API)
-                                     ▼
-+--------------------------------------------------------------------------+
-|                     Next.js Frontend (apps/web)                          |
-|             React Server Components + Client Interactions                |
-+--------------------------------------------------------------------------+
-                                     │
-                                     │ REST JSON (/api/v1/*)
-                                     ▼
-+--------------------------------------------------------------------------+
-|                       FastAPI Backend (apps/api)                         |
-|              Request Validation (Pydantic), Auth, Routing                |
-+────────────────────────────────────┬─────────────────────────────────────+
-                  │                  │                   │
-                  ▼                  ▼                   ▼
-    +────────────────────────+ +──────────────+ +──────────────────────────+
-    | PostgreSQL + pgvector  | | Redis Cache  | | External LLM & Embedding |
-    | (Relational + Vectors) | | (Sessions,   | | (OpenAI / Anthropic /    |
-    |  Legal Docs & Chunks   | |  Queries)    | |  Cohere APIs)            |
-    +────────────────────────+ +──────────────+ +──────────────────────────+
+```text
+Web ── login ──► Firebase Authentication
+ │
+ └─ Bearer ID token ─► Edge gateway ─► FastAPI /api/v1
+                       limits/TLS      │
+                                     auth + active profile + role guard
+                                       │
+                                       router (Pydantic schemas)
+                                       │
+                                       service (business rules)
+                                       ├─ repository ─► Firestore
+                                       └─ private files ─► Firebase Storage
 ```
 
----
+The frontend has no Admin SDK and does not directly read/write business collections or Storage. Firebase Auth is responsible for registration, sign-in, password reset and token refresh. Backend verifies tokens including revocation, reads active/role from the server-owned profile, and issues no separate session token.
 
-## 2. Directory Responsibilities & Ownership Matrix
+## Boundaries
 
-| Directory | Primary Scope | Lead Assignees | Key Responsibilities |
-| :--- | :--- | :--- | :--- |
-| `apps/web` | Next.js Frontend App | @minhnm162, @teddywristh | UI views, search interactions, citation inspector, responsive design |
-| `apps/api` | FastAPI Backend | @MinhQuangQu, @teddywristh | REST API endpoints, legal ingestion, vector search, LLM orchestration |
-| `packages/ui` | Shared UI Library | @minhnm162, @teddywristh | Reusable buttons, badges, modals, design tokens, legal status pills |
-| `infra` | Infrastructure & Docker | @teddywristh, @MinhQuangQu | Docker Compose (PostgreSQL, pgvector, Redis), container builds |
-| `docs` | Documentation | @teddywristh, @leducminh290506-eng | Architecture, local setup, testing strategy, development conventions |
-| `scripts` | Development Automation | @teddywristh, @leducminh290506-eng | Environment preflight checks, database seeding, migration shortcuts |
-| `.github` | CI/CD & Repository | @teddywristh | GitHub Actions workflows, issue templates, PR review gates |
+- `apps/api/app/api/v1/routes.py`: HTTP contract and download/upload transport.
+- `apps/api/app/schemas`: strict request models and response allowlists.
+- `apps/api/app/dependencies.py`: Firebase clients, current user, admin guard, If-Match parsing.
+- `apps/api/app/services/users.py`: bootstrap and user updates.
+- `apps/api/app/services/documents.py`: metadata, query construction, upload/delete saga and reconciliation.
+- `apps/api/app/repositories/backend.py`: bounded Firestore query/cursor, transactional version checks via domain callbacks, atomic audit writes.
+- `apps/api/app/core`: validated configuration, common Firebase init, auth and errors.
+- `scripts/backend_admin.py`: project-targeted CLI with dry-run default.
+- `infra/firebase`: deny-all client rules and explicit query indexes.
+- `infra/nginx/api.conf`: single edge gateway rate/body/connection limits.
 
----
+SDK calls use sync routes/dependencies or worker threads. Upload reads the HTTP stream into a bounded temporary file; download reads a generation-pinned object into a temporary file and sends an attachment. Files are private, and authorization happens for each request. No signed URL or public bucket access is needed.
 
-## 3. Core User Journey Data Flow
+Firestore transactions atomically write a versioned record and audit event. Storage cannot participate in that transaction: upload leases, unique object names, deletion tombstones and a dry-run reconciliation CLI provide recovery. This is a synchronous MVP, with no cache or broker dependency. Maintenance uses paged scans, never an entire collection in memory.
 
-```
-[User Question]
-       │
-       ▼
-1. Ask / Search (apps/web)
-       │
-       ▼
-2. API Router & Query Embedding (apps/api)
-       │
-       ├──────────────► Hybrid Search in PostgreSQL (Full-text + pgvector)
-       │                                  │
-       ▼                                  ▼
-3. Top Relevant Articles & Clauses Retrieved
-       │
-       ▼
-4. Context Ingestion & Prompt Synthesis
-       │
-       ├──────────────► LLM Generation with Strict Citation Constraints
-       │                                  │
-       ▼                                  ▼
-5. AI Response + Traceable Citations Sent to Frontend
-       │
-       ▼
-6. Verify (apps/web)
-   User inspects original legal provisions, checks validity date & amendments
-```
+## Environment and delivery
 
----
+Local development uses all three Firebase emulators with project demo-legal-api. Production rejects emulator configuration and wildcard CORS. Dev and production are separate projects. Runtime uses ADC/Workload Identity and least-privilege service accounts. CI runs lint/format/compile, domain/API tests and emulator integration/rules tests.
 
-## 4. Environment Configuration Isolation
-Each component manages its own configuration through environment variables:
-- **`apps/web/.env.example`**: Defines client-side variables (`NEXT_PUBLIC_*`).
-- **`apps/api/.env.example`**: Defines backend secrets, database connection string, and external API keys.
-- **`infra/.env.example`**: Defines container service ports and database credentials for Docker Compose.
+The public entry point must enforce TLS and rate limits. Docker Compose includes a gateway; a cloud deployment may use an equivalent central edge policy. Backend replicas must not be publicly reachable around that policy. Readiness checks dependencies separately from process health. See [operations](backend-operations.md) for rollout, quota monitoring, backup/restore and rollback.
 
-**Security Rule:** Never commit `.env` or `.env.local` files to version control. Only `.env.example` with non-secret defaults should ever be committed.
+## Excluded features
+
+No LLM calls, AI feature, chat/history API, embedding/vector store, semantic search, OCR or document content extraction is introduced. Existing helpers for excluded domains are not wired into the API. PostgreSQL/Redis diagrams in historical planning do not describe this Firebase-first backend.

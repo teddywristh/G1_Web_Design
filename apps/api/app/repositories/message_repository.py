@@ -16,4 +16,10 @@ class MessageRepository:
         return snapshot.to_dict() if snapshot.exists else None
 
     def list(self, conversation_id: str, *, limit: int = 50) -> list[dict[str, Any]]:
-        return [{"id": item.id, **(item.to_dict() or {})} for item in self._collection(conversation_id).order_by("createdAt").limit(limit).stream()]
+        return [
+            {"id": item.id, **(item.to_dict() or {})}
+            for item in self._collection(conversation_id)
+            .order_by("createdAt")
+            .limit(limit)
+            .stream()
+        ]
