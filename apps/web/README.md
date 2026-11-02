@@ -1,39 +1,26 @@
-﻿# Lề Luật — frontend
+# Legal AI — HTML, CSS, JavaScript thuần
 
-Next.js App Router + React + TypeScript + CSS + Lucide. Node.js 20.9+.
+Chỉ có 3 file nguồn:
 
-## Chạy từ thư mục gốc repo (PowerShell)
+- `index.html`: bố cục, các trang, form và cửa sổ PDF.
+- `style.css`: font, màu sắc và responsive.
+- `script.js`: sự kiện, hỏi đáp, thư viện, PDF và localStorage.
 
-```powershell
-cd apps/web
-npm.cmd install
-npm.cmd run dev
-```
-
-Mở http://127.0.0.1:3000. Dùng npm.cmd để tránh chặn npm.ps1 trên Windows.
-
-## Kiểm tra
+## Chạy từ thư mục gốc repo
 
 ```powershell
-npm.cmd run typecheck
-npm.cmd run build
-npm.cmd start
+python -m http.server 5500 --bind 127.0.0.1 --directory apps/web
 ```
+
+Mở http://127.0.0.1:5500. Không cần npm, React hay bước build. Có thể dùng VS Code Live Server với `index.html`.
 
 ## Chức năng
 
-- Tìm tên/số hiệu/cơ quan, lọc loại, sắp xếp, đánh dấu và xóa tài liệu.
-- Thêm PDF: kiểm tra đuôi, MIME, chữ ký PDF, tối đa 20 MB. Đọc bằng trình đọc PDF của trình duyệt và tải file.
-- Tạo/xóa nghiên cứu, đổi tên, lưu câu hỏi và ghi chép. Chưa có câu trả lời AI.
-- Thiết lập, kiểm tra backend, khôi phục dữ liệu mẫu.
-- Responsive, keyboard focus, native modal dialog.
+- Hỏi đáp: câu hỏi gợi ý, tạo/xóa/đổi tên cuộc trò chuyện, lưu lịch sử. Enter để lưu, Shift + Enter xuống dòng.
+- Thư viện: tìm tên/số hiệu/cơ quan, lọc loại, sắp xếp, đánh dấu, xóa.
+- PDF: kiểm tra đuôi, MIME, chữ ký PDF và giới hạn 20 MB; đọc và tải file trong phiên.
+- Thiết lập: khôi phục dữ liệu mẫu.
 
-Đây là bản trải nghiệm local, chưa có đăng nhập hoặc quyền Admin thực tế. Metadata và ghi chép lưu trong localStorage. PDF dùng object URL, chỉ giữ trong phiên; tải lại trang cần chọn lại PDF. Các bản ghi mẫu chỉ minh họa giao diện, không xác nhận hiệu lực pháp lý và không chứa PDF gốc.
+Metadata, đánh dấu và câu hỏi lưu trên trình duyệt bằng localStorage. PDF chỉ giữ trong phiên; tải lại trang cần chọn lại file. Dùng cùng địa chỉ và cổng để truy cập dữ liệu đã lưu của phiên bản trước.
 
-Backend hiện chỉ có /health. Route Next.js /api/health gọi endpoint này phía server, không cần CORS. Đặt API_URL=http://127.0.0.1:8000 trong .env.local nếu cần; đây cũng là mặc định. Không cần bật backend để xem FE. Chưa gọi API CRUD hoặc Firebase do chưa có route nghiệp vụ.
-
-Giao diện mở vào trang hỏi đáp, có câu hỏi gợi ý, lịch sử và phím Enter để lưu câu hỏi (Shift + Enter xuống dòng). AI chưa được kết nối nên không sinh câu trả lời mẫu.
-
-Font hệ thống Segoe UI/Arial hỗ trợ tiếng Việt, không tải Google Fonts. Giao diện dùng CSS thuần, giảm trang trí và ưu tiên khả năng đọc.
-
-Source: src/app/page.tsx (UI và tương tác), src/app/globals.css (design và responsive), src/lib/workspace.ts (types, metadata mẫu, helpers).
+Đây là bản trải nghiệm, chưa đăng nhập Firebase, chưa gọi API nghiệp vụ và chưa tạo câu trả lời AI. Các bản ghi mẫu không đính kèm PDF gốc hoặc xác nhận hiệu lực pháp lý. Font Segoe UI/Arial hỗ trợ tiếng Việt và không cần tải font từ mạng.

@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="vi">
+  <!-- Cấu hình trang và liên kết CSS, JavaScript -->
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Không gian hỏi đáp và quản lý tài liệu pháp lý."
+    />
+    <title>Legal AI · Legal Assistant</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <button
+      id="menu-overlay"
+      class="menu-overlay"
+      aria-label="Đóng menu"
+      hidden
+    ></button>
+    <!-- Menu điều hướng và thông tin phiên -->
+    <aside id="sidebar" class="sidebar">
+      <a class="brand" href="index.html">
+        <span class="brand-mark">L</span>
+        <span>
+          Legal AI
+          <small>LEGAL ASSISTANT</small>
+        </span>
+      </a>
+      <button class="new-chat secondary-button" data-action="new-chat">
+        + Cuộc trò chuyện mới
+      </button>
+      <nav aria-label="Điều hướng chính">
+        <button data-view="chat" class="active">
+          Hỏi đáp
+          <span id="chat-count">0</span>
+        </button>
+        <button data-view="library">
+          Thư viện tài liệu
+          <span id="document-count">0</span>
+        </button>
+        <button data-view="saved">
+          Đã lưu
+          <span id="saved-count">0</span>
+        </button>
+      </nav>
+      <div class="sidebar-bottom">
+        <button data-view="settings">Thiết lập</button>
+        <p>
+          Không gian cá nhân
+          <small>Phiên trải nghiệm · Local</small>
+        </p>
+      </div>
+    </aside>
+
+    <div class="main-shell">
+      <!-- Thanh tiêu đề trang hiện tại -->
+      <header class="topbar">
+        <div>
+          <button
+            id="menu-toggle"
+            class="menu-toggle"
+            aria-controls="sidebar"
+            aria-expanded="false"
+            aria-label="Mở menu"
+          >
+            ☰
+          </button>
+          <span>Không gian làm việc /</span>
+          <strong id="page-label">Hỏi đáp</strong>
+        </div>
+        <span class="preview-label">Bản trải nghiệm</span>
+      </header>
+      <main>
+        <!-- Hỏi đáp, lịch sử và câu hỏi gợi ý -->
+        <section
+          id="chat-view"
+          class="view question-workspace"
+          aria-label="Hỏi đáp pháp luật"
+        >
+          <div class="section-heading">
+            <h2>Hỏi đáp pháp luật</h2>
+            <button class="secondary-button" data-action="new-chat">
+              + Cuộc trò chuyện mới
+            </button>
+          </div>
+          <div id="history-bar" class="history-bar" hidden>
+            <label for="history-select">Lịch sử</label>
+            <select id="history-select">
+              <option value="">Chọn cuộc trò chuyện</option>
+            </select>
+            <button id="delete-chat" class="text-button danger" hidden>
+              Xóa
+            </button>
+          </div>
+          <div class="question-content">
+            <div id="welcome" class="welcome">
+              <span class="welcome-mark" aria-hidden="true">?</span>
+              <p class="eyebrow">LEGAL AI</p>
+              <h1>Bạn muốn tìm hiểu điều gì?</h1>
+              <p>Đặt câu hỏi bằng cách mô tả tình huống của bạn.</p>
+            </div>
+            <div id="conversation" hidden>
+              <label class="sr-only" for="chat-title">
+                Tên cuộc trò chuyện
+              </label>
+              <input id="chat-title" class="chat-title" maxlength="100" />
+              <div
+                id="messages"
+                class="messages"
+                role="log"
+                aria-label="Các câu hỏi đã lưu"
+              ></div>
+              <p class="assistant-status">
+                Câu hỏi đã được lưu trên thiết bị. Tính năng trả lời AI chưa
+                được kết nối.
+              </p>
+            </div>
+            <form id="question-form" class="question-composer">
+              <label class="sr-only" for="question">
+                Nhập câu hỏi pháp luật
+              </label>
+              <textarea
+                id="question"
+                placeholder="Nhập câu hỏi của bạn…"
+                rows="3"
+                maxlength="5000"
+                required
+              ></textarea>
+              <div class="composer-bottom">
+                <span>Enter để lưu · Shift + Enter để xuống dòng</span>
+                <button
+                  id="send-question"
+                  class="send-button"
+                  type="submit"
+                  aria-label="Lưu câu hỏi"
+                  disabled
+                >
+                  ↑
+                </button>
+              </div>
+            </form>
+            <div id="suggestions" class="suggestions">
+              <p>Gợi ý để bắt đầu</p>
+              <button>Hợp đồng lao động cần có những nội dung gì?</button>
+              <button>Tôi cần chuẩn bị gì khi thành lập doanh nghiệp?</button>
+              <button>Làm thế nào để kiểm tra hiệu lực của một văn bản?</button>
+            </div>
+            <p class="small-print centered">
+              Bản trải nghiệm: lưu câu hỏi trên trình duyệt, chưa tạo câu trả
+              lời AI.
+            </p>
+          </div>
+        </section>
+
+        <!-- Thư viện, tìm kiếm và lọc tài liệu -->
+        <section
+          id="library-view"
+          class="view"
+          aria-labelledby="library-title"
+          hidden
+        >
+          <div class="section-heading page-heading">
+            <div>
+              <h1 id="library-title">Thư viện tài liệu</h1>
+              <p class="subtitle">Tìm kiếm, lưu và đọc tài liệu PDF của bạn.</p>
+            </div>
+            <button class="primary-button" id="open-upload">
+              + Thêm tài liệu
+            </button>
+          </div>
+          <div class="filters">
+            <div id="category-tabs" class="tabs" aria-label="Lọc loại tài liệu">
+              <button
+                data-category="Tất cả"
+                class="selected"
+                aria-pressed="true"
+              >
+                Tất cả
+              </button>
+              <button data-category="Bộ luật" aria-pressed="false">
+                Bộ luật
+              </button>
+              <button data-category="Luật" aria-pressed="false">Luật</button>
+              <button data-category="Nghị định" aria-pressed="false">
+                Nghị định
+              </button>
+              <button data-category="Thông tư" aria-pressed="false">
+                Thông tư
+              </button>
+            </div>
+            <div class="search-sort">
+              <label class="sr-only" for="search">Tìm tài liệu</label>
+              <input
+                id="search"
+                type="search"
+                placeholder="Tìm tên, số hiệu, cơ quan…"
+              />
+              <label class="sr-only" for="sort">Sắp xếp tài liệu</label>
+              <select id="sort">
+                <option value="newest">Mới nhất</option>
+                <option value="name">Tên A → Z</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>TÊN TÀI LIỆU</th>
+                  <th>LOẠI</th>
+                  <th>NGÀY THÊM</th>
+                  <th>TRẠNG THÁI</th>
+                  <th><span class="sr-only">Thao tác</span></th>
+                </tr>
+              </thead>
+              <tbody id="document-rows"></tbody>
+            </table>
+            <div id="empty-library" class="empty-state" hidden>
+              <h3>Chưa tìm thấy tài liệu</h3>
+              <p>Thử từ khóa khác hoặc thêm PDF của bạn.</p>
+            </div>
+          </div>
+          <div class="table-footer">
+            <span id="result-count"></span>
+            <span>Metadata mẫu không xác nhận hiệu lực pháp lý.</span>
+          </div>
+        </section>
+
+        <!-- Thiết lập và khôi phục dữ liệu mẫu -->
+        <section
+          id="settings-view"
+          class="view"
+          aria-labelledby="settings-title"
+          hidden
+        >
+          <h1 id="settings-title">Thiết lập</h1>
+          <div class="settings-grid">
+            <article class="settings-card">
+              <h2>Phiên trải nghiệm</h2>
+              <p>
+                Chưa kết nối đăng nhập Firebase hoặc AI. Các thao tác tài liệu
+                và câu hỏi hiện chạy trong trình duyệt.
+              </p>
+              <p class="small-print">
+                Bản HTML chạy độc lập. Backend hiện chỉ có /health, chưa có API
+                nghiệp vụ.
+              </p>
+            </article>
+            <article class="settings-card">
+              <h2>Dữ liệu trên thiết bị</h2>
+              <p>
+                Metadata, đánh dấu và câu hỏi lưu bằng localStorage. PDF chỉ giữ
+                trong phiên hiện tại; tải lại trang cần chọn lại file.
+              </p>
+              <button id="reset-data" class="secondary-button">
+                Khôi phục dữ liệu mẫu
+              </button>
+            </article>
+          </div>
+        </section>
+        <!-- Thông tin cuối trang -->
+        <footer class="page-footer">
+          <strong>Legal AI</strong>
+          <span>Đọc kỹ hơn. Hiểu sâu hơn.</span>
+        </footer>
+      </main>
+    </div>
+
+    <!-- Form thêm tài liệu PDF -->
+    <dialog id="upload-dialog" aria-labelledby="upload-title">
+      <button class="close-dialog" data-close aria-label="Đóng">×</button>
+      <h2 id="upload-title">Thêm tài liệu PDF</h2>
+      <p class="subtitle">Chọn file và nhập thông tin tài liệu.</p>
+      <form id="upload-form">
+        <label id="drop-zone" class="upload-zone" for="pdf-file">
+          <strong id="file-label">Chọn hoặc kéo thả PDF vào đây</strong>
+          <span>PDF · Tối đa 20 MB</span>
+          <input
+            id="pdf-file"
+            type="file"
+            accept="application/pdf,.pdf"
+            class="sr-only"
+          />
+        </label>
+        <label class="form-field">
+          Tên tài liệu
+          <input name="title" maxlength="180" required />
+        </label>
+        <div class="form-grid">
+          <label class="form-field">
+            Loại văn bản
+            <select name="category">
+              <option>Bộ luật</option>
+              <option>Luật</option>
+              <option>Nghị định</option>
+              <option>Thông tư</option>
+            </select>
+          </label>
+          <label class="form-field">
+            Số hiệu
+            <input name="number" maxlength="80" />
+          </label>
+        </div>
+        <label class="form-field">
+          Cơ quan ban hành
+          <input name="authority" maxlength="120" />
+        </label>
+        <p class="form-notice">
+          Chế độ trải nghiệm: metadata lưu trong trình duyệt, PDF chỉ giữ trong
+          phiên này. Chưa gửi lên Firebase.
+        </p>
+        <p id="upload-error" class="error" role="alert"></p>
+        <div class="dialog-actions">
+          <button type="button" class="secondary-button" data-close>
+            Để sau
+          </button>
+          <button id="save-document" type="submit" class="primary-button">
+            Thêm tài liệu
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Xem, đánh dấu và tải tài liệu PDF -->
+    <dialog
+      id="document-dialog"
+      class="dialog-wide"
+      aria-labelledby="detail-title"
+    >
+      <button class="close-dialog" data-close aria-label="Đóng">×</button>
+      <h2 id="detail-title"></h2>
+      <p id="detail-meta" class="subtitle"></p>
+      <div class="detail-toolbar">
+        <button id="detail-bookmark" class="secondary-button">Đánh dấu</button>
+        <a id="download-pdf" class="secondary-button" hidden>Tải PDF</a>
+        <button id="delete-document" class="text-button danger">
+          Xóa tài liệu
+        </button>
+      </div>
+      <iframe id="pdf-viewer" title="Nội dung tài liệu PDF" hidden></iframe>
+      <div id="pdf-empty" class="empty-state">
+        <h3 id="pdf-empty-title">Chọn PDF để đọc</h3>
+        <p id="pdf-empty-note"></p>
+        <label class="primary-button file-picker">
+          Chọn PDF để xem
+          <input
+            id="reselect-pdf"
+            class="sr-only"
+            type="file"
+            accept="application/pdf,.pdf"
+          />
+        </label>
+      </div>
+      <p id="pdf-error" class="error" role="alert"></p>
+      <p class="small-print">
+        Thông tin trải nghiệm không thay thế nguồn văn bản chính thức hoặc tư
+        vấn pháp lý.
+      </p>
+    </dialog>
+    <!-- Thông báo thao tác -->
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>
