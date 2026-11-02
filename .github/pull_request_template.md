@@ -21,7 +21,7 @@
 
 ## Monorepo Scope
 
-- [ ] `apps/web`: Next.js frontend
+- [ ] `apps/web`: HTML/CSS/JavaScript frontend
 - [ ] `apps/api`: FastAPI backend
 - [ ] `packages/ui`: Shared UI library
 - [ ] `infra`: Docker or infrastructure configuration
@@ -37,8 +37,8 @@
 ## Verification & Testing
 
 <!-- How did you test and verify these changes? Include commands and results. -->
-- [ ] Local build passes (`npm run build` or equivalent)
-- [ ] Local tests pass (`pytest` / `npm test`)
+- [ ] Local build passes (`node --check apps/web/*.js` for web changes)
+- [ ] Local tests pass (`python -m pytest -m 'not integration'`)
 - [ ] Linting & type checking pass without warnings
 - [ ] Manually tested affected endpoints or UI flows
 

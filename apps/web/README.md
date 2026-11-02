@@ -1,32 +1,52 @@
 # Legal AI — HTML, CSS, JavaScript thuần
 
-Bản FE HTML của nhóm gồm 3 file nguồn:
+Giao diện nối với backend FastAPI của dự án, không cần build.
 
-- `index.html`: bố cục, các trang, form và cửa sổ PDF.
+- `index.html`: bố cục, trang, form và hộp thoại.
 - `style.css`: font, màu sắc và responsive.
-- `script.js`: sự kiện, hỏi đáp, thư viện, PDF và localStorage.
+- `api.js`: gọi backend (cookie phiên, CSRF, thông báo lỗi tiếng Việt).
+- `script.js`: đăng nhập, kho tài liệu, hỏi đáp, trích dẫn và thiết lập.
 
-## Chạy từ thư mục gốc repo
+## Chạy
+
+1. Chạy backend (xem `apps/api/README.md`), mặc định http://127.0.0.1:8000. Worker xử lý PDF chạy riêng: `python -m app.workers.ingestion`.
+2. Chạy giao diện từ thư mục gốc repo:
 
 ```powershell
 python -m http.server 8085 --bind 127.0.0.1 --directory apps/web
 ```
 
-Mở http://127.0.0.1:8085. Không cần npm, React hay bước build. Có thể dùng VS Code Live Server với `index.html`.
+Mở http://127.0.0.1:8085. Backend đã cho phép origin cổng 8085 (`BACKEND_CORS_ORIGINS`). Dùng đúng `127.0.0.1` ở cả hai bên để cookie phiên được gửi kèm.
+
+Nếu terminal đã ở trong `apps/web`, không thêm `--directory apps/web` vì đường dẫn đó sẽ
+được tính tiếp từ thư mục hiện tại. Chạy:
+
+```bash
+python -m http.server 8085 --bind 127.0.0.1
+```
+
+Nếu server cũ đang chiếm cổng 8085, nhấn `Ctrl+C` trong terminal chạy server đó trước khi chạy
+lại. Lỗi 404 cho `favicon.ico` không ảnh hưởng đến trang.
+
+Đổi địa chỉ API ở thẻ `<meta name="api-base">` trong `index.html`. Đăng nhập Google dùng client ID
+công khai trả về từ backend khi `GOOGLE_OAUTH_CLIENT_ID` được cấu hình; thẻ
+`<meta name="google-client-id">` có thể dùng để ghi đè. Đăng ký origin
+`http://127.0.0.1:8085` trong Authorized JavaScript origins của đúng OAuth client.
 
 ## Chức năng
 
-- Hỏi đáp: câu hỏi gợi ý, tạo/xóa/đổi tên cuộc trò chuyện, lưu lịch sử. Enter để lưu, Shift + Enter xuống dòng.
-- Thư viện: tìm tên/số hiệu/cơ quan, lọc loại, sắp xếp, đánh dấu, xóa.
-- PDF: kiểm tra đuôi, MIME, chữ ký PDF và giới hạn 20 MB; đọc và tải file trong phiên.
-- Thiết lập: khôi phục dữ liệu mẫu.
+- Chế độ khách, đăng ký, đăng nhập Google/email, xem và thu hồi phiên đăng nhập.
+- Thư viện: chọn kho dùng chung hoặc kho riêng; thêm PDF, xem trạng thái xử lý nền, xử lý lại, xóa, đọc PDF. Quản trị viên thêm văn bản dùng chung và xuất bản bản dựng mới.
+- Hỏi đáp: chọn tối đa 5 kho, mốc thời gian và nhà cung cấp AI; câu trả lời có trạng thái, giả định, câu hỏi cần bổ sung, giới hạn nguồn và trích dẫn bấm được để xem đúng đoạn nguồn.
+- Thiết lập: khóa API cá nhân hoặc dùng chung (admin), OpenCode local và ChatGPT Plus/Pro
+  OAuth local, tài khoản và xóa dữ liệu trên thiết bị. Provider/model/nguồn key và cách tra cứu
+  được chọn trong phần hỏi đáp. OAuth local không tự chuyển sang API key khi mất phiên.
 
-Metadata, đánh dấu và câu hỏi lưu trên trình duyệt bằng localStorage. PDF chỉ giữ trong phiên; tải lại trang cần chọn lại file. Dùng cùng địa chỉ và cổng để truy cập dữ liệu đã lưu của phiên bản trước.
+Lịch sử hội thoại và đánh dấu chỉ lưu trong localStorage, tách theo tài khoản và bị xóa khi đăng xuất. Khóa API và token không bao giờ nằm trong localStorage.
 
-Đây là bản trải nghiệm, chưa đăng nhập Firebase, chưa gọi API nghiệp vụ và chưa tạo câu trả lời AI. Các bản ghi mẫu không đính kèm PDF gốc hoặc xác nhận hiệu lực pháp lý. Font Segoe UI/Arial hỗ trợ tiếng Việt và không cần tải font từ mạng.
+ChatGPT OAuth cần `OPENCODE_LOCAL_ENABLED=true` và `OPENCODE_CHATGPT_LOCAL_ENABLED=true`,
+Docker và OpenCode theo [hướng dẫn API](../../docs/ai-connections.md#thử-chatgpt-oauth-local).
+Phiên chỉ dành cho thử nghiệm local. Với chế độ này, RAG tra theo số hiệu/điều; để dùng tìm kiếm
+ngữ nghĩa và xử lý PDF vẫn cần OpenAI API key cho embeddings.
 
-## Code cập nhật từ remote
-
-Backend, RAG và các tính năng tài khoản mới đã được merge từ `origin/main`. Bản HTML vẫn giữ nguyên hành vi local; việc merge Git chưa kết nối các API mới vào `script.js`.
-
-Mã giao diện Next.js từ remote được giữ nguyên trong `src/`, cùng `package.json`, lockfile và cấu hình liên quan, để không mất phần đăng nhập, tài khoản và AI settings mà thành viên khác đã làm. Mã này không được tải khi chạy server HTML ở trên. Muốn chạy riêng bản Next.js: vào `apps/web`, chạy `npm.cmd install` rồi `npm.cmd run dev`; xem `.env.example` và tài liệu trong `docs/` để cấu hình backend.
+Bản Next.js cũ vẫn còn trong `src/` để tham khảo, nhưng không được tải bởi bản HTML này.

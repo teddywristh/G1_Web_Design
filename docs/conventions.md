@@ -53,7 +53,7 @@ We adhere to the [Conventional Commits](https://www.conventionalcommits.org/) st
 
 ### Commit Scopes
 Scopes identify which part of the monorepo is affected:
-- `web`: Next.js frontend (`apps/web`)
+- `web`: HTML/CSS/JavaScript frontend (`apps/web`)
 - `api`: FastAPI backend (`apps/api`)
 - `ui`: Shared UI library (`packages/ui`)
 - `infra`: Docker, database, Redis (`infra/`)
@@ -87,8 +87,8 @@ Scopes identify which part of the monorepo is affected:
 ### 2. Pre-PR Checklist
 Before requesting reviews, ensure:
 - [ ] Code compiles and runs cleanly without unhandled errors.
-- [ ] Linters and formatters pass (`ruff check .`, `npm run lint`).
-- [ ] All automated tests pass (`pytest`, `npm test`).
+- [ ] Linters and formatters pass (`ruff check .`; `node --check` for web scripts).
+- [ ] All automated tests pass (`pytest`).
 - [ ] No secrets, keys, or credentials are committed.
 - [ ] `.env.example` is updated if new configuration is introduced.
 - [ ] Documentation is updated to reflect new functionality.
@@ -107,10 +107,10 @@ Before requesting reviews, ensure:
   - Formatter & Linter: `Ruff`
   - Max line length: 88 characters (PEP 8 compatible)
   - Type hints: Explicit type annotations encouraged for all function signatures.
-- **TypeScript / React (apps/web, packages/ui)**:
-  - Linter: `ESLint`
-  - Formatter: `Prettier` (configured in web package)
-  - Strict typing: `strict: true` in `tsconfig.json`, no implicit `any`.
+- **JavaScript / CSS (apps/web)**:
+  - Plain ES modules-free scripts, no build step; `"use strict"` and `textContent` for any server or user text.
+  - Keep layout in `index.html`, styling in `style.css`, API access in `api.js`.
+- **TypeScript / React (legacy `apps/web/src`, packages/ui)**: kept for reference only.
 - **Environment & Secrets**:
   - Never commit real passwords, API tokens, or session secrets.
   - Always provide clean placeholders in `.env.example`.

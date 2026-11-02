@@ -148,7 +148,9 @@ def test_legacy_firebase_password_and_google_link(setup, monkeypatch):
     )
     assert response.status_code == 200, response.text
     csrf = response.json()["csrfToken"]
-    challenge = client.get("/api/v1/auth/google/challenge").json()["nonce"]
+    challenge_response = client.get("/api/v1/auth/google/challenge").json()
+    assert challenge_response["clientId"] == "test-client"
+    challenge = challenge_response["nonce"]
     claims = {
         "email": "different@gmail.com",
         "sub": "google-sub",

@@ -8,6 +8,8 @@
 - [Backend operations](backend-operations.md): local/Docker, admin, đối soát, deploy, backup/restore.
 - [Verification](backend-verification.md): kết quả test/build và giới hạn trước phát hành.
 - [Backend quickstart](../apps/api/README.md): cài đặt và chạy test.
+- [Knowledge bases & Q&A](knowledge-rag.md): kho tài liệu, worker ingestion, hỏi đáp có trích dẫn.
+- [Web app](../apps/web/README.md): chạy giao diện HTML tĩnh.
 - [Conventions](conventions.md): branch, commit và review.
 - [Original project plan](plans.md): bối cảnh sản phẩm rộng hơn backend MVP.
 - [Firebase setup](infrastructure/firebase-setup.md): hướng dẫn hạ tầng ban đầu.

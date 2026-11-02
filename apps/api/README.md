@@ -1,6 +1,6 @@
 # Backend API
 
-FastAPI + Firebase Authentication + Firestore + Firebase Storage. Backend MVP quản lý tài khoản và văn bản pháp luật. Module RAG từ nhánh AI_RAG được tích hợp riêng; các API MVP không cần OpenAI key.
+FastAPI + Firebase Authentication + Firestore + Firebase Storage. Backend MVP quản lý tài khoản và văn bản pháp luật. Có thêm kho tài liệu riêng, worker ingestion và hỏi đáp RAG; các API MVP không cần OpenAI key.
 
 ## Chạy local
 
@@ -10,7 +10,7 @@ Từ thư mục gốc repo, dùng Python 3.11+, Node 22+, Java 21+:
 python -m venv .venv
 source .venv/bin/activate
 pip install -r apps/api/requirements-dev.txt
-cp apps/api/.env.example apps/api/.env
+test -e apps/api/.env || cp apps/api/.env.example apps/api/.env
 npm install -g firebase-tools@15.12.0
 firebase emulators:start --project demo-legal-api --only auth,firestore,storage
 ```
@@ -27,9 +27,9 @@ Health: `/health`; dependency readiness: `/ready`; Swagger: `/docs`. File `.env`
 ## Kiểm tra
 
 ```bash
-ruff check apps/api scripts/backend_admin.py
-ruff format --check apps/api scripts/backend_admin.py
-python -m compileall apps/api/app scripts/backend_admin.py
+ruff check apps/api scripts/backend_admin.py scripts/migrate_knowledge.py scripts/evaluate_legal_qa.py
+ruff format --check apps/api scripts/backend_admin.py scripts/migrate_knowledge.py scripts/evaluate_legal_qa.py
+python -m compileall apps/api/app scripts
 python -m pytest -m 'not integration' -q
 firebase emulators:exec --project demo-legal-api --only auth,firestore,storage 'RUN_FIREBASE_INTEGRATION=1 python -m pytest -m integration -q'
 ```
@@ -44,22 +44,22 @@ Test tự cố định các host 127.0.0.1 và project demo-legal-api. Không c�
 - [Kế hoạch phạm vi](../../docs/backend-plan.md).
 - [Xác thực và quản lý phiên](../../docs/auth-plan.md): đăng ký bcrypt, Google Sign-In, cookie và cấu hình production.
 
-## RAG integration
+## Worker và RAG
 
-Module từ `AI_RAG` cung cấp `POST /api/v1/rag/ask` với body
-`{"question": "Câu hỏi pháp luật", "top_k": 5}`. Endpoint yêu cầu phiên ứng dụng hoặc Firebase ID token
-và profile đang active, theo cùng cơ chế xác thực của backend.
+PDF tải lên được xử lý nền bởi worker riêng (cần chạy cùng emulator và API):
 
-RAG đọc tối đa 100 chunk chuẩn bị sẵn từ Firestore `document_chunks`, xếp hạng
-bằng embedding/keyword rồi sinh câu trả lời kèm nguồn; không đọc PDF trực tiếp
-trong request. Chunk gồm `content` (hoặc `text`), `embedding`, `document_id`,
-`document_title`, và metadata tùy chọn `article`, `clause`, `point`, `page_number`,
-`source_url`. `core/database.py` dùng lại kết nối tại `core/firebase.py`.
+```bash
+cd apps/api && python -m app.workers.ingestion
+```
 
-Cấu hình `OPENAI_API_KEY` trong môi trường backend để sử dụng RAG. Model và
-ngưỡng lấy từ các biến tương ứng trong `.env.example`. Khi thiếu key, request RAG
-đã xác thực trả 503; các endpoint backend khác vẫn hoạt động. Giữ key ngoài Git.
-Các test tích hợp route dùng AI giả lập, không gọi API tính phí.
+`POST /api/v1/rag/ask` chạy workflow trong `services/qa.py`: chọn kho (`knowledge_base_ids`, tối đa 5), tra theo số hiệu/điều và vector, kiểm tra lại nguồn rồi trả lời kèm trích dẫn. Embedding luôn dùng OpenAI; thiếu khóa thì request RAG trả 503. Chi tiết, cờ tính năng, vận hành và giới hạn: [docs/knowledge-rag.md](../../docs/knowledge-rag.md). Giữ key ngoài Git. Test dùng AI giả lập, không gọi API tính phí; emulator không chạy `find_nearest`, nên chỉ mục vector cần kiểm tra trên dự án Firebase thật.
+
+Nếu dùng Firebase cloud thay vì emulator, tạo các index trong `infra/firebase/firestore.indexes.json`
+trước khi chạy worker và chờ trạng thái **Ready**. Truy vấn nhận job cần composite index
+`processing_jobs` với `status` và `nextRunAt` tăng dần; danh sách tài liệu và tìm kiếm vector
+cũng cần index riêng. Lệnh deploy index của Firebase chạy từ gốc repo và có thể yêu cầu xác nhận
+thay đổi index hiện có, nên hãy đọc kỹ các prompt. Lỗi `FAILED_PRECONDITION: The query requires
+an index` nghĩa là index tương ứng chưa có hoặc chưa build xong, không phải lỗi khởi động FastAPI.
 
 ## AI connection options
 

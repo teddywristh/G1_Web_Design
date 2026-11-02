@@ -22,7 +22,12 @@ class Settings(BaseSettings):
     firebase_auth_emulator_host: str | None = None
     firestore_emulator_host: str | None = None
     storage_emulator_host: str | None = None
-    backend_cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    backend_cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8085",
+        "http://127.0.0.1:8085",
+    ]
     max_upload_size_bytes: int = Field(default=20 * 1024 * 1024, gt=0)
     storage_timeout_seconds: int = Field(default=30, ge=1, le=120)
     upload_lease_seconds: int = Field(default=900, ge=300)

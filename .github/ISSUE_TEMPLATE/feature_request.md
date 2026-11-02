@@ -14,7 +14,7 @@ e.g. As a legal researcher, I need [...] so that [...].
 A clear and concise description of what you want to happen.
 
 ## Affected Component
-- [ ] `apps/web` (Next.js frontend)
+- [ ] `apps/web` (HTML/CSS/JS frontend)
 - [ ] `apps/api` (FastAPI backend / AI services)
 - [ ] `packages/ui` (Shared UI components)
 - [ ] `infra` (Infrastructure / PostgreSQL / Redis)

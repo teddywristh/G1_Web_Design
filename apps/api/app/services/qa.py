@@ -325,6 +325,10 @@ def answer(repo, user, request, ai, embedder, settings):
             if evidence_id not in order:
                 order.append(evidence_id)
     used = order if output.status == "answered" else []
+    if used:
+        # Only the sources actually cited explain what limits this answer.
+        cited = {x for e in used for x in pack[e]["limitations"]}
+        limitations = notes + sorted(cited)
     number = {evidence_id: n for n, evidence_id in enumerate(used, 1)}
     if output.status == "answered":
         lines = [

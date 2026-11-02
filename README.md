@@ -15,7 +15,8 @@
   - [2. Environment Configuration](#2-environment-configuration)
   - [3. Start Infrastructure (Docker)](#3-start-infrastructure-docker)
   - [4. Start Backend API (FastAPI)](#4-start-backend-api-fastapi)
-  - [5. Start Frontend Web (Next.js)](#5-start-frontend-web-nextjs)
+  - [5. Start the Ingestion Worker](#5-start-the-ingestion-worker)
+  - [6. Start Frontend Web (static HTML)](#6-start-frontend-web-static-html)
 - [Repository Conventions](#repository-conventions)
   - [Branch Naming](#branch-naming)
   - [Commit Messages (Conventional Commits)](#commit-messages-conventional-commits)
@@ -67,7 +68,7 @@ The project is structured as a modular monorepo:
 ```text
 G1_Web_Design/
 ├── apps/
-│   ├── web/                     # Next.js 14+ frontend application (TypeScript, App Router)
+│   ├── web/                     # Plain HTML/CSS/JavaScript frontend (no build step; legacy Next.js in src/)
 │   └── api/                     # FastAPI backend service (Python 3.11+, Firebase Admin SDK)
 ├── packages/
 │   └── ui/                      # Shared reusable UI component library & design tokens
@@ -97,7 +98,7 @@ G1_Web_Design/
 
 | Path | Primary Component | Tech Stack | Lead Assignees | Responsibilities |
 | :--- | :--- | :--- | :--- | :--- |
-| `apps/web/` | Web Client | Next.js, React, TypeScript | @minhnm162, @teddywristh | Search interfaces, document viewer, chat UI, responsive layouts |
+| `apps/web/` | Web Client | HTML, CSS, JavaScript | @minhnm162, @teddywristh | Search interfaces, document viewer, chat UI, responsive layouts |
 | `apps/api/` | Backend & AI Services | FastAPI, Python, Firebase | @MinhQuangQu, @teddywristh | REST API, database access, vector search, LLM orchestration |
 | `packages/ui/` | Shared UI Library | React, CSS Tokens | @minhnm162, @teddywristh | Reusable design components, badges, modals, typography |
 | `infra/` | Infrastructure | Docker, Firebase Emulator, Nginx | @teddywristh, @MinhQuangQu | Firebase setup, private file storage, API gateway |
@@ -111,7 +112,7 @@ G1_Web_Design/
 
 Before starting local development, ensure your machine has:
 - **Git** (2.30+)
-- **Node.js** (v22+) & **npm**
+- **Node.js** (v22+) & **npm** (only for `firebase-tools`; the web app needs no npm)
 - **Java** (21+, for Firebase Emulator)
 - **Python** (3.11+ recommended) & `venv` / `pip`
 - **Docker Desktop** or **Docker Engine** with Docker Compose v2+
@@ -131,16 +132,13 @@ git checkout -b feat/your-feature-name
 Copy `.env.example` templates to your local configuration files. **Never commit `.env` files to git.**
 ```bash
 # Root environment (optional central reference)
-cp .env.example .env
-
-# Web frontend
-cp apps/web/.env.example apps/web/.env.local
+test -e .env || cp .env.example .env
 
 # API backend
-cp apps/api/.env.example apps/api/.env
+test -e apps/api/.env || cp apps/api/.env.example apps/api/.env
 
 # Infrastructure
-cp infra/.env.example infra/.env
+test -e infra/.env || cp infra/.env.example infra/.env
 ```
 
 ### 3. Start Infrastructure (Docker)
@@ -149,9 +147,14 @@ The backend MVP uses Firebase Emulator Suite for local development:
 npm install -g firebase-tools@15.12.0
 firebase emulators:start --project demo-legal-api --only auth,firestore,storage
 ```
-Use `apps/api/.env.example` for matching demo configuration. For Docker API/gateway,
+Use `apps/api/.env.example` for matching demo configuration (the commands above preserve an existing `apps/api/.env`; check that it points to the emulator and that `BACKEND_CORS_ORIGINS` includes `http://127.0.0.1:8085`). Against a real Firebase project, deploy the indexes first: `firebase deploy --only firestore:indexes --project <id>` (the worker and vector search need them). For Docker API/gateway,
 follow [the operations runbook](docs/backend-operations.md), including the separate
 Docker emulator binding configuration.
+
+Run Firebase CLI commands from the repository root, where `firebase.json` lives. On a shared
+project, review the index changes and any deletion prompts before deploying. Wait for indexes to
+reach **Ready**; the emulator does not enforce the same composite and vector indexes as Firestore.
+For an existing cloud configuration, do not overwrite `apps/api/.env` with the emulator template.
 
 ### 4. Start Backend API (FastAPI)
 ```bash
@@ -166,16 +169,36 @@ source .venv/bin/activate
 pip install -r requirements-dev.txt
 uvicorn app.main:app --reload --port 8000
 ```
+Run these from `apps/api` with the emulators from step 3 already running.
 - API Health Check: `http://localhost:8000/health`
 - Interactive Swagger Docs: `http://localhost:8000/docs`
 
-### 5. Start Frontend Web (Next.js)
+### 5. Start the Ingestion Worker
+Uploaded PDFs are parsed, embedded and indexed by a separate process. In a third terminal, with the same virtualenv:
 ```bash
-cd apps/web
-npm install
-npm run dev
+cd apps/api
+python -m app.workers.ingestion
 ```
-Open `http://localhost:3000` in your browser.
+Without it, documents stay `queued`. Embedding needs an OpenAI key (personal key in Settings, or a shared key set by an admin). See [docs/knowledge-rag.md](docs/knowledge-rag.md).
+
+### 6. Start Frontend Web (static HTML)
+The web app is plain HTML, CSS and JavaScript. There is nothing to install or build. From the repository root:
+```bash
+python -m http.server 8085 --bind 127.0.0.1 --directory apps/web
+```
+Open `http://127.0.0.1:8085` (use `127.0.0.1`, not `localhost`, so the session cookie reaches the API). The backend allows ports 3000 and 8085 by default (`BACKEND_CORS_ORIGINS`). Change the API address in `<meta name="api-base">` of `apps/web/index.html`. See [apps/web/README.md](apps/web/README.md).
+
+If the terminal is already in `apps/web`, run this instead:
+
+```bash
+python -m http.server 8085 --bind 127.0.0.1
+```
+
+The `--directory apps/web` argument is relative to the current directory; using it from inside
+`apps/web` points to a nonexistent nested directory and returns 404. Stop the old server with
+`Ctrl+C` before restarting on the same port. A `favicon.ico` 404 does not prevent the page loading.
+
+The earlier Next.js app is still in `apps/web/src/` for reference and is not used by this setup.
 
 ---
 
@@ -214,7 +237,7 @@ docs(root): update architecture and setup documentation
 ## Code Quality & Linting
 - **Editor Configuration**: Consistently enforced by [`.editorconfig`](.editorconfig).
 - **Backend Linting**: `ruff check .` and `ruff format .`
-- **Frontend Linting**: `npm run lint` and TypeScript compilation `tsc --noEmit`.
+- **Frontend**: no build or lint step; `node --check apps/web/script.js apps/web/api.js` catches syntax errors.
 - **Automated CI**: GitHub Actions validates linting, type-checking, and test suites on all PRs.
 
 ---
@@ -225,9 +248,10 @@ Backend implementation scope follows [backend-plan.md](docs/backend-plan.md),
 not the scope or progress of historical issues. The current backend includes
 Firebase authentication/profile/roles, document metadata and private PDF lifecycle,
 metadata lookup with cursor pagination, admin user controls, atomic audit logs,
-reconciliation, gateway limits and CI tests. LLM/AI endpoints remain outside this work.
+reconciliation, gateway limits and CI tests. It also provides private knowledge bases, a durable
+ingestion worker and a cited legal Q&A workflow ([knowledge-rag.md](docs/knowledge-rag.md)).
 
-See [API contract](docs/api-contract.md), [backend quickstart](apps/api/README.md),
+See [knowledge bases & Q&A](docs/knowledge-rag.md), [API contract](docs/api-contract.md), [backend quickstart](apps/api/README.md),
 [architecture](docs/architecture.md) and [operations](docs/backend-operations.md).
 
 ---

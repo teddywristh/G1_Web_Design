@@ -1,0 +1,83 @@
+"use strict";
+
+// Backend client: session cookie, CSRF header and Vietnamese error text. Keys and tokens never go to localStorage.
+const API_BASE = (
+  document.querySelector('meta[name="api-base"]')?.content || "http://127.0.0.1:8000"
+).replace(/\/$/, "");
+const API = `${API_BASE}/api/v1`;
+let csrfToken = "";
+
+class ApiError extends Error {
+  constructor(status, code, message) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+}
+
+const ERROR_TEXT = {
+  unauthenticated: "Vui lòng đăng nhập.",
+  ai_not_configured: "Chưa có khóa AI phù hợp. Hãy thêm khóa trong Thiết lập.",
+  ai_authentication_failed: "Nhà cung cấp AI từ chối khóa đã chọn.",
+  ai_rate_limited: "Nhà cung cấp AI đang giới hạn lượt dùng. Thử lại sau.",
+  ai_unavailable: "Dịch vụ AI tạm thời không phản hồi.",
+  opencode_unavailable: "OpenCode chưa được bật hoặc chưa sẵn sàng trong môi trường này.",
+  oauth_exists: "Đã có phiên ChatGPT. Hãy ngắt kết nối trước khi kết nối lại.",
+  invalid_retrieval: "ChatGPT OAuth chỉ hỗ trợ tra theo số hiệu và điều trong phiên này.",
+  feature_disabled: "Tính năng này đang tắt trên máy chủ.",
+  quota_exceeded: "Đã đạt giới hạn số kho riêng.",
+  version_conflict: "Dữ liệu vừa thay đổi. Hãy tải lại rồi thử lại.",
+  file_too_large: "PDF vượt quá giới hạn dung lượng.",
+  csrf_failed: "Phiên không hợp lệ. Hãy đăng nhập lại.",
+};
+
+function setCsrf(token) {
+  csrfToken = token || "";
+}
+
+async function request(method, path, { json, body, headers = {}, version, raw } = {}) {
+  const timeout = path === "/ai/chatgpt/finish" ? 260000 : path === "/rag/ask" ? 120000 : 90000;
+  const options = { method, credentials: "include", headers: { ...headers }, signal: AbortSignal.timeout(timeout) };
+  if (method !== "GET" && method !== "HEAD") options.headers["X-CSRF-Token"] = csrfToken;
+  if (version !== undefined) options.headers["If-Match"] = `"${version}"`;
+  if (json !== undefined) {
+    options.headers["Content-Type"] = "application/json";
+    options.body = JSON.stringify(json);
+  }
+  if (body !== undefined) options.body = body;
+  let response;
+  try {
+    response = await fetch(API + path, options);
+  } catch {
+    throw new ApiError(0, "network", "Không kết nối được máy chủ. Kiểm tra backend và địa chỉ API.");
+  }
+  if (!response.ok) {
+    let info = {};
+    try {
+      info = (await response.json()).error || {};
+    } catch {
+      /* Response was not JSON. */
+    }
+    const code = info.code || "http_error";
+    throw new ApiError(response.status, code, ERROR_TEXT[code] || info.message || "Có lỗi xảy ra.");
+  }
+  if (raw) return response;
+  if (response.status === 204) return null;
+  return response.json();
+}
+
+const api = {
+  get: (path) => request("GET", path),
+  post: (path, json, options) => request("POST", path, { json, ...options }),
+  put: (path, json, options) => request("PUT", path, { json, ...options }),
+  patch: (path, json, options) => request("PATCH", path, { json, ...options }),
+  del: (path, version) => request("DELETE", path, { version }),
+  // Raw PDF body: the backend requires Content-Type application/pdf and If-Match.
+  upload: (path, file, version) =>
+    request("PUT", path, {
+      body: file,
+      headers: { "Content-Type": "application/pdf" },
+      version,
+    }),
+  blob: async (path) => (await request("GET", path, { raw: true })).blob(),
+};

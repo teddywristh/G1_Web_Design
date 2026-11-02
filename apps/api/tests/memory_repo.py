@@ -93,6 +93,7 @@ class FakeBlob:
         self.store.pop(self.name, None)
 
     generation = 1
+    size = 10
 
 
 class FakeBucket:

@@ -141,6 +141,7 @@ def test_server_shared_policy_and_storage_readiness(repo, configured_crypto):
     with pytest.raises(APIError):
         connections.resolve(repo, {"id": "reader"}, "openai", "shared", get_settings())
     configured_crypto.ai_credential_encryption_key = SecretStr("")
+    configured_crypto.opencode_chatgpt_local_enabled = False  # a developer .env may enable it
     options = connections.options(repo, {"id": "reader"}, get_settings())
     assert options["credentialStorageReady"] is False
     assert all(not x["available"] for x in options["methods"] if "oauth" in x["id"])

@@ -9,7 +9,10 @@
       content="Không gian hỏi đáp và quản lý tài liệu pháp lý."
     />
     <title>Legal AI · Legal Assistant</title>
+    <meta name="api-base" content="http://127.0.0.1:8000" />
+    <meta name="google-client-id" content="" />
     <link rel="stylesheet" href="style.css" />
+    <script src="api.js" defer></script>
     <script src="script.js" defer></script>
   </head>
   <body>
@@ -19,8 +22,46 @@
       aria-label="Đóng menu"
       hidden
     ></button>
+    <!-- Đăng nhập và đăng ký -->
+    <section id="auth-view" class="auth-view" aria-labelledby="auth-title" hidden>
+      <form id="auth-form" class="auth-card">
+        <span class="brand-mark">L</span>
+        <h1 id="auth-title">Đăng nhập Legal AI</h1>
+        <label class="form-field" id="name-field" hidden>
+          Tên hiển thị
+          <input name="displayName" maxlength="120" autocomplete="name" />
+        </label>
+        <label class="form-field">
+          Email
+          <input name="email" type="email" required autocomplete="email" />
+        </label>
+        <label class="form-field">
+          Mật khẩu
+          <input
+            name="password"
+            type="password"
+            minlength="8"
+            maxlength="72"
+            required
+            autocomplete="current-password"
+          />
+        </label>
+        <label class="form-field" id="confirm-field" hidden>
+          Xác nhận mật khẩu
+          <input name="confirmation" type="password" minlength="8" maxlength="72" autocomplete="new-password" />
+        </label>
+        <p id="auth-error" class="error" role="alert"></p>
+        <button id="auth-submit" class="primary-button" type="submit">Đăng nhập</button>
+        <div id="google-button"></div>
+        <button id="auth-switch" class="text-button" type="button">
+          Chưa có tài khoản? Đăng ký
+        </button>
+        <button id="guest-back" class="text-button" type="button">Quay lại trải nghiệm</button>
+      </form>
+    </section>
+
     <!-- Menu điều hướng và thông tin phiên -->
-    <aside id="sidebar" class="sidebar">
+    <aside id="sidebar" class="sidebar" hidden>
       <a class="brand" href="index.html">
         <span class="brand-mark">L</span>
         <span>
@@ -33,14 +74,17 @@
       </button>
       <nav aria-label="Điều hướng chính">
         <button data-view="chat" class="active">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H5l-2 2v-7.5A8.5 8.5 0 1 1 21 11.5Z"/></svg>
           Hỏi đáp
           <span id="chat-count">0</span>
         </button>
         <button data-view="library">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19V5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1 0-4h13M8 7h7M8 11h7"/></svg>
           Thư viện tài liệu
           <span id="document-count">0</span>
         </button>
         <button data-view="saved">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h12v18l-6-4-6 4z"/></svg>
           Đã lưu
           <span id="saved-count">0</span>
         </button>
@@ -48,13 +92,13 @@
       <div class="sidebar-bottom">
         <button data-view="settings">Thiết lập</button>
         <p>
-          Không gian cá nhân
-          <small>Phiên trải nghiệm · Local</small>
+          <span id="user-name">Không gian cá nhân</span>
+          <small id="user-role"></small>
         </p>
       </div>
     </aside>
 
-    <div class="main-shell">
+    <div id="app-shell" class="main-shell" hidden>
       <!-- Thanh tiêu đề trang hiện tại -->
       <header class="topbar">
         <div>
@@ -70,7 +114,12 @@
           <span>Không gian làm việc /</span>
           <strong id="page-label">Hỏi đáp</strong>
         </div>
-        <span class="preview-label">Bản trải nghiệm</span>
+        <div class="topbar-actions">
+          <span id="backend-label" class="preview-label">Đã kết nối</span>
+          <button type="button" class="secondary-button" data-settings-target="ai-card">Kết nối AI</button>
+          <button id="register-action" type="button" class="secondary-button" hidden>Đăng ký</button>
+          <button id="account-action" type="button" class="secondary-button" data-settings-target="account-card">Tài khoản</button>
+        </div>
       </header>
       <main>
         <!-- Hỏi đáp, lịch sử và câu hỏi gợi ý -->
@@ -84,6 +133,50 @@
             <button class="secondary-button" data-action="new-chat">
               + Cuộc trò chuyện mới
             </button>
+          </div>
+          <div class="scope-bar">
+            <fieldset id="kb-scope">
+              <legend>Nguồn tra cứu (tối đa 5 kho)</legend>
+            </fieldset>
+            <label class="form-field">
+              Mốc thời gian
+              <input id="as-of" type="date" />
+            </label>
+            <label class="form-field">
+              AI
+              <select id="provider">
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Claude</option>
+                <option value="deepseek">DeepSeek</option>
+                <option value="openrouter">OpenRouter</option>
+              </select>
+            </label>
+            <details class="advanced-options">
+              <summary>Tùy chọn nâng cao</summary>
+              <div class="advanced-grid">
+            <label class="form-field">
+              Engine
+              <select id="engine"><option value="direct">Trực tiếp</option><option value="opencode">OpenCode (local)</option></select>
+            </label>
+            <label class="form-field">
+              Nguồn kết nối
+              <select id="credential-source">
+                <option value="auto">Tự động</option>
+                <option value="personal">Key cá nhân</option>
+                <option value="shared">Key dùng chung</option>
+                <option value="chatgpt" hidden>ChatGPT Plus/Pro</option>
+              </select>
+            </label>
+            <label class="form-field">
+              Tra cứu
+              <select id="retrieval-mode"><option value="hybrid">Ngữ nghĩa + số hiệu/điều</option><option value="keyword">Số hiệu/điều</option></select>
+            </label>
+            <label class="form-field" id="model-field">
+              Model
+              <input id="model" maxlength="200" placeholder="Để trống dùng mặc định" />
+            </label>
+              </div>
+            </details>
           </div>
           <div id="history-bar" class="history-bar" hidden>
             <label for="history-select">Lịch sử</label>
@@ -112,9 +205,9 @@
                 role="log"
                 aria-label="Các câu hỏi đã lưu"
               ></div>
-              <p class="assistant-status">
-                Câu hỏi đã được lưu trên thiết bị. Tính năng trả lời AI chưa
-                được kết nối.
+              <p id="assistant-status" class="assistant-status">
+                Lịch sử hội thoại chỉ lưu trên thiết bị này. Câu trả lời không
+                thay thế tư vấn pháp lý.
               </p>
             </div>
             <form id="question-form" class="question-composer">
@@ -125,16 +218,16 @@
                 id="question"
                 placeholder="Nhập câu hỏi của bạn…"
                 rows="3"
-                maxlength="5000"
+                maxlength="4000"
                 required
               ></textarea>
               <div class="composer-bottom">
-                <span>Enter để lưu · Shift + Enter để xuống dòng</span>
+                <span>Enter để gửi · Shift + Enter để xuống dòng</span>
                 <button
                   id="send-question"
                   class="send-button"
                   type="submit"
-                  aria-label="Lưu câu hỏi"
+                  aria-label="Gửi câu hỏi"
                   disabled
                 >
                   ↑
@@ -148,8 +241,8 @@
               <button>Làm thế nào để kiểm tra hiệu lực của một văn bản?</button>
             </div>
             <p class="small-print centered">
-              Bản trải nghiệm: lưu câu hỏi trên trình duyệt, chưa tạo câu trả
-              lời AI.
+              Câu trả lời chỉ dựa trên các kho đã chọn và luôn kèm nguồn để
+              kiểm tra.
             </p>
           </div>
         </section>
@@ -164,10 +257,18 @@
           <div class="section-heading page-heading">
             <div>
               <h1 id="library-title">Thư viện tài liệu</h1>
-              <p class="subtitle">Tìm kiếm, lưu và đọc tài liệu PDF của bạn.</p>
+              <p id="library-note" class="subtitle">Tìm kiếm, lưu và đọc tài liệu PDF.</p>
             </div>
             <button class="primary-button" id="open-upload">
               + Thêm tài liệu
+            </button>
+          </div>
+          <div class="kb-bar">
+            <label class="sr-only" for="kb-select">Chọn kho</label>
+            <select id="kb-select"></select>
+            <button id="new-kb" class="secondary-button">+ Kho riêng</button>
+            <button id="publish-kb" class="secondary-button" hidden>
+              Xuất bản bản dựng mới
             </button>
           </div>
           <div class="filters">
@@ -224,7 +325,7 @@
           </div>
           <div class="table-footer">
             <span id="result-count"></span>
-            <span>Metadata mẫu không xác nhận hiệu lực pháp lý.</span>
+            <button id="load-more" class="text-button" hidden>Tải thêm</button>
           </div>
         </section>
 
@@ -237,25 +338,69 @@
         >
           <h1 id="settings-title">Thiết lập</h1>
           <div class="settings-grid">
-            <article class="settings-card">
-              <h2>Phiên trải nghiệm</h2>
-              <p>
-                Chưa kết nối đăng nhập Firebase hoặc AI. Các thao tác tài liệu
-                và câu hỏi hiện chạy trong trình duyệt.
-              </p>
+            <article class="settings-card" id="account-card" tabindex="-1">
+              <h2>Tài khoản</h2>
+              <p id="account-info"></p>
+              <p class="small-print">Liên kết Google với tài khoản hiện tại:</p>
+              <div id="google-link-button"></div>
+              <button id="logout" class="secondary-button">Đăng xuất</button>
+              <button id="logout-all" class="text-button danger">
+                Đăng xuất mọi thiết bị
+              </button>
+              <h3>Phiên đăng nhập</h3>
+              <ul id="session-list" class="connection-list"></ul>
+              <p id="session-error" class="error" role="alert"></p>
+              <button id="sessions-more" type="button" class="text-button" hidden>Tải thêm</button>
+            </article>
+            <article class="settings-card" id="ai-card" tabindex="-1">
+              <h2>Kết nối AI</h2>
+              <ul id="connection-list" class="connection-list"></ul>
+              <form id="connection-form" class="inline-form">
+                <label class="sr-only" for="connection-provider">Nhà cung cấp</label>
+                <select id="connection-provider">
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Claude (Anthropic)</option>
+                  <option value="deepseek">DeepSeek</option>
+                  <option value="openrouter">OpenRouter</option>
+                </select>
+                <label class="sr-only" for="connection-scope">Phạm vi khóa</label>
+                <select id="connection-scope"><option value="personal">Key cá nhân</option><option value="shared" hidden>Key dùng chung</option></select>
+                <label class="sr-only" for="connection-key">Khóa API</label>
+                <input
+                  id="connection-key"
+                  type="password"
+                  autocomplete="off"
+                  placeholder="Khóa API cá nhân"
+                  required
+                />
+                <button class="primary-button" type="submit">Lưu khóa</button>
+              </form>
+              <div class="chatgpt-connection">
+                <h3>ChatGPT Plus/Pro qua OpenCode</h3>
+                <p id="chatgpt-status" class="small-print">Đang kiểm tra…</p>
+                <p id="chatgpt-instructions" class="small-print" hidden></p>
+                <a id="chatgpt-link" class="secondary-button" target="_blank" rel="noopener noreferrer" hidden>Mở trang đăng nhập OpenAI</a>
+                <div class="ai-actions">
+                  <button id="chatgpt-start" type="button" class="secondary-button" hidden>Kết nối ChatGPT Plus/Pro</button>
+                  <button id="chatgpt-finish" type="button" class="secondary-button" hidden>Tôi đã đăng nhập</button>
+                  <button id="chatgpt-use" type="button" class="secondary-button" hidden>Sử dụng ChatGPT</button>
+                  <button id="chatgpt-disconnect" type="button" class="text-button danger" hidden>Ngắt kết nối</button>
+                </div>
+              </div>
               <p class="small-print">
-                Bản HTML chạy độc lập. Backend hiện chỉ có /health, chưa có API
-                nghiệp vụ.
+                Khóa được mã hóa ở máy chủ và không bao giờ hiển thị lại. Chỉ
+                hiện trạng thái đã cấu hình. Embedding luôn dùng khóa OpenAI;
+                nếu chỉ có khóa Claude, hãy dùng mục tìm theo số hiệu/điều.
               </p>
             </article>
             <article class="settings-card">
               <h2>Dữ liệu trên thiết bị</h2>
               <p>
-                Metadata, đánh dấu và câu hỏi lưu bằng localStorage. PDF chỉ giữ
-                trong phiên hiện tại; tải lại trang cần chọn lại file.
+                Lịch sử hội thoại và đánh dấu lưu bằng localStorage, tách theo
+                tài khoản. Tài liệu và kho nằm trên máy chủ.
               </p>
               <button id="reset-data" class="secondary-button">
-                Khôi phục dữ liệu mẫu
+                Xóa lịch sử trên thiết bị
               </button>
             </article>
           </div>
@@ -286,8 +431,9 @@
         </label>
         <label class="form-field">
           Tên tài liệu
-          <input name="title" maxlength="180" required />
+          <input name="title" maxlength="300" required />
         </label>
+        <div id="shared-fields" class="shared-fields" hidden>
         <div class="form-grid">
           <label class="form-field">
             Loại văn bản
@@ -300,17 +446,34 @@
           </label>
           <label class="form-field">
             Số hiệu
-            <input name="number" maxlength="80" />
+            <input name="number" maxlength="100" />
           </label>
         </div>
         <label class="form-field">
           Cơ quan ban hành
-          <input name="authority" maxlength="120" />
+          <input name="authority" maxlength="200" />
         </label>
-        <p class="form-notice">
-          Chế độ trải nghiệm: metadata lưu trong trình duyệt, PDF chỉ giữ trong
-          phiên này. Chưa gửi lên Firebase.
-        </p>
+        <div class="form-grid">
+          <label class="form-field">
+            Ngày ban hành
+            <input name="issueDate" type="date" />
+          </label>
+          <label class="form-field">
+            Ngày hiệu lực
+            <input name="effectiveDate" type="date" />
+          </label>
+        </div>
+        <label class="form-field">
+          Tình trạng hiệu lực
+          <select name="status">
+            <option value="effective">Còn hiệu lực</option>
+            <option value="not_yet_effective">Chưa có hiệu lực</option>
+            <option value="partially_expired">Hết hiệu lực một phần</option>
+            <option value="expired">Hết hiệu lực</option>
+          </select>
+        </label>
+        </div>
+        <p id="upload-notice" class="form-notice"></p>
         <p id="upload-error" class="error" role="alert"></p>
         <div class="dialog-actions">
           <button type="button" class="secondary-button" data-close>
@@ -335,29 +498,35 @@
       <div class="detail-toolbar">
         <button id="detail-bookmark" class="secondary-button">Đánh dấu</button>
         <a id="download-pdf" class="secondary-button" hidden>Tải PDF</a>
+        <button id="retry-document" class="secondary-button" hidden>
+          Xử lý lại
+        </button>
         <button id="delete-document" class="text-button danger">
           Xóa tài liệu
         </button>
       </div>
       <iframe id="pdf-viewer" title="Nội dung tài liệu PDF" hidden></iframe>
       <div id="pdf-empty" class="empty-state">
-        <h3 id="pdf-empty-title">Chọn PDF để đọc</h3>
+        <h3 id="pdf-empty-title">Đang tải PDF…</h3>
         <p id="pdf-empty-note"></p>
-        <label class="primary-button file-picker">
-          Chọn PDF để xem
-          <input
-            id="reselect-pdf"
-            class="sr-only"
-            type="file"
-            accept="application/pdf,.pdf"
-          />
-        </label>
       </div>
       <p id="pdf-error" class="error" role="alert"></p>
       <p class="small-print">
-        Thông tin trải nghiệm không thay thế nguồn văn bản chính thức hoặc tư
-        vấn pháp lý.
+        Nội dung không thay thế nguồn văn bản chính thức hoặc tư vấn pháp lý.
       </p>
+    </dialog>
+
+    <!-- Đoạn nguồn của một trích dẫn -->
+    <dialog id="evidence-dialog" aria-labelledby="evidence-title">
+      <button class="close-dialog" data-close aria-label="Đóng">×</button>
+      <h2 id="evidence-title"></h2>
+      <p id="evidence-meta" class="subtitle"></p>
+      <blockquote id="evidence-text" class="evidence-text"></blockquote>
+      <p id="evidence-limits" class="small-print"></p>
+      <p id="evidence-error" class="error" role="alert"></p>
+      <a id="evidence-link" class="secondary-button" target="_blank" rel="noopener" hidden>
+        Mở nguồn web
+      </a>
     </dialog>
     <!-- Thông báo thao tác -->
     <div id="toast" class="toast" role="status" hidden></div>

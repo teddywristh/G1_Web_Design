@@ -52,7 +52,7 @@ def google_challenge(request: Request, response: Response):
         path="/api/v1/auth/google",
         max_age=300,
     )
-    return {"nonce": nonce}
+    return {"nonce": nonce, "clientId": settings.google_oauth_client_id}
 
 
 @router.post("/google", response_model=SessionUser)

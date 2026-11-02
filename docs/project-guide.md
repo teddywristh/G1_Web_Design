@@ -286,17 +286,17 @@ Chỉ chạy lệnh này sau khi xác nhận project và credentials đúng.
 
 ## 5. Hướng dẫn frontend agent
 
-Frontend dùng Next.js và Firebase Client SDK.
+Frontend hiện là HTML, CSS và JavaScript thuần trong `apps/web` (không build). Nó gọi backend bằng phiên cookie HttpOnly và header `X-CSRF-Token`, không dùng Firebase Client SDK.
 
 Frontend agent cần:
 
 1. Đọc `docs/architecture.md`, `docs/plans.md` và tài liệu này.
-2. Tạo `.env.local` từ `apps/web/.env.example`.
-3. Chỉ dùng biến client bắt đầu bằng `NEXT_PUBLIC_`.
-4. Cấu hình Firebase Client SDK bằng web app config của project.
-5. Đăng nhập user bằng Firebase Authentication.
-6. Lấy ID token sau khi đăng nhập.
-7. Gửi token đến FastAPI trong header `Authorization`.
+2. Chạy `python -m http.server 8085 --bind 127.0.0.1 --directory apps/web`; địa chỉ API đặt ở `<meta name="api-base">` trong `index.html`.
+3. Mọi cấu hình phía client là công khai; không đặt khóa bí mật vào HTML/JS.
+4. Origin frontend phải có trong `BACKEND_CORS_ORIGINS`.
+5. Đăng nhập qua `/api/v1/auth/login`, `/register` hoặc `/google`.
+6. Giữ `csrfToken` trong bộ nhớ, không trong localStorage.
+7. Gửi `credentials: include` và `X-CSRF-Token` với mọi request ghi.
 8. Không đọc trực tiếp private Firestore/Storage nếu API là data boundary.
 9. Hiển thị citation từ response và cho phép user kiểm tra nguồn.
 10. Không lưu service account, private key hoặc Admin SDK trong frontend.

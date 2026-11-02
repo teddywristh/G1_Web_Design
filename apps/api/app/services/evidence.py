@@ -107,6 +107,8 @@ def read(repo, user, provision_id):
     return {
         **to_item(provision, {}, limits),
         "id": provision_id,
+        "documentTitle": provision["documentTitle"],
+        "documentNumber": provision["documentNumber"],
         "validFrom": provision.get("validFrom"),
         "validUntil": provision.get("validUntil"),
         "endKind": provision.get("endKind", "unknown"),

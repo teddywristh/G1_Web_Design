@@ -2,7 +2,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 
-from app.api.v1.uploads import receive_pdf
+from app.api.v1.uploads import receive_pdf, send_pdf
 from app.core.config import get_settings
 from app.core.errors import APIError
 from app.dependencies import (
@@ -121,6 +121,20 @@ def document_processing(
 ):
     document = knowledge.private_document(repo, user, kb_id, doc_id)
     return knowledge.processing(repo, document, get_settings())
+
+
+@router.get("/knowledge-bases/{kb_id}/documents/{doc_id}/download")
+def document_download(
+    kb_id: str,
+    doc_id: str,
+    user=Depends(current_user),
+    repo=Depends(get_repository),
+    bucket=Depends(get_bucket),
+):
+    document = knowledge.private_document(repo, user, kb_id, doc_id)
+    if document.get("fileState") != "available":
+        raise APIError(404, "not_found", "Document not found")
+    return send_pdf(bucket, document["storagePath"], f"{doc_id}.pdf")
 
 
 @router.post("/knowledge-bases/{kb_id}/documents/{doc_id}/reprocess", response_model=ProcessingOut)

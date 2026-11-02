@@ -1,11 +1,6 @@
-from pathlib import Path
-from tempfile import NamedTemporaryFile
-
 from fastapi import APIRouter, Depends, Query, Request, Response
-from fastapi.responses import FileResponse
-from starlette.background import BackgroundTask
 
-from app.api.v1.uploads import receive_pdf
+from app.api.v1.uploads import receive_pdf, send_pdf
 from app.core.config import get_settings
 from app.core.errors import APIError
 from app.core.security import verify_firebase_token
@@ -95,31 +90,7 @@ def download(
     bucket=Depends(get_bucket),
 ):
     document = documents.ensure_document(repo.get("legal_documents", doc_id), public=True)
-    handle = NamedTemporaryFile(delete=False, suffix=".pdf")
-    path = handle.name
-    handle.close()
-    try:
-        blob = bucket.blob(document["storagePath"])
-        blob.reload(timeout=10, retry=None)
-        maximum = get_settings().max_upload_size_bytes
-        if blob.size is None or blob.size > maximum:
-            raise APIError(503, "file_unavailable", "Stored file exceeds the download limit")
-        blob.download_to_filename(
-            path,
-            if_generation_match=blob.generation,
-            timeout=get_settings().storage_timeout_seconds,
-            retry=None,
-        )
-    except Exception:
-        Path(path).unlink(missing_ok=True)
-        raise
-    return FileResponse(
-        path,
-        media_type="application/pdf",
-        filename=f"{doc_id}.pdf",
-        headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"},
-        background=BackgroundTask(Path(path).unlink, missing_ok=True),
-    )
+    return send_pdf(bucket, document["storagePath"], f"{doc_id}.pdf")
 
 
 @router.get("/admin/documents", response_model=DocumentPage, tags=["admin"])

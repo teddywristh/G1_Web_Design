@@ -1,6 +1,9 @@
 import hashlib
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import get_settings
@@ -49,3 +52,31 @@ async def receive_pdf(request, store, repo, bucket, doc_id, actor, version, **op
             version,
             **options,
         )
+
+
+def send_pdf(bucket, storage_path, filename):
+    """Download a stored PDF to a temp file and stream it back without public URLs."""
+    handle = NamedTemporaryFile(delete=False, suffix=".pdf")
+    path = handle.name
+    handle.close()
+    try:
+        blob = bucket.blob(storage_path)
+        blob.reload(timeout=10, retry=None)
+        if blob.size is None or blob.size > get_settings().max_upload_size_bytes:
+            raise APIError(503, "file_unavailable", "Stored file exceeds the download limit")
+        blob.download_to_filename(
+            path,
+            if_generation_match=blob.generation,
+            timeout=get_settings().storage_timeout_seconds,
+            retry=None,
+        )
+    except Exception:
+        Path(path).unlink(missing_ok=True)
+        raise
+    return FileResponse(
+        path,
+        media_type="application/pdf",
+        filename=filename,
+        headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"},
+        background=BackgroundTask(Path(path).unlink, missing_ok=True),
+    )

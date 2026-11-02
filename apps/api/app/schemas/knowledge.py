@@ -38,6 +38,8 @@ class KnowledgeBaseOut(Out):
     title: str
     state: str
     ready: bool = False
+    activeIndexGeneration: str | None = None
+    latestGeneration: str | None = None
     version: int
 
 

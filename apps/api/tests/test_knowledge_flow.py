@@ -7,6 +7,7 @@ import pytest
 from app.core.config import Settings
 from app.core.errors import APIError
 from app.ingestion import parser, pipeline
+from app.schemas.knowledge import EvidenceOut
 from app.schemas.rag import AskRequest
 from app.services import documents, evidence, knowledge, qa, users
 from app.workers import ingestion as worker
@@ -123,6 +124,7 @@ def test_answer_has_resolvable_citation_and_isolation(env, tmp_path):
     citation = response.citations[0]
     assert "[1]" in response.answer and citation.provision_version_id
     shown = evidence.read(repo, user(repo, "alice"), citation.provision_version_id)
+    EvidenceOut.model_validate(shown)
     assert "60 ngày" in shown["text"] and "user_document_unverified" in shown["limitations"]
     with pytest.raises(APIError) as error:
         evidence.read(repo, user(repo, "bob"), citation.provision_version_id)
@@ -292,10 +294,12 @@ def test_routes_hide_other_users_private_knowledge_bases(env, monkeypatch):
         url = f"/api/v1/knowledge-bases/{kb_id}/documents/{doc.json()['id']}"
         assert client.put(url + "/file", content=b"%PDF-1 x", headers=pdf).status_code == 200
         assert client.get(url + "/processing").json()["status"] == "queued"
+        assert client.get(url + "/download").status_code == 200
 
         app.dependency_overrides[verify_firebase_token] = lambda: {"uid": "bob"}
         assert client.get("/api/v1/knowledge-bases").json() == []
         assert client.get(url + "/processing").status_code == 404
+        assert client.get(url + "/download").status_code == 404
         assert client.delete(url, headers={"if-match": '"2"'}).status_code == 404
         assert client.get("/api/v1/evidence/anything").status_code == 404
         body = {"question": "Điều 1?", "knowledge_base_ids": [kb_id]}
