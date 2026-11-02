@@ -430,6 +430,10 @@ def test_rag_route_uses_backend_auth_and_returns_citations(api, repo, monkeypatc
     ai.answer.return_value = "Căn cứ Điều 1."
     factory = Mock(return_value=ai)
     monkeypatch.setattr("app.api.v1.rag.OpenAIService", factory)
+    monkeypatch.setattr(
+        "app.api.v1.rag.get_settings",
+        lambda: get_settings().model_copy(update={"openai_api_key": "sk-test-only"}),
+    )
     payload = {"question": "Quy định về hợp đồng?", "top_k": 5}
     assert client.post("/api/v1/rag/ask", json=payload).status_code == 401
     factory.assert_not_called()

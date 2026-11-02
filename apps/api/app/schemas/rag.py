@@ -1,4 +1,8 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
+
+from app.schemas.ai_connections import CredentialSource, Provider
 
 
 class StoredChunk(BaseModel):
@@ -28,9 +32,17 @@ class Citation(BaseModel):
 class AskRequest(BaseModel):
     question: str = Field(min_length=3, max_length=4000)
     top_k: int = Field(default=5, ge=1, le=20)
+    provider: Provider = "openai"
+    credential_source: CredentialSource = "auto"
+    model: str | None = Field(
+        default=None, min_length=1, max_length=200, pattern=r"^[A-Za-z0-9_.:-]+$"
+    )
+    retrieval_mode: Literal["hybrid", "keyword"] = "hybrid"
 
 
 class AskResponse(BaseModel):
+    provider: Provider | None = None
+    credential_source: Literal["personal", "shared"] | None = None
     answer: str
     citations: list[Citation]
     retrieved_chunks: list[StoredChunk]

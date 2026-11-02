@@ -12,6 +12,9 @@ import {
   FileText,
   FolderOpen,
   Menu,
+  KeyRound,
+  LogIn,
+  UserRound,
   MessageSquare,
   Plus,
   Search,
@@ -30,16 +33,24 @@ import {
 } from "@/lib/workspace";
 
 import { QuestionWorkspace } from "@/components/question-workspace";
+import { AiSettings } from "@/components/ai-settings";
+import { AiSessionProvider, useAiSession } from "@/lib/ai-session";
 
 type View = "library" | "saved" | "conversations" | "settings";
 const categories = ["Tất cả", "Bộ luật", "Luật", "Nghị định", "Thông tư"];
 const DOCUMENT_KEY = "le-luat.documents.v1";
 const CONVERSATION_KEY = "le-luat.conversations.v1";
 
-export default function Workspace() {
+function Workspace() {
+  const { profile } = useAiSession();
+  const historyOwner = useRef("demo");
   const [documents, setDocuments] = useState(initialDocuments);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [view, setView] = useState<View>("conversations");
+  const [settingsFocus, setSettingsFocus] = useState<{
+    target: "account" | "ai";
+    sequence: number;
+  } | null>(null);
   const [category, setCategory] = useState("Tất cả");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("newest");
@@ -72,11 +83,27 @@ export default function Workspace() {
     if (!ready) return;
     try {
       localStorage.setItem(DOCUMENT_KEY, JSON.stringify(documents));
-      localStorage.setItem(CONVERSATION_KEY, JSON.stringify(conversations));
     } catch {
       notify("Trình duyệt không thể lưu thay đổi. Hãy kiểm tra dung lượng lưu trữ.");
     }
-  }, [documents, conversations, ready]);
+  }, [documents, ready]);
+
+  useEffect(() => {
+    const owner = profile?.id || "demo";
+    if (historyOwner.current !== owner) {
+      historyOwner.current = owner;
+      setConversations(owner === "demo" ? readLocal<Conversation[]>(CONVERSATION_KEY, []) : []);
+      setActiveConversation(null);
+      return;
+    }
+    if (ready && !profile) {
+      try {
+        localStorage.setItem(CONVERSATION_KEY, JSON.stringify(conversations));
+      } catch {
+        notify("Không lưu được ghi chép trên thiết bị.");
+      }
+    }
+  }, [conversations, ready, profile]);
 
   function notify(message: string) {
     setToast(message);
@@ -89,6 +116,24 @@ export default function Workspace() {
     setQuery("");
     setMobileOpen(false);
   }
+  function openSettings(target: "account" | "ai") {
+    navigate("settings");
+    setSettingsFocus((previous) => ({ target, sequence: (previous?.sequence || 0) + 1 }));
+  }
+
+  useEffect(() => {
+    if (view !== "settings" || !settingsFocus) return;
+    const section = document.getElementById(
+      settingsFocus.target === "account" ? "account-settings" : "ai-settings",
+    );
+    section?.scrollIntoView({ block: "start", behavior: "instant" });
+    const focus =
+      settingsFocus.target === "account" && !profile
+        ? document.getElementById("account-email")
+        : section;
+    focus?.focus({ preventScroll: true });
+  }, [view, settingsFocus, profile]);
+
   function toggleSaved(id: string) {
     setDocuments((current) =>
       current.map((doc) => (doc.id === id ? { ...doc, saved: !doc.saved } : doc)),
@@ -178,21 +223,35 @@ export default function Workspace() {
                 .padStart(2, "0")}
             </span>
           </button>
+          <button onClick={() => openSettings("ai")}>
+            <KeyRound size={19} /> Kết nối AI
+          </button>
         </nav>
         <div className="sidebar-bottom">
           <button
             onClick={() => navigate("settings")}
             className={view === "settings" ? "active" : ""}
           >
-            <Settings2 size={18} /> Thiết lập trải nghiệm
+            <Settings2 size={18} /> Tài khoản & thiết lập
           </button>
-          <div className="profile">
-            <span className="avatar">M</span>
+          <button
+            className="profile account-profile"
+            aria-label="Mở tài khoản dự án"
+            onClick={() => openSettings("account")}
+          >
+            <span className="avatar">{profile?.displayName.slice(0, 1) || "M"}</span>
             <div>
-              Không gian cá nhân<small>Phiên trải nghiệm · Local</small>
+              {profile?.displayName || "Không gian cá nhân"}
+              <small>
+                {profile
+                  ? profile.role === "admin"
+                    ? "Quản trị viên"
+                    : "Đã đăng nhập"
+                  : "Phiên trải nghiệm · Local"}
+              </small>
             </div>
             <span className="profile-dot" />
-          </div>
+          </button>
         </div>
       </aside>
 
@@ -206,8 +265,8 @@ export default function Workspace() {
             >
               <Menu size={21} />
             </button>
-            <span>Không gian làm việc</span>
-            <span className="slash">/</span>
+            <span className="breadcrumb-context">Không gian làm việc</span>
+            <span className="slash breadcrumb-context">/</span>
             <strong>
               {
                 {
@@ -219,8 +278,28 @@ export default function Workspace() {
               }
             </strong>
           </div>
-          <div className="preview-label">
-            <span /> Bản trải nghiệm <span className="version">v.01</span>
+          <div className="topbar-actions">
+            <div className="preview-label">
+              <span /> Bản trải nghiệm
+            </div>
+            <button
+              className="header-ai-button"
+              aria-label="Kết nối AI"
+              onClick={() => openSettings("ai")}
+            >
+              <KeyRound size={16} />
+              <span className="connection-label-desktop">Kết nối AI</span>
+              <span className="connection-label-mobile">AI</span>
+            </button>
+            <button
+              className="header-account-button"
+              aria-label={profile ? "Tài khoản" : "Đăng nhập"}
+              title={profile?.email || "Đăng nhập tài khoản dự án"}
+              onClick={() => openSettings("account")}
+            >
+              {profile ? <UserRound size={16} /> : <LogIn size={16} />}
+              <span>{profile ? "Tài khoản" : "Đăng nhập"}</span>
+            </button>
           </div>
         </header>
         <main>
@@ -391,6 +470,8 @@ export default function Workspace() {
               active={active}
               onSelect={setActiveConversation}
               onNew={newConversation}
+              onLogin={() => openSettings("account")}
+              onConnectAI={() => openSettings("ai")}
               onQuestion={(question) => {
                 if (active) {
                   setConversations((items) =>
@@ -398,6 +479,7 @@ export default function Workspace() {
                       item.id === active.id ? { ...item, notes: [...item.notes, question] } : item,
                     ),
                   );
+                  return active.id;
                 } else {
                   const id = crypto.randomUUID();
                   setConversations((items) => [
@@ -410,6 +492,7 @@ export default function Workspace() {
                     ...items,
                   ]);
                   setActiveConversation(id);
+                  return id;
                 }
               }}
               onRename={(title) =>
@@ -431,40 +514,23 @@ export default function Workspace() {
                   <p className="eyebrow">
                     <span /> KHÔNG GIAN RIÊNG CỦA BẠN
                   </p>
-                  <h1>Thiết lập</h1>
+                  <h1>Tài khoản & kết nối AI</h1>
                   <p className="subtitle">Thông tin kết nối và cách dữ liệu được lưu trữ.</p>
                 </div>
               </section>
               <div className="settings-grid">
-                <section className="settings-card">
-                  <ShieldCheck size={28} />
-                  <h2>Phiên trải nghiệm</h2>
-                  <p>
-                    Chưa kết nối đăng nhập Firebase. Đây là không gian local, không đại diện cho tài
-                    khoản hoặc quyền Admin thực tế.
-                  </p>
-                  <div className="setting-row">
-                    <span>Backend FastAPI</span>
-                    <span className={`status-badge ${connected ? "ready" : "uploaded"}`}>
-                      <span />
-                      {connected === null
-                        ? "Đang kiểm tra"
-                        : connected
-                          ? "Đã kết nối"
-                          : "Chưa kết nối"}
-                    </span>
-                  </div>
-                  <p className="small-print">
-                    Kết nối chỉ kiểm tra /health. Các thao tác tài liệu và ghi chép hiện chạy trong
-                    trình duyệt.
-                  </p>
-                </section>
+                <AiSettings
+                  connected={connected}
+                  onLogin={() => openSettings("account")}
+                  onConnect={() => openSettings("ai")}
+                />
                 <section className="settings-card">
                   <FolderOpen size={28} />
                   <h2>Dữ liệu trên thiết bị</h2>
                   <p>
-                    Metadata, đánh dấu và ghi chép được lưu bằng localStorage. PDF chỉ có thể đọc
-                    trong phiên vừa chọn file; mở lại trang cần chọn lại PDF.
+                    Tài liệu mẫu và ghi chép khi chưa đăng nhập được lưu trên thiết bị. Khi đăng
+                    nhập, câu hỏi và câu trả lời AI chỉ có trong phiên hiện tại. PDF cần chọn lại
+                    khi mở trang.
                   </p>
                   <button
                     className="secondary-button"
@@ -483,9 +549,7 @@ export default function Workspace() {
             </>
           )}
           <footer className="page-footer">
-            <span className="footer-wordmark">
-              Legal AI
-            </span>
+            <span className="footer-wordmark">Legal AI</span>
             <span>Đọc kỹ hơn. Hiểu sâu hơn.</span>
             <span>Được tạo cho những góc nhìn độc lập.</span>
           </footer>
@@ -766,5 +830,13 @@ function UploadDialog({
         </div>
       </form>
     </Dialog>
+  );
+}
+
+export default function WorkspacePage() {
+  return (
+    <AiSessionProvider>
+      <Workspace />
+    </AiSessionProvider>
   );
 }

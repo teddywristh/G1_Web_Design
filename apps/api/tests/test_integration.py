@@ -299,3 +299,66 @@ def test_firebase_disabled_and_expired_tokens_are_rejected(environment):
         api.get("/api/v1/users/me", headers={"Authorization": "Bearer " + expired}).status_code
         == 401
     )
+
+
+def test_encrypted_ai_credentials_with_real_firebase_authorization(environment, monkeypatch):
+    from cryptography.fernet import Fernet
+    from pydantic import SecretStr
+
+    from app.core.config import get_settings
+    from app.services.ai_connections import connection_id, resolve
+
+    api, repo, _ = environment
+    monkeypatch.setattr(
+        get_settings(), "ai_credential_encryption_key", SecretStr(Fernet.generate_key().decode())
+    )
+    admin_uid, admin = admin_session(api, repo)
+    uid, reader = signup(api)
+    secret = "sk-test-emulator-not-a-real-key"
+    response = api.put(
+        "/api/v1/ai/connections/openai",
+        headers=reader,
+        json={"apiKey": secret, "expectedVersion": 0},
+    )
+    assert response.status_code == 200, response.text
+    assert secret not in response.text
+    stored = repo.get("ai_connections", connection_id("user:" + uid, "openai"))
+    assert secret not in str(stored)
+    assert resolve(repo, {"id": uid}, "openai", "personal", get_settings()).api_key == secret
+    assert (
+        api.put(
+            "/api/v1/admin/ai/connections/anthropic",
+            headers=reader,
+            json={"apiKey": secret, "expectedVersion": 0},
+        ).status_code
+        == 403
+    )
+    shared = api.put(
+        "/api/v1/admin/ai/connections/anthropic",
+        headers=admin,
+        json={"apiKey": secret, "expectedVersion": 0},
+    )
+    assert shared.status_code == 200, shared.text
+    _, other = signup(api)
+    options = api.get("/api/v1/ai/connections", headers=other)
+    assert options.status_code == 200, options.text
+    assert secret not in options.text
+    assert not next(
+        x
+        for x in options.json()["connections"]
+        if x["scope"] == "personal" and x["provider"] == "openai"
+    )["configured"]
+    assert (
+        api.delete(
+            "/api/v1/ai/connections/openai",
+            headers={**reader, "If-Match": str(response.json()["version"])},
+        ).status_code
+        == 200
+    )
+    assert (
+        api.delete(
+            "/api/v1/admin/ai/connections/anthropic",
+            headers={**admin, "If-Match": str(shared.json()["version"])},
+        ).status_code
+        == 200
+    )

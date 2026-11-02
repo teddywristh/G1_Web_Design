@@ -1,6 +1,7 @@
 # Documentation
 
 - [Backend plan — không bao gồm LLM/AI](backend-plan.md): phạm vi và tiêu chí nghiệm thu.
+- [AI connections](ai-connections.md): key cá nhân/key chung, lựa chọn provider và điều kiện OAuth.
 - [API contract](api-contract.md): endpoint, payload, quyền, query, retry và mã lỗi.
 - [Architecture](architecture.md): kiến trúc backend hiện triển khai.
 - [Database schema](database-schema.md): trường dữ liệu, lifecycle, version và index.

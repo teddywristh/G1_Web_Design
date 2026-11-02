@@ -59,3 +59,7 @@ Cấu hình `OPENAI_API_KEY` trong môi trường backend để sử dụng RAG.
 ngưỡng lấy từ các biến tương ứng trong `.env.example`. Khi thiếu key, request RAG
 đã xác thực trả 503; các endpoint backend khác vẫn hoạt động. Giữ key ngoài Git.
 Các test tích hợp route dùng AI giả lập, không gọi API tính phí.
+
+## AI connection options
+
+Xem [AI connections](../../docs/ai-connections.md) cho key cá nhân/key chung của OpenAI và Anthropic, cấu hình mã hóa, lựa chọn provider/source và trạng thái OAuth cho website hosted. `POST /api/v1/rag/ask` nhận thêm provider, credential_source, model và retrieval_mode; request cũ tiếp tục dùng mặc định OpenAI/auto/hybrid.

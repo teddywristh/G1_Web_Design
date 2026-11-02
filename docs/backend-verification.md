@@ -36,3 +36,7 @@ docker build -t legal-api-backend:verify -f infra/docker/Dockerfile.api apps/api
 ## Giới hạn trước phát hành
 
 Chưa tạo/cấu hình hoặc deploy tài nguyên cloud; chưa smoke test IAM/index trên Firebase dev thật; chưa bật backup/PITR/Storage retention hoặc diễn tập restore. Emulator không xác minh đầy đủ IAM và yêu cầu composite indexes của Firestore thật. Các bước này có hướng dẫn trong [runbook](backend-operations.md) và phải hoàn tất theo môi trường phát hành.
+
+## Bổ sung AI connection options — 2026-11-02
+
+Sau khi tích hợp RAG và quản lý key cá nhân/key chung, bộ test hiện tại đạt 51 test với Firebase Emulator, gồm test HTTP contract giả lập cho OpenAI/Claude. Frontend typecheck/build và Chromium smoke test desktop/mobile đạt. Chi tiết phạm vi và điều kiện OAuth nằm tại [AI connections](ai-connections.md). Không gọi inference trả phí hoặc cấu hình OAuth hosted thật trong lần xác minh này.

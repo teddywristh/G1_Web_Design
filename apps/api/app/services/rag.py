@@ -1,6 +1,6 @@
 from app.core.config import Settings
 from app.schemas.rag import AskResponse, Citation, StoredChunk
-from app.services.ai import OpenAIService
+from app.services.ai import AnthropicService, OpenAIService
 
 
 def make_citations(chunks: list[StoredChunk]) -> list[Citation]:
@@ -21,7 +21,7 @@ def make_citations(chunks: list[StoredChunk]) -> list[Citation]:
 def answer_question(
     question: str,
     chunks: list[StoredChunk],
-    ai: OpenAIService,
+    ai: OpenAIService | AnthropicService,
     settings: Settings,
 ) -> AskResponse:
     sufficient = bool(chunks) and chunks[0].score >= settings.rag_min_retrieval_score

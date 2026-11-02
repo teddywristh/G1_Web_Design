@@ -26,7 +26,7 @@ def _text_score(query: str, content: str) -> float:
 
 def retrieve_chunks(
     database: Any,
-    query_embedding: list[float],
+    query_embedding: list[float] | None,
     query_text: str,
     top_k: int,
 ) -> list[StoredChunk]:
@@ -38,8 +38,12 @@ def retrieve_chunks(
         content = str(data.get("content") or data.get("text") or "").strip()
         if not content:
             continue
-        vector_score = _cosine_similarity(query_embedding, data.get("embedding", []))
-        score = 0.8 * vector_score + 0.2 * _text_score(query_text, content)
+        text_score = _text_score(query_text, content)
+        if query_embedding is None:
+            score = text_score
+        else:
+            vector_score = _cosine_similarity(query_embedding, data.get("embedding", []))
+            score = 0.8 * vector_score + 0.2 * text_score
         chunks.append(
             StoredChunk(
                 id=row.id,

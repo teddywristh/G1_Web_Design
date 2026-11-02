@@ -1,8 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAiSession } from "@/lib/ai-session";
 import { ArrowUp, MessageSquare, Plus, Trash2 } from "lucide-react";
 import type { Conversation } from "@/lib/workspace";
+
+type Reply = {
+  answer: string;
+  provider?: string;
+  credential_source?: string;
+  citations: { document_title: string; article?: string; page_number?: number }[];
+};
 
 const suggestions = [
   "Hợp đồng lao động cần có những nội dung gì?",
@@ -15,7 +23,9 @@ type Props = {
   active?: Conversation;
   onSelect: (id: string) => void;
   onNew: () => void;
-  onQuestion: (question: string) => void;
+  onLogin: () => void;
+  onConnectAI: () => void;
+  onQuestion: (question: string) => string;
   onRename: (title: string) => void;
   onDelete: () => void;
 };
@@ -25,18 +35,51 @@ export function QuestionWorkspace({
   active,
   onSelect,
   onNew,
+  onLogin,
+  onConnectAI,
   onQuestion,
   onRename,
   onDelete,
 }: Props) {
   const [question, setQuestion] = useState("");
   const hasQuestions = Boolean(active?.notes.length);
+  const { profile, choice, request } = useAiSession();
+  const [replies, setReplies] = useState<Record<string, Reply | { error: string }>>({});
+  const [pending, setPending] = useState(false);
+  const inFlight = useRef(false);
+  const owner = useRef(profile?.id);
+  owner.current = profile?.id;
+  useEffect(() => {
+    setReplies({});
+  }, [profile?.id]);
 
-  function submit() {
+  async function submit() {
     const value = question.trim();
-    if (!value) return;
-    onQuestion(value);
+    if (value.length < 3 || inFlight.current) return;
+    const index = active?.notes.length || 0;
+    const conversationId = onQuestion(value);
     setQuestion("");
+    if (!profile) return;
+    const account = profile.id;
+    const key = `${conversationId}-${index}`;
+    setPending(true);
+    inFlight.current = true;
+    try {
+      const response = await request<Reply>("/api/v1/rag/ask", {
+        method: "POST",
+        body: JSON.stringify({ question: value, ...choice, model: choice.model || undefined }),
+      });
+      if (owner.current === account) setReplies((items) => ({ ...items, [key]: response }));
+    } catch (error) {
+      if (owner.current === account)
+        setReplies((items) => ({
+          ...items,
+          [key]: { error: error instanceof Error ? error.message : "Không nhận được câu trả lời." },
+        }));
+    } finally {
+      setPending(false);
+      inFlight.current = false;
+    }
   }
 
   return (
@@ -49,6 +92,22 @@ export function QuestionWorkspace({
           <Plus size={16} /> Cuộc trò chuyện mới
         </button>
       </div>
+      {!profile && (
+        <div className="ai-onboarding" aria-label="Bắt đầu sử dụng AI">
+          <div>
+            <strong>Kết nối AI của bạn</strong>
+            <p>Đăng nhập để dùng OpenAI hoặc Claude với key cá nhân hay key chung.</p>
+          </div>
+          <div className="ai-actions">
+            <button className="secondary-button" onClick={onConnectAI}>
+              Xem kết nối AI
+            </button>
+            <button className="header-account-button" onClick={onLogin}>
+              Đăng nhập tài khoản
+            </button>
+          </div>
+        </div>
+      )}
       {conversations.length > 0 && (
         <div className="history-picker">
           <label htmlFor="conversation-history">Lịch sử</label>
@@ -91,11 +150,46 @@ export function QuestionWorkspace({
                 <div className="question-message" key={`${active!.id}-${index}`}>
                   <span>Bạn</span>
                   <p>{note}</p>
+                  {(() => {
+                    const reply = replies[`${active!.id}-${index}`];
+                    if (!reply) return null;
+                    return (
+                      <div className="ai-reply">
+                        <strong>
+                          {"error" in reply ? "Chưa nhận được câu trả lời" : "Trả lời AI"}
+                        </strong>
+                        <p>{"error" in reply ? reply.error : reply.answer}</p>
+                        {!("error" in reply) && (
+                          <>
+                            <small>
+                              {reply.provider} ·{" "}
+                              {reply.credential_source === "personal" ? "Key cá nhân" : "Key chung"}
+                            </small>
+                            <ul>
+                              {reply.citations.map((citation, i) => (
+                                <li key={i}>
+                                  {citation.document_title}
+                                  {citation.article ? ` · Điều ${citation.article}` : ""}
+                                  {citation.page_number ? ` · Trang ${citation.page_number}` : ""}
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
               <div className="assistant-status">
                 <MessageSquare size={18} />
-                <p>Câu hỏi đã được lưu trên thiết bị. Tính năng trả lời AI chưa được kết nối.</p>
+                <p>
+                  {pending
+                    ? "AI đang xử lý câu hỏi…"
+                    : profile
+                      ? "Câu hỏi và câu trả lời AI chỉ có trong phiên đăng nhập này."
+                      : "Câu hỏi đã lưu trên thiết bị. Đăng nhập trong Thiết lập để sử dụng AI."}
+                </p>
               </div>
             </div>
           </>
@@ -122,7 +216,7 @@ export function QuestionWorkspace({
             placeholder="Nhập câu hỏi của bạn…"
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
-            maxLength={5000}
+            maxLength={4000}
             rows={3}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -132,12 +226,14 @@ export function QuestionWorkspace({
             }}
           />
           <div className="composer-bottom">
-            <span>Enter để lưu · Shift + Enter để xuống dòng</span>
+            <span>
+              {profile ? "Enter để gửi AI" : "Enter để lưu"} · Shift + Enter để xuống dòng
+            </span>
             <button
               type="submit"
               className="send-question"
-              disabled={!question.trim()}
-              aria-label="Lưu câu hỏi"
+              disabled={question.trim().length < 3 || pending}
+              aria-label={profile ? "Gửi câu hỏi tới AI" : "Lưu câu hỏi"}
             >
               <ArrowUp size={20} />
             </button>
@@ -163,7 +259,9 @@ export function QuestionWorkspace({
           </div>
         )}
         <p className="chat-disclaimer">
-          Bản trải nghiệm: lưu câu hỏi trên trình duyệt, chưa tạo câu trả lời AI.
+          {profile
+            ? "AI hỗ trợ tra cứu. Hãy kiểm tra nguồn trước khi sử dụng kết quả."
+            : "Đăng nhập và chọn kết nối AI trong Thiết lập để nhận câu trả lời."}
         </p>
       </section>
     </div>

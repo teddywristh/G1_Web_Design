@@ -3,7 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -27,7 +27,14 @@ class Settings(BaseSettings):
     upload_lease_seconds: int = Field(default=900, ge=300)
     orphan_grace_seconds: int = Field(default=3600, ge=1800)
 
-    openai_api_key: str = ""
+    ai_credential_encryption_key: SecretStr = SecretStr("")
+    ai_allow_shared_keys: bool = True
+    ai_request_timeout_seconds: int = Field(default=30, ge=1, le=120)
+    anthropic_api_key: str = Field(default="", repr=False)
+    anthropic_model: str = ""
+    anthropic_api_version: str = "2023-06-01"
+    ai_max_output_tokens: int = Field(default=2048, ge=128, le=8192)
+    openai_api_key: str = Field(default="", repr=False)
     default_llm_model: str = "gpt-4o-mini"
     default_embedding_model: str = "text-embedding-3-small"
     rag_top_k: int = Field(default=5, ge=1, le=20)
