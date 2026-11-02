@@ -323,6 +323,71 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "search_chunks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "kbId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "indexGeneration",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "embeddingProfileId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "state",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "vector",
+          "vectorConfig": {
+            "dimension": 1536,
+            "flat": {}
+          }
+        }
+      ]
+    },
+    {
+      "collectionGroup": "processing_jobs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nextRunAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "knowledge_documents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "kbId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "deletedAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

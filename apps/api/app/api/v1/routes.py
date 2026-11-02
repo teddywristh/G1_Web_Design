@@ -1,12 +1,11 @@
-import hashlib
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
-from starlette.concurrency import run_in_threadpool
 
+from app.api.v1.uploads import receive_pdf
 from app.core.config import get_settings
 from app.core.errors import APIError
 from app.core.security import verify_firebase_token
@@ -17,6 +16,7 @@ from app.dependencies import (
     get_bucket,
     get_repository,
 )
+from app.ingestion import pipeline
 from app.schemas import (
     AuditPage,
     DocumentCreate,
@@ -29,7 +29,7 @@ from app.schemas import (
     UserPage,
     UserPatch,
 )
-from app.services import documents, users
+from app.services import documents, knowledge, users
 
 router = APIRouter(prefix="/api/v1")
 
@@ -197,45 +197,20 @@ async def document_upload(
     bucket=Depends(get_bucket),
     version=Depends(expected_version),
 ):
-    if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/pdf":
-        raise APIError(415, "unsupported_media_type", "Send a raw application/pdf body")
-    maximum = get_settings().max_upload_size_bytes
-    length = request.headers.get("content-length")
-    if length:
-        try:
-            if int(length) < 0:
-                raise ValueError()
-            if int(length) > maximum:
-                raise APIError(413, "file_too_large", "PDF exceeds upload limit")
-        except ValueError as exc:
-            raise APIError(422, "invalid_length", "Invalid Content-Length") from exc
-    # Bound RAM and disk even when Content-Length is absent or false.
-    size, prefix = 0, b""
-    digest = hashlib.sha256()
-    with NamedTemporaryFile(suffix=".pdf") as handle:
-        async for chunk in request.stream():
-            size += len(chunk)
-            if size > maximum:
-                raise APIError(413, "file_too_large", "PDF exceeds upload limit")
-            if len(prefix) < 5:
-                prefix = (prefix + chunk)[:5]
-            digest.update(chunk)
-            await run_in_threadpool(handle.write, chunk)
-        if prefix != b"%PDF-":
-            raise APIError(415, "invalid_pdf", "PDF signature is required")
-        await run_in_threadpool(handle.flush)
-        result = await run_in_threadpool(
-            documents.upload_document,
-            repo,
-            bucket,
-            doc_id,
-            handle.name,
-            size,
-            digest.hexdigest(),
-            user["id"],
-            request.state.request_id,
-            version,
-        )
+    knowledge.ensure_shared_kb(repo, request.state.request_id)
+    outbox = pipeline.job_outbox(
+        knowledge.SHARED, "legal_documents", doc_id, user["id"], "auto", get_settings()
+    )
+    result = await receive_pdf(
+        request,
+        documents.upload_document,
+        repo,
+        bucket,
+        doc_id,
+        user["id"],
+        version,
+        outbox=outbox,
+    )
     return tagged(response, result)
 
 

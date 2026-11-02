@@ -77,7 +77,8 @@ def test_reconcile_cli_error_exit_and_dry_run(cli, monkeypatch, capsys):
     module, repo, _ = cli
     reconcile = Mock(return_value={"errors": 1})
     monkeypatch.setattr(module, "reconcile", reconcile)
+    monkeypatch.setattr(module.knowledge, "reconcile", Mock(return_value={"errors": 0}))
     monkeypatch.setattr("sys.argv", ["backend_admin", "--project", "demo-legal-api", "reconcile"])
     assert module.main() == 1
     assert reconcile.call_args.kwargs["dry_run"] is True
-    assert json.loads(capsys.readouterr().out)["errors"] == 1
+    assert json.loads(capsys.readouterr().out)["shared"]["errors"] == 1

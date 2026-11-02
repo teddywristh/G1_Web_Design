@@ -15,6 +15,7 @@ from app.main import create_app
 from app.repositories.backend import decode_cursor, encode_cursor, utcnow
 from app.schemas import DocumentPatch, DocumentQuery
 from app.services import documents, users
+from tests.stubs import stub_qa
 
 
 class MemoryRepository:
@@ -34,7 +35,7 @@ class MemoryRepository:
     def get(self, collection, doc_id):
         return deepcopy(self.rows.get((collection, doc_id)))
 
-    def mutate(self, collection, doc_id, change, *, actor, event, request_id):
+    def mutate(self, collection, doc_id, change, *, actor, event, request_id, extra=None):
         with self.lock:
             if event == self.fail_event:
                 raise ServiceUnavailable("simulated outage")
@@ -48,6 +49,8 @@ class MemoryRepository:
                     "version": (current or {}).get("version", 0) + 1,
                 }
                 self.rows[(collection, doc_id)] = data
+                for name, row_id, row in extra(patch) if extra else []:
+                    self.rows[(name, row_id)] = row
                 self.audit.append({"event": event, "actorId": actor})
             return self.get(collection, doc_id)
 
@@ -411,24 +414,9 @@ def test_cursor_preserves_firestore_nanoseconds():
 
 
 def test_rag_route_uses_backend_auth_and_returns_citations(api, repo, monkeypatch):
-    from app.core.database import get_database
-
     client, app, _ = api
-    database = Mock()
-    row = Mock()
-    row.id = "chunk-1"
-    row.to_dict.return_value = {
-        "document_id": "doc-1",
-        "document_title": "Luật mẫu",
-        "content": "Điều 1 quy định về hợp đồng.",
-        "embedding": [1.0, 0.0],
-        "article": "1",
-    }
-    database.collection.return_value.limit.return_value.stream.return_value = [row]
-    app.dependency_overrides[get_database] = lambda: database
+    stub = stub_qa(monkeypatch)
     ai = Mock()
-    ai.embed.return_value = [[1.0, 0.0]]
-    ai.answer.return_value = "Căn cứ Điều 1."
     factory = Mock(return_value=ai)
     monkeypatch.setattr("app.api.v1.rag.OpenAIService", factory)
     monkeypatch.setattr(
@@ -446,19 +434,15 @@ def test_rag_route_uses_backend_auth_and_returns_citations(api, repo, monkeypatc
     repo.rows[("users", "reader")]["isActive"] = True
     response = client.post("/api/v1/rag/ask", json=payload)
     assert response.status_code == 200, response.text
-    assert response.json()["citations"][0]["chunk_id"] == "chunk-1"
+    assert response.json()["citations"][0]["chunk_id"] == "c"
     assert response.json()["has_sufficient_evidence"] is True
-    ai.embed.assert_called_once_with([payload["question"]])
-    ai.answer.assert_called_once()
+    assert stub.call_args.args[3] is ai and stub.call_args.args[4] is ai
 
 
 def test_rag_without_api_key_is_503_while_core_backend_still_works(api, repo, monkeypatch):
-    from app.core.database import get_database
-
     client, app, _ = api
     identity(app)
     profile(repo)
-    app.dependency_overrides[get_database] = lambda: Mock()
     monkeypatch.setattr(
         "app.api.v1.rag.get_settings",
         lambda: get_settings().model_copy(update={"openai_api_key": ""}),

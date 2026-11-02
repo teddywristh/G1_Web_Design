@@ -1,9 +1,9 @@
 name: Backend CI
 on:
   push:
-    paths: ["apps/api/**", "infra/firebase/**", "infra/docker/**", "infra/nginx/**", "firebase.json", "firebase.docker.json", "scripts/backend_admin.py", ".github/workflows/backend-ci.yml", "pytest.ini"]
+    paths: ["apps/api/**", "infra/firebase/**", "infra/docker/**", "infra/nginx/**", "firebase.json", "firebase.docker.json", "scripts/backend_admin.py", "scripts/migrate_knowledge.py", "scripts/evaluate_legal_qa.py", ".github/workflows/backend-ci.yml", "pytest.ini"]
   pull_request:
-    paths: ["apps/api/**", "infra/firebase/**", "infra/docker/**", "infra/nginx/**", "firebase.json", "firebase.docker.json", "scripts/backend_admin.py", ".github/workflows/backend-ci.yml", "pytest.ini"]
+    paths: ["apps/api/**", "infra/firebase/**", "infra/docker/**", "infra/nginx/**", "firebase.json", "firebase.docker.json", "scripts/backend_admin.py", "scripts/migrate_knowledge.py", "scripts/evaluate_legal_qa.py", ".github/workflows/backend-ci.yml", "pytest.ini"]
 permissions:
   contents: read
 jobs:
@@ -19,9 +19,9 @@ jobs:
       - uses: actions/setup-java@v4
         with: {distribution: "temurin", java-version: "21"}
       - run: pip install -r apps/api/requirements-dev.txt
-      - run: ruff check apps/api scripts/backend_admin.py
-      - run: ruff format --check apps/api scripts/backend_admin.py
-      - run: python -m compileall apps/api/app scripts/backend_admin.py
+      - run: ruff check apps/api scripts/backend_admin.py scripts/migrate_knowledge.py scripts/evaluate_legal_qa.py
+      - run: ruff format --check apps/api scripts/backend_admin.py scripts/migrate_knowledge.py scripts/evaluate_legal_qa.py
+      - run: python -m compileall apps/api/app scripts/backend_admin.py scripts/migrate_knowledge.py scripts/evaluate_legal_qa.py
       - run: python -m pytest -m 'not integration' -q --junitxml=test-results/backend-unit.xml
       - run: npm install -g firebase-tools@15.12.0
       - name: Firebase integration and client access rules

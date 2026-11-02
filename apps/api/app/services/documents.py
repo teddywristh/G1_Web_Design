@@ -110,10 +110,23 @@ def list_documents(repo, params, *, admin=False):
     )
 
 
-def upload_document(repo, bucket, doc_id, path, size, digest, actor, request_id, version):
+def upload_document(
+    repo,
+    bucket,
+    doc_id,
+    path,
+    size,
+    digest,
+    actor,
+    request_id,
+    version,
+    collection="legal_documents",
+    prefix="legal-documents",
+    outbox=None,
+):
     settings = get_settings()
     attempt = uuid4().hex
-    object_path = f"legal-documents/{doc_id}/{attempt}.pdf"
+    object_path = f"{prefix}/{doc_id}/{attempt}.pdf"
 
     def claim(current):
         ensure_document(current)
@@ -140,7 +153,7 @@ def upload_document(repo, bucket, doc_id, path, size, digest, actor, request_id,
         }
 
     claimed = repo.mutate(
-        "legal_documents",
+        collection,
         doc_id,
         claim,
         actor=actor,
@@ -166,7 +179,7 @@ def upload_document(repo, bucket, doc_id, path, size, digest, actor, request_id,
             return {"fileState": "upload_failed", "updatedBy": actor}
 
         repo.mutate(
-            "legal_documents",
+            collection,
             doc_id,
             fail,
             actor=actor,
@@ -192,17 +205,19 @@ def upload_document(repo, bucket, doc_id, path, size, digest, actor, request_id,
         }
 
     # If this transaction fails the lease retains the object for reconciliation.
+    extra = {"extra": outbox} if outbox else {}
     return repo.mutate(
-        "legal_documents",
+        collection,
         doc_id,
         complete,
         actor=actor,
         event="document.upload_complete",
         request_id=request_id,
+        **extra,
     )
 
 
-def delete_document(repo, bucket, doc_id, actor, request_id, version):
+def delete_document(repo, bucket, doc_id, actor, request_id, version, collection="legal_documents"):
     def mark(current):
         if not current:
             raise APIError(404, "not_found", "Document not found")
@@ -219,7 +234,7 @@ def delete_document(repo, bucket, doc_id, actor, request_id, version):
         }
 
     current = repo.mutate(
-        "legal_documents",
+        collection,
         doc_id,
         mark,
         actor=actor,
@@ -227,8 +242,8 @@ def delete_document(repo, bucket, doc_id, actor, request_id, version):
         request_id=request_id,
     )
     if current["fileState"] != "deleted":
-        finish_deletion(repo, bucket, current, actor, request_id)
-    return repo.get("legal_documents", doc_id)
+        finish_deletion(repo, bucket, current, actor, request_id, collection)
+    return repo.get(collection, doc_id)
 
 
 def delete_object(bucket, path):
@@ -242,7 +257,7 @@ def delete_object(bucket, path):
         pass
 
 
-def finish_deletion(repo, bucket, current, actor, request_id):
+def finish_deletion(repo, bucket, current, actor, request_id, collection="legal_documents"):
     if current.get("fileState") != "deletion_pending":
         return
     paths = {current.get("storagePath"), (current.get("uploadLease") or {}).get("path")}
@@ -261,7 +276,7 @@ def finish_deletion(repo, bucket, current, actor, request_id):
         }
 
     repo.mutate(
-        "legal_documents",
+        collection,
         current["id"],
         finish,
         actor=actor,
@@ -270,16 +285,18 @@ def finish_deletion(repo, bucket, current, actor, request_id):
     )
 
 
-def reconcile(repo, bucket, *, dry_run=True):
+def reconcile(
+    repo, bucket, *, dry_run=True, collection="legal_documents", prefix="legal-documents"
+):
     """Safe by default. In-flight leases are retained; stale writes are fenced by ID."""
     settings = get_settings()
     results = {"expiredUploads": 0, "pendingDeletions": 0, "orphanFiles": 0, "errors": 0}
-    for current in repo.scan("legal_documents"):
+    for current in repo.scan(collection):
         try:
             if current.get("fileState") == "deletion_pending":
                 results["pendingDeletions"] += 1
                 if not dry_run:
-                    finish_deletion(repo, bucket, current, "maintenance", "reconcile")
+                    finish_deletion(repo, bucket, current, "maintenance", "reconcile", collection)
             lease = current.get("uploadLease")
             if lease and lease["expiresAt"] < utcnow() and current.get("deletedAt") is None:
                 results["expiredUploads"] += 1
@@ -292,7 +309,7 @@ def reconcile(repo, bucket, *, dry_run=True):
                         return {"uploadLease": None, "fileState": "upload_failed"}
 
                     repo.mutate(
-                        "legal_documents",
+                        collection,
                         current["id"],
                         fence,
                         actor="maintenance",
@@ -303,7 +320,7 @@ def reconcile(repo, bucket, *, dry_run=True):
         except Exception:
             results["errors"] += 1
     # Streaming iterator pages objects internally; never collect all files in RAM.
-    for blob in bucket.list_blobs(prefix="legal-documents/", page_size=100, timeout=30, retry=None):
+    for blob in bucket.list_blobs(prefix=prefix + "/", page_size=100, timeout=30, retry=None):
         try:
             if (
                 not blob.time_created
@@ -313,7 +330,7 @@ def reconcile(repo, bucket, *, dry_run=True):
             parts = blob.name.split("/")
             if len(parts) != 3:
                 continue
-            doc = repo.get("legal_documents", parts[1])
+            doc = repo.get(collection, parts[1])
             retained = doc and (
                 doc.get("storagePath") == blob.name
                 or (doc.get("uploadLease") or {}).get("path") == blob.name

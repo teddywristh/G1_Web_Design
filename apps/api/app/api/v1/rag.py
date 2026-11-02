@@ -1,16 +1,14 @@
 from fastapi import APIRouter, Depends, Request
 
 from app.core.config import get_settings
-from app.core.database import get_database
 from app.core.errors import APIError
 from app.dependencies import current_user, get_repository
 from app.schemas.rag import AskRequest, AskResponse
+from app.services import qa
 from app.services.ai import AnthropicService, OpenAIService
 from app.services.ai_connections import Credential, resolve
 from app.services.opencode import OpenCodeService
 from app.services.opencode_oauth import OAuthAnswer
-from app.services.rag import answer_question
-from app.services.retrieval import retrieve_chunks
 
 router = APIRouter(prefix="/rag", tags=["rag"])
 
@@ -28,11 +26,12 @@ def openai_settings(settings, credential, model=None):
 def ask_question(
     request: AskRequest,
     http_request: Request,
-    database=Depends(get_database),
     user=Depends(current_user),
     repo=Depends(get_repository),
 ) -> AskResponse:
     settings = get_settings()
+    if not settings.qa_workflow_enabled:
+        raise APIError(503, "feature_disabled", "The legal Q&A workflow is disabled")
     if request.engine == "opencode":
         if not settings.opencode_local_enabled:
             raise APIError(503, "opencode_unavailable", "OpenCode local worker is not enabled")
@@ -67,7 +66,7 @@ def ask_question(
         selected = resolve(repo, user, request.provider, request.credential_source, settings)
         ai = AnthropicService(settings, selected.api_key, request.model)
     try:
-        query_embedding = None
+        embedder = None
         if request.retrieval_mode == "hybrid":
             if request.provider == "openai" and request.engine == "direct":
                 embedder = ai
@@ -75,9 +74,7 @@ def ask_question(
                 # Never silently borrow a shared embedding key when personal-only was selected.
                 embedding_key = resolve(repo, user, "openai", request.credential_source, settings)
                 embedder = OpenAIService(openai_settings(settings, embedding_key))
-            query_embedding = embedder.embed([request.question])[0]
-        chunks = retrieve_chunks(database, query_embedding, request.question, request.top_k)
-        result = answer_question(request.question, chunks, ai, settings)
+        result = qa.answer(repo, user, request, ai, embedder, settings)
         return result.model_copy(
             update={
                 "provider": selected.provider,

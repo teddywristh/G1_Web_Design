@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -27,6 +28,28 @@ class Citation(BaseModel):
     page_number: int | None = None
     source_url: str | None = None
     chunk_id: str | None = None
+    document_version_id: str | None = None
+    provision_version_id: str | None = None
+    source_type: str | None = None
+    quote: str | None = None
+    evidence_url: str | None = None
+
+
+class ClaimCitation(BaseModel):
+    claim_id: str
+    kind: str
+    text: str
+    support: str
+    chunk_ids: list[str] = []
+
+
+AnswerStatus = Literal[
+    "answered",
+    "needs_clarification",
+    "insufficient_evidence",
+    "conflicting_sources",
+    "temporarily_unavailable",
+]
 
 
 class AskRequest(BaseModel):
@@ -39,6 +62,10 @@ class AskRequest(BaseModel):
     )
     retrieval_mode: Literal["hybrid", "keyword"] = "hybrid"
     engine: Literal["direct", "opencode"] = "direct"
+    knowledge_base_ids: list[str] | None = Field(default=None, max_length=5)
+    as_of: date | None = None
+    session_facts: list[str] = Field(default_factory=list, max_length=10)
+    web_mode: Literal["off", "official", "examples"] = "off"
 
 
 class AskResponse(BaseModel):
@@ -49,3 +76,10 @@ class AskResponse(BaseModel):
     citations: list[Citation]
     retrieved_chunks: list[StoredChunk]
     has_sufficient_evidence: bool
+    status: AnswerStatus = "insufficient_evidence"
+    as_of: date | None = None
+    assumptions: list[str] = []
+    missing_facts: list[str] = []
+    claim_citations: list[ClaimCitation] = []
+    source_limitations: list[str] = []
+    run_id: str | None = None

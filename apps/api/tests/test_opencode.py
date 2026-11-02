@@ -7,8 +7,8 @@ import pytest
 from app.core.config import Settings, get_settings
 from app.core.database import get_database
 from app.core.errors import APIError
-from app.schemas.rag import StoredChunk
 from app.services.opencode import OpenCodeService
+from tests.stubs import stub_qa
 from tests.test_ai_connections import PERSONAL, configured_crypto, save
 from tests.test_backend import api, identity, profile, repo
 
@@ -25,8 +25,7 @@ def test_opencode_route_uses_selected_personal_key_and_existing_citations(
     save(repo, {"id": "reader", "role": "user"})
     app.dependency_overrides[get_database] = lambda: Mock()
     monkeypatch.setattr(get_settings(), "opencode_local_enabled", True)
-    chunk = StoredChunk(id="c", document_id="d", document_title="Luật mẫu", text="Điều 1", score=1)
-    monkeypatch.setattr("app.api.v1.rag.retrieve_chunks", Mock(return_value=[chunk]))
+    stub_qa(monkeypatch)
     factory = Mock(return_value=Mock(answer=Mock(return_value="Căn cứ Điều 1.")))
     monkeypatch.setattr("app.api.v1.rag.OpenCodeService", factory)
     result = client.post(
@@ -58,8 +57,7 @@ def test_opencode_provider_uses_its_own_key_and_model(
     save(repo, {"id": "reader", "role": "user"}, provider=provider)
     app.dependency_overrides[get_database] = lambda: Mock()
     monkeypatch.setattr(get_settings(), "opencode_local_enabled", True)
-    chunk = StoredChunk(id="c", document_id="d", document_title="Luật mẫu", text="Điều 1", score=1)
-    monkeypatch.setattr("app.api.v1.rag.retrieve_chunks", Mock(return_value=[chunk]))
+    stub_qa(monkeypatch)
     factory = Mock(return_value=Mock(answer=Mock(return_value="Căn cứ Điều 1.")))
     monkeypatch.setattr("app.api.v1.rag.OpenCodeService", factory)
     result = client.post(

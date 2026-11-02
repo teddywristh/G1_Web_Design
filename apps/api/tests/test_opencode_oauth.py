@@ -2,8 +2,8 @@ from unittest.mock import Mock
 
 from app.core.config import get_settings
 from app.core.database import get_database
-from app.schemas.rag import StoredChunk
 from app.services import opencode_oauth
+from tests.stubs import stub_qa
 from tests.test_backend import api, identity, profile, repo
 
 __all__ = ["api", "repo"]
@@ -36,8 +36,7 @@ def test_chatgpt_rag_uses_personal_oauth_without_api_key_or_fallback(api, repo, 
     settings = get_settings()
     monkeypatch.setattr(settings, "opencode_local_enabled", True)
     monkeypatch.setattr(settings, "opencode_chatgpt_local_enabled", True)
-    chunk = StoredChunk(id="c", document_id="d", document_title="Luật mẫu", text="Điều 1", score=1)
-    monkeypatch.setattr("app.api.v1.rag.retrieve_chunks", Mock(return_value=[chunk]))
+    stub_qa(monkeypatch)
     factory = Mock(return_value=Mock(answer=Mock(return_value="Căn cứ Điều 1.")))
     monkeypatch.setattr("app.api.v1.rag.OAuthAnswer", factory)
     resolve = Mock(side_effect=AssertionError("must not use a key"))
