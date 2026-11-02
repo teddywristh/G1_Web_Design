@@ -9,6 +9,7 @@ from uuid import uuid4
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds, to_rfc3339
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
+from google.cloud.firestore_v1.vector import Vector
 
 from app.core.errors import APIError
 
@@ -53,8 +54,12 @@ class BackendRepository:
         snap = self.db.collection(collection).document(doc_id).get(timeout=5, retry=None)
         return {**snap.to_dict(), "id": snap.id} if snap.exists else None
 
-    def mutate(self, collection, doc_id, change, *, actor, event, request_id):
-        """Callback receives current state; data and success audit commit together."""
+    def mutate(self, collection, doc_id, change, *, actor, event, request_id, extra=None):
+        """Callback receives current state; data and success audit commit together.
+
+        extra(patch) may return (collection, doc_id, data) rows written in the same
+        transaction, used for the job outbox.
+        """
         ref = self.db.collection(collection).document(doc_id)
         audit = self.db.collection("system_logs").document(uuid4().hex)
 
@@ -74,6 +79,11 @@ class BackendRepository:
                 transaction.create(ref, {**patch, "createdAt": firestore.SERVER_TIMESTAMP})
             else:
                 transaction.update(ref, patch)
+            for name, row_id, data in extra(patch) if extra else []:
+                transaction.set(
+                    self.db.collection(name).document(row_id),
+                    {**data, "createdAt": firestore.SERVER_TIMESTAMP},
+                )
             transaction.create(
                 audit,
                 {
@@ -113,6 +123,48 @@ class BackendRepository:
             last = items[-1]
             next_cursor = encode_cursor(scope, last[order], last["id"])
         return {"items": items, "nextCursor": next_cursor}
+
+    def query(self, collection, filters=(), order=None, limit=100):
+        """Bounded, index-backed read. Never use it for unbounded scans."""
+        query = self.db.collection(collection)
+        for field, op, value in filters:
+            query = query.where(filter=FieldFilter(field, op, value))
+        if order:
+            query = query.order_by(order)
+        snapshots = query.limit(limit).stream(timeout=10, retry=None)
+        return [{**s.to_dict(), "id": s.id} for s in snapshots]
+
+    def put(self, collection, doc_id, data):
+        """Deterministic derived record; repeating the write is harmless."""
+        self.db.collection(collection).document(doc_id).set(data, timeout=10, retry=None)
+
+    def put_many(self, collection, rows):
+        items = list(rows.items())
+        for start in range(0, len(items), 400):
+            batch = self.db.batch()
+            for doc_id, data in items[start : start + 400]:
+                if isinstance(data.get("vector"), list):
+                    data = {**data, "vector": Vector(data["vector"])}
+                batch.set(self.db.collection(collection).document(doc_id), data)
+            batch.commit(timeout=30, retry=None)
+
+    def remove(self, collection, doc_id):
+        self.db.collection(collection).document(doc_id).delete()
+
+    def nearest(self, collection, filters, vector, limit):
+        from google.cloud.firestore_v1.base_vector_query import DistanceMeasure
+
+        query = self.db.collection(collection)
+        for field, op, value in filters:
+            query = query.where(filter=FieldFilter(field, op, value))
+        found = query.find_nearest(
+            vector_field="vector",
+            query_vector=Vector(vector),
+            distance_measure=DistanceMeasure.COSINE,
+            limit=limit,
+            distance_result_field="distance",
+        )
+        return [{**s.to_dict(), "id": s.id} for s in found.stream(timeout=20, retry=None)]
 
     def scan(self, collection, *, filters=(), batch_size=100):
         """Maintenance-only bounded pages, without accumulating the collection."""

@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "apps/api"))
 from app.core.config import get_settings
 from app.core.firebase import initialize_firebase
 from app.repositories.backend import BackendRepository
+from app.services import knowledge
 from app.services.documents import reconcile
 from firebase_admin import auth
 
@@ -35,8 +36,11 @@ def main():
     repo = BackendRepository(clients["db"])
     if args.command == "reconcile":
         result = reconcile(repo, clients["storage"], dry_run=not args.apply)
-        print(json.dumps({"dryRun": not args.apply, **result}))
-        return 1 if result["errors"] else 0
+        private = knowledge.reconcile(repo, clients["storage"], dry_run=not args.apply)
+        print(
+            json.dumps({"dryRun": not args.apply, "shared": result, "private": private})
+        )
+        return 1 if result["errors"] or private["errors"] else 0
     identity = auth.get_user(args.uid)
     if identity.disabled:
         parser.error("Cannot grant admin to disabled Firebase identity")

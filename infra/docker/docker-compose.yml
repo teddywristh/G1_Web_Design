@@ -11,6 +11,18 @@ services:
       STORAGE_EMULATOR_HOST: http://host.docker.internal:9198
     extra_hosts: ["host.docker.internal:host-gateway"]
     restart: unless-stopped
+  worker:
+    build:
+      context: ../../apps/api
+      dockerfile: ../../infra/docker/Dockerfile.api
+    command: ["python", "-m", "app.workers.ingestion"]
+    env_file: [../../apps/api/.env]
+    environment:
+      FIRESTORE_EMULATOR_HOST: host.docker.internal:8081
+      FIREBASE_AUTH_EMULATOR_HOST: host.docker.internal:9099
+      STORAGE_EMULATOR_HOST: http://host.docker.internal:9198
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    restart: unless-stopped
   gateway:
     image: nginx:1.28-alpine
     ports: ["8001:8080"]

@@ -54,6 +54,31 @@ class Settings(BaseSettings):
     rag_top_k: int = Field(default=5, ge=1, le=20)
     rag_min_retrieval_score: float = Field(default=0.15, ge=0, le=1)
 
+    knowledge_upload_enabled: bool = True
+    qa_workflow_enabled: bool = True
+    official_web_enabled: bool = False
+    example_search_enabled: bool = False
+    official_domains: list[str] = ["vbpl.vn", "congbao.chinhphu.vn", "chinhphu.vn"]
+    embedding_dimensions: int = Field(default=1536, ge=1)
+    max_kbs_per_request: int = Field(default=5, ge=1)
+    max_private_kbs: int = Field(default=20, ge=1)
+    candidate_k: int = Field(default=40, ge=1, le=200)
+    final_evidence_k: int = Field(default=8, ge=1, le=20)
+    max_evidence_tokens: int = Field(default=12000, ge=500)
+    max_retrieval_passes: int = Field(default=2, ge=1, le=3)
+    max_related_provisions: int = Field(default=12, ge=0)
+    max_official_searches: int = Field(default=2, ge=0)
+    max_fetched_sources: int = Field(default=4, ge=0)
+    qa_deadline_seconds: int = Field(default=40, ge=5)
+    evidence_run_retention_days: int = Field(default=30, ge=1)
+    max_pdf_pages: int = Field(default=300, ge=1)
+    max_provision_chars: int = Field(default=2000, ge=200)
+    ocr_enabled: bool = False
+    job_lease_seconds: int = Field(default=300, ge=30)
+    job_max_failures: int = Field(default=5, ge=1)
+    job_backoff_seconds: int = Field(default=30, ge=1)
+    embedding_batch_size: int = Field(default=64, ge=1, le=256)
+
     @model_validator(mode="after")
     def validate_environment(self):
         if self.opencode_local_enabled and self.app_env.lower() not in {"development", "test"}:

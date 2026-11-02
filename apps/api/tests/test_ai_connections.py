@@ -12,6 +12,7 @@ from app.schemas.ai_connections import ConnectionPut
 from app.schemas.rag import StoredChunk
 from app.services import ai_connections as connections
 from app.services.ai import AnthropicService
+from tests.stubs import stub_qa
 
 from .test_backend import api as api  # noqa: F401
 from .test_backend import identity, profile
@@ -214,6 +215,7 @@ def test_personal_provider_rejection_never_switches_to_shared(api, repo, monkeyp
     error.status_code = 401
     factory = Mock(return_value=Mock(embed=Mock(side_effect=error)))
     monkeypatch.setattr("app.api.v1.rag.OpenAIService", factory)
+    stub_qa(monkeypatch, use_embedder=True)
     response = client.post("/api/v1/rag/ask", json={"question": "Câu hỏi pháp luật"})
     assert response.status_code == 502
     assert PERSONAL not in response.text
@@ -229,9 +231,7 @@ def test_claude_keyword_mode_requires_no_openai_embedding_key(api, repo, monkeyp
     profile(repo)
     save(repo, {"id": "reader", "role": "user"}, provider="anthropic")
     app.dependency_overrides[get_database] = lambda: Mock()
-    chunk = StoredChunk(id="c", document_id="d", document_title="Luật mẫu", text="Điều 1", score=1)
-    retrieve = Mock(return_value=[chunk])
-    monkeypatch.setattr("app.api.v1.rag.retrieve_chunks", retrieve)
+    retrieve = stub_qa(monkeypatch)
     monkeypatch.setattr(
         "app.api.v1.rag.AnthropicService",
         Mock(return_value=Mock(answer=Mock(return_value="Điều 1."))),
@@ -249,7 +249,7 @@ def test_claude_keyword_mode_requires_no_openai_embedding_key(api, repo, monkeyp
     assert response.status_code == 200, response.text
     assert response.json()["provider"] == "anthropic"
     assert response.json()["credential_source"] == "personal"
-    assert retrieve.call_args.args[1] is None
+    assert retrieve.call_args.args[4] is None
 
 
 def test_openai_answers_have_bounded_output_and_reject_partial_results(configured_crypto):
