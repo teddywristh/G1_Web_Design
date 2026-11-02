@@ -2,15 +2,32 @@
 
 from typing import Any
 
-from fastapi import Header
+from fastapi import Depends, Header, Request
 from firebase_admin import auth
 
 from app.core.errors import APIError
 from app.core.firebase import initialize_firebase
+from app.repositories.backend import BackendRepository
 from app.repositories.user_repository import UserRepository
+from app.services.auth_sessions import authenticate
 
 
-def verify_firebase_token(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+def get_repository():
+    return BackendRepository(initialize_firebase()["db"])
+
+
+def verify_firebase_token(
+    authorization: str | None = Header(default=None),
+    request: Request = None,
+    repo=Depends(get_repository),
+) -> dict[str, Any]:
+    if not authorization and request is not None and request.cookies.get("legal_session"):
+        session, profile = authenticate(repo, request)
+        return {
+            "uid": profile["id"],
+            "_sessionId": session["id"],
+            "_csrfToken": session["csrfToken"],
+        }
     if not authorization or not authorization.startswith("Bearer "):
         raise APIError(401, "unauthenticated", "Bearer token required")
     token = authorization[7:].strip()

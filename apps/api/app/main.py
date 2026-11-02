@@ -15,6 +15,7 @@ from google.api_core.exceptions import GoogleAPICallError
 from starlette.exceptions import HTTPException
 
 from app.api.v1.ai_connections import router as ai_connections_router
+from app.api.v1.auth import router as auth_router
 from app.api.v1.rag import router as rag_router
 from app.api.v1.routes import router
 from app.core.config import get_settings
@@ -37,9 +38,9 @@ def create_app():
     api.add_middleware(
         CORSMiddleware,
         allow_origins=settings.backend_cors_origins,
-        allow_credentials=False,
+        allow_credentials=True,
         allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"],
-        allow_headers=["Authorization", "Content-Type", "If-Match", "X-Request-ID"],
+        allow_headers=["Authorization", "Content-Type", "If-Match", "X-Request-ID", "X-CSRF-Token"],
         expose_headers=["ETag", "X-Request-ID", "Location"],
     )
 
@@ -150,6 +151,7 @@ def create_app():
         return {"status": "ready"}
 
     api.include_router(router)
+    api.include_router(auth_router)
     api.include_router(ai_connections_router)
     api.include_router(rag_router, prefix="/api/v1", dependencies=[Depends(current_user)])
     return api

@@ -67,6 +67,7 @@ export function QuestionWorkspace({
     try {
       const response = await request<Reply>("/api/v1/rag/ask", {
         method: "POST",
+        signal: choice.engine === "opencode" ? AbortSignal.timeout(120000) : undefined,
         body: JSON.stringify({ question: value, ...choice, model: choice.model || undefined }),
       });
       if (owner.current === account) setReplies((items) => ({ ...items, [key]: response }));
@@ -163,7 +164,7 @@ export function QuestionWorkspace({
                           <>
                             <small>
                               {reply.provider} ·{" "}
-                              {reply.credential_source === "personal" ? "Key cá nhân" : "Key chung"}
+                              {reply.credential_source === "chatgpt" ? "ChatGPT cá nhân" : reply.credential_source === "personal" ? "Key cá nhân" : "Key chung"}
                             </small>
                             <ul>
                               {reply.citations.map((citation, i) => (

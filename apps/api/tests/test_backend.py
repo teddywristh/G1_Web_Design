@@ -396,6 +396,7 @@ def test_production_configuration_accepts_real_project_without_emulators():
         firestore_emulator_host=None,
         storage_emulator_host=None,
         backend_cors_origins=["https://frontend.example.com"],
+        auth_cookie_secure=True,
     )
     assert settings.app_env == "production"
 

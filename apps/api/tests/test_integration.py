@@ -362,3 +362,34 @@ def test_encrypted_ai_credentials_with_real_firebase_authorization(environment, 
         ).status_code
         == 200
     )
+
+
+def test_password_account_sessions_with_firebase(environment):
+    api, repo, _ = environment
+    email = f"auth-{uuid4().hex}@example.com"
+    response = api.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": "TestPassword123!", "displayName": "Auth test"},
+    )
+    assert response.status_code == 201, response.text
+    uid = response.json()["user"]["id"]
+    csrf = response.json()["csrfToken"]
+    assert repo.get("users", uid)["passwordHash"].startswith("$2")
+    assert api.get("/api/v1/auth/me").json()["user"]["id"] == uid
+    sessions = api.get("/api/v1/auth/sessions")
+    assert sessions.status_code == 200, sessions.text
+    assert len(sessions.json()["items"]) == 1 and sessions.json()["items"][0]["current"]
+    assert api.post("/api/v1/auth/logout", json={}).status_code == 403
+    assert (
+        api.post("/api/v1/auth/logout", json={}, headers={"X-CSRF-Token": csrf}).status_code == 204
+    )
+    assert api.get("/api/v1/auth/me").status_code == 401
+    login = api.post("/api/v1/auth/login", json={"email": email, "password": "TestPassword123!"})
+    assert login.status_code == 200, login.text
+    assert (
+        api.post(
+            "/api/v1/auth/logout-all", json={}, headers={"X-CSRF-Token": login.json()["csrfToken"]}
+        ).status_code
+        == 204
+    )
+    assert api.get("/api/v1/auth/me").status_code == 401

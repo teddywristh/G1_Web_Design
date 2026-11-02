@@ -6,8 +6,8 @@ from pydantic import Field, SecretStr, field_validator
 
 from app.schemas import Input, Output
 
-Provider = Literal["openai", "anthropic"]
-CredentialSource = Literal["auto", "personal", "shared"]
+Provider = Literal["openai", "anthropic", "deepseek", "openrouter"]
+CredentialSource = Literal["auto", "personal", "shared", "chatgpt"]
 
 
 class ConnectionPut(Input):

@@ -35,14 +35,16 @@ class AskRequest(BaseModel):
     provider: Provider = "openai"
     credential_source: CredentialSource = "auto"
     model: str | None = Field(
-        default=None, min_length=1, max_length=200, pattern=r"^[A-Za-z0-9_.:-]+$"
+        default=None, min_length=1, max_length=200, pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:/-]*$"
     )
     retrieval_mode: Literal["hybrid", "keyword"] = "hybrid"
+    engine: Literal["direct", "opencode"] = "direct"
 
 
 class AskResponse(BaseModel):
+    engine: Literal["direct", "opencode"] = "direct"
     provider: Provider | None = None
-    credential_source: Literal["personal", "shared"] | None = None
+    credential_source: Literal["personal", "shared", "chatgpt"] | None = None
     answer: str
     citations: list[Citation]
     retrieved_chunks: list[StoredChunk]

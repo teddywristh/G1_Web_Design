@@ -46,7 +46,12 @@ def owner_for(user, shared):
 
 
 def environment_key(provider, settings):
-    return settings.openai_api_key if provider == "openai" else settings.anthropic_api_key
+    return {
+        "openai": settings.openai_api_key,
+        "anthropic": settings.anthropic_api_key,
+        "deepseek": settings.deepseek_api_key,
+        "openrouter": settings.openrouter_api_key,
+    }.get(provider, "")
 
 
 def status(repo, owner, provider, settings):
@@ -173,13 +178,29 @@ def options(repo, user, settings):
         storage_ready = False
     return {
         "credentialStorageReady": storage_ready,
+        "engines": {
+            "direct": True,
+            "opencode": settings.opencode_local_enabled and bool(settings.opencode_binary),
+        },
         "connections": [
             status(repo, owner, provider, settings).model_dump()
             for owner in ("user:" + user["id"], "system")
-            for provider in ("openai", "anthropic")
+            for provider in ("openai", "anthropic", "deepseek", "openrouter")
         ],
         "methods": [
             {"id": "api_key", "provider": "openai", "available": True, "reason": "OpenAI API key"},
+            {
+                "id": "api_key",
+                "provider": "deepseek",
+                "available": True,
+                "reason": "DeepSeek API key",
+            },
+            {
+                "id": "api_key",
+                "provider": "openrouter",
+                "available": True,
+                "reason": "OpenRouter API key",
+            },
             {
                 "id": "api_key",
                 "provider": "anthropic",
@@ -189,8 +210,8 @@ def options(repo, user, settings):
             {
                 "id": "chatgpt_oauth",
                 "provider": "openai",
-                "available": False,
-                "reason": "Hosted ChatGPT plan usage requires OpenAI integration access",
+                "available": settings.opencode_chatgpt_local_enabled,
+                "reason": "OpenCode ChatGPT OAuth, local development only",
                 "documentationUrl": "https://developers.openai.com/siwc/token-sharing-open-source",
             },
             {

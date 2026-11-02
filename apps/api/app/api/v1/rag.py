@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from app.core.config import get_settings
 from app.core.database import get_database
@@ -6,7 +6,9 @@ from app.core.errors import APIError
 from app.dependencies import current_user, get_repository
 from app.schemas.rag import AskRequest, AskResponse
 from app.services.ai import AnthropicService, OpenAIService
-from app.services.ai_connections import resolve
+from app.services.ai_connections import Credential, resolve
+from app.services.opencode import OpenCodeService
+from app.services.opencode_oauth import OAuthAnswer
 from app.services.rag import answer_question
 from app.services.retrieval import retrieve_chunks
 
@@ -25,20 +27,49 @@ def openai_settings(settings, credential, model=None):
 @router.post("/ask", response_model=AskResponse)
 def ask_question(
     request: AskRequest,
+    http_request: Request,
     database=Depends(get_database),
     user=Depends(current_user),
     repo=Depends(get_repository),
 ) -> AskResponse:
     settings = get_settings()
-    selected = resolve(repo, user, request.provider, request.credential_source, settings)
-    if request.provider == "openai":
+    if request.engine == "opencode":
+        if not settings.opencode_local_enabled:
+            raise APIError(503, "opencode_unavailable", "OpenCode local worker is not enabled")
+        if settings.app_env.lower() != "test" and (
+            not http_request.client or http_request.client.host not in {"127.0.0.1", "::1"}
+        ):
+            raise APIError(403, "forbidden", "OpenCode worker is available only locally")
+        if request.provider not in {"openai", "deepseek", "openrouter"}:
+            raise APIError(422, "invalid_provider", "This provider is not enabled for OpenCode")
+        if request.provider != "openai" and not request.model:
+            raise APIError(422, "invalid_model", "Select a model for this provider")
+    elif request.provider not in {"openai", "anthropic"}:
+        raise APIError(422, "invalid_provider", "This provider requires OpenCode")
+    if request.credential_source == "chatgpt":
+        if (
+            request.engine != "opencode"
+            or request.provider != "openai"
+            or not settings.opencode_chatgpt_local_enabled
+        ):
+            raise APIError(422, "invalid_provider", "ChatGPT sign-in requires local OpenCode")
+        if request.retrieval_mode != "keyword":
+            raise APIError(422, "invalid_retrieval", "ChatGPT sign-in requires keyword retrieval")
+        selected = Credential("openai", "", "chatgpt")
+        ai = OAuthAnswer(user["id"], request.model)
+    elif request.engine == "opencode":
+        selected = resolve(repo, user, request.provider, request.credential_source, settings)
+        ai = OpenCodeService(settings, selected.api_key, request.model, provider=request.provider)
+    elif request.provider == "openai":
+        selected = resolve(repo, user, request.provider, request.credential_source, settings)
         ai = OpenAIService(openai_settings(settings, selected, request.model))
     else:
+        selected = resolve(repo, user, request.provider, request.credential_source, settings)
         ai = AnthropicService(settings, selected.api_key, request.model)
     try:
         query_embedding = None
         if request.retrieval_mode == "hybrid":
-            if request.provider == "openai":
+            if request.provider == "openai" and request.engine == "direct":
                 embedder = ai
             else:
                 # Never silently borrow a shared embedding key when personal-only was selected.
@@ -48,7 +79,11 @@ def ask_question(
         chunks = retrieve_chunks(database, query_embedding, request.question, request.top_k)
         result = answer_question(request.question, chunks, ai, settings)
         return result.model_copy(
-            update={"provider": selected.provider, "credential_source": selected.source}
+            update={
+                "provider": selected.provider,
+                "credential_source": selected.source,
+                "engine": request.engine,
+            }
         )
     except APIError:
         raise

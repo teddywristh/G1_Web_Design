@@ -2,12 +2,7 @@ from fastapi import Depends, Header
 
 from app.core.errors import APIError
 from app.core.firebase import initialize_firebase
-from app.core.security import verify_firebase_token
-from app.repositories.backend import BackendRepository
-
-
-def get_repository():
-    return BackendRepository(initialize_firebase()["db"])
+from app.core.security import get_repository, verify_firebase_token
 
 
 def get_bucket():

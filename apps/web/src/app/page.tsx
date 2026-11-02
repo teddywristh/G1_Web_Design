@@ -47,6 +47,7 @@ function Workspace() {
   const [documents, setDocuments] = useState(initialDocuments);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [view, setView] = useState<View>("conversations");
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [settingsFocus, setSettingsFocus] = useState<{
     target: "account" | "ai";
     sequence: number;
@@ -121,6 +122,11 @@ function Workspace() {
     setSettingsFocus((previous) => ({ target, sequence: (previous?.sequence || 0) + 1 }));
   }
 
+  function openAccount(mode: "login" | "register" = "login") {
+    setAuthMode(mode);
+    openSettings("account");
+  }
+
   useEffect(() => {
     if (view !== "settings" || !settingsFocus) return;
     const section = document.getElementById(
@@ -132,7 +138,7 @@ function Workspace() {
         ? document.getElementById("account-email")
         : section;
     focus?.focus({ preventScroll: true });
-  }, [view, settingsFocus, profile]);
+  }, [view, settingsFocus, profile, authMode]);
 
   function toggleSaved(id: string) {
     setDocuments((current) =>
@@ -291,11 +297,16 @@ function Workspace() {
               <span className="connection-label-desktop">Kết nối AI</span>
               <span className="connection-label-mobile">AI</span>
             </button>
+            {!profile && (
+              <button className="header-ai-button" onClick={() => openAccount("register")}>
+                Đăng ký
+              </button>
+            )}
             <button
               className="header-account-button"
               aria-label={profile ? "Tài khoản" : "Đăng nhập"}
               title={profile?.email || "Đăng nhập tài khoản dự án"}
-              onClick={() => openSettings("account")}
+              onClick={() => openAccount("login")}
             >
               {profile ? <UserRound size={16} /> : <LogIn size={16} />}
               <span>{profile ? "Tài khoản" : "Đăng nhập"}</span>
@@ -470,7 +481,7 @@ function Workspace() {
               active={active}
               onSelect={setActiveConversation}
               onNew={newConversation}
-              onLogin={() => openSettings("account")}
+              onLogin={() => openAccount("login")}
               onConnectAI={() => openSettings("ai")}
               onQuestion={(question) => {
                 if (active) {
@@ -521,8 +532,10 @@ function Workspace() {
               <div className="settings-grid">
                 <AiSettings
                   connected={connected}
-                  onLogin={() => openSettings("account")}
+                  onLogin={() => openAccount("login")}
                   onConnect={() => openSettings("ai")}
+                  authMode={authMode}
+                  setAuthMode={setAuthMode}
                 />
                 <section className="settings-card">
                   <FolderOpen size={28} />

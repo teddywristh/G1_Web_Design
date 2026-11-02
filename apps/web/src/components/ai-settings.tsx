@@ -3,34 +3,50 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { KeyRound, ShieldCheck } from "lucide-react";
 import { useAiSession } from "@/lib/ai-session";
+import { GoogleSignIn } from "@/components/google-sign-in";
+import { AccountSessions } from "@/components/account-sessions";
 
 type Connection = {
-  provider: "openai" | "anthropic";
+  provider: "openai" | "anthropic" | "deepseek" | "openrouter";
   scope: "personal" | "shared";
   configured: boolean;
   enabled: boolean;
   version: number;
   origin: string;
 };
-type Options = { credentialStorageReady: boolean; connections: Connection[] };
+type Options = {
+  credentialStorageReady: boolean;
+  connections: Connection[];
+  engines?: { opencode: boolean };
+  methods?: { id: string; available: boolean }[];
+};
 
 export function AiSettings({
   connected,
   onLogin,
   onConnect,
+  authMode,
+  setAuthMode,
 }: {
   connected: boolean | null;
   onLogin: () => void;
   onConnect: () => void;
+  authMode: "login" | "register";
+  setAuthMode: (mode: "login" | "register") => void;
 }) {
-  const { profile, choice, setChoice, request, signIn, signOut } = useAiSession();
+  const { profile, restoring, choice, setChoice, request, signIn, signUp, signInGoogle, signOut } =
+    useAiSession();
   const [options, setOptions] = useState<Options | null>(null);
   const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [confirmation, setConfirmation] = useState("");
   const [password, setPassword] = useState("");
   const [key, setKey] = useState("");
   const [scope, setScope] = useState<"personal" | "shared">("personal");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [chatgpt, setChatgpt] = useState<{connected: boolean; pending?: boolean; url?: string; instructions?: string}>({connected: false});
+  const chatgptAvailable = Boolean(options?.methods?.find((item) => item.id === "chatgpt_oauth")?.available);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,6 +54,7 @@ export function AiSettings({
     setKey("");
     setScope("personal");
     setMessage("");
+    setChatgpt({connected: false});
     if (profile)
       request<Options>("/api/v1/ai/connections")
         .then((value) => {
@@ -52,6 +69,36 @@ export function AiSettings({
     };
   }, [profile, request]);
 
+  useEffect(() => {
+    let active = true;
+    if (profile && chatgptAvailable) {
+      request<{connected: boolean; pending: boolean}>("/api/v1/ai/chatgpt")
+        .then((value) => { if (active) setChatgpt(value); })
+        .catch(() => { if (active) setChatgpt({connected: false}); });
+    }
+    return () => { active = false; };
+  }, [profile, chatgptAvailable, request]);
+
+  async function chatgptAction(action: "start" | "finish" | "disconnect") {
+    setBusy(true);
+    setMessage("");
+    try {
+      const result = await request<{connected: boolean; pending?: boolean; url?: string; instructions?: string}>(
+        action === "disconnect" ? "/api/v1/ai/chatgpt" : `/api/v1/ai/chatgpt/${action}`,
+        {method: action === "disconnect" ? "DELETE" : "POST", body: action === "disconnect" ? undefined : "{}", signal: AbortSignal.timeout(action === "finish" ? 260000 : 130000)},
+      );
+      setChatgpt({...result, pending: action === "start"});
+      if (action === "finish" && result.connected) {
+        setChoice({...choice, provider: "openai", engine: "opencode", credential_source: "chatgpt", retrieval_mode: "keyword", model: "gpt-5.6-luna"});
+        setMessage("Đã kết nối ChatGPT cho phiên local này.");
+      }
+      if (action === "disconnect" && choice.credential_source === "chatgpt")
+        setChoice({...choice, credential_source: "auto"});
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Không kết nối được ChatGPT.");
+    } finally { setBusy(false); }
+  }
+
   const connection = options?.connections.find(
     (item) => item.provider === choice.provider && item.scope === scope,
   );
@@ -61,11 +108,41 @@ export function AiSettings({
     setBusy(true);
     setMessage("");
     try {
-      await signIn(email, password);
+      if (new TextEncoder().encode(password).length > 72)
+        throw new Error("Mật khẩu tối đa 72 byte UTF-8.");
+      if (authMode === "register") {
+        if (password !== confirmation) throw new Error("Mật khẩu xác nhận không khớp.");
+        await signUp(displayName, email, password);
+      } else await signIn(email, password);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Không đăng nhập được.");
     } finally {
       setPassword("");
+      setConfirmation("");
+      setBusy(false);
+    }
+  }
+
+  async function googleLogin(credential: string) {
+    setBusy(true);
+    setMessage("");
+    try {
+      await signInGoogle(credential);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Không đăng nhập Google được.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function logout() {
+    setBusy(true);
+    setMessage("");
+    try {
+      await signOut();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Không đăng xuất được.");
+    } finally {
       setBusy(false);
     }
   }
@@ -133,17 +210,39 @@ export function AiSettings({
               <button className="secondary-button" onClick={onConnect}>
                 Quản lý kết nối AI
               </button>
-              <button className="secondary-button" onClick={signOut} disabled={busy}>
+              <button className="secondary-button" onClick={() => void logout()} disabled={busy}>
                 Đăng xuất
               </button>
             </div>
-            <p className="small-print">
-              Phiên chỉ lưu trong bộ nhớ. Tải lại trang sẽ cần đăng nhập lại.
-            </p>
+            <p className="small-print">Liên kết Google với tài khoản hiện tại:</p>
+            <GoogleSignIn
+              onCredential={(credential) => void googleLogin(credential)}
+              disabled={busy}
+            />
+            <AccountSessions />
           </>
+        ) : restoring ? (
+          <p>Đang kiểm tra phiên đăng nhập…</p>
         ) : (
           <form onSubmit={login} className="ai-form">
-            <p>Đăng nhập tài khoản dự án để lưu key cá nhân hoặc quản lý key chung.</p>
+            <p>
+              {authMode === "register"
+                ? "Tạo tài khoản để sử dụng ứng dụng."
+                : "Đăng nhập tài khoản dự án để kết nối AI."}
+            </p>
+            {authMode === "register" && (
+              <label>
+                Họ và tên
+                <input
+                  autoComplete="name"
+                  value={displayName}
+                  minLength={1}
+                  maxLength={120}
+                  required
+                  onChange={(e) => setDisplayName(e.target.value)}
+                />
+              </label>
+            )}
             <label>
               Email
               <input
@@ -159,15 +258,54 @@ export function AiSettings({
               Mật khẩu
               <input
                 type="password"
-                autoComplete="current-password"
+                autoComplete={authMode === "register" ? "new-password" : "current-password"}
+                minLength={authMode === "register" ? 8 : 1}
+                maxLength={72}
                 value={password}
                 required
                 onChange={(e) => setPassword(e.target.value)}
               />
             </label>
-            <button className="secondary-button" disabled={busy} type="submit">
-              {busy ? "Đang đăng nhập…" : "Đăng nhập tài khoản"}
+            {authMode === "register" && (
+              <label>
+                Xác nhận mật khẩu
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  maxLength={72}
+                  value={confirmation}
+                  required
+                  onChange={(e) => setConfirmation(e.target.value)}
+                />
+              </label>
+            )}
+            <button className="header-account-button" disabled={busy} type="submit">
+              {busy
+                ? "Đang xử lý…"
+                : authMode === "register"
+                  ? "Đăng ký tài khoản"
+                  : "Đăng nhập tài khoản"}
             </button>
+            <button
+              className="auth-mode-link"
+              type="button"
+              onClick={() => {
+                setPassword("");
+                setConfirmation("");
+                setMessage("");
+                setAuthMode(authMode === "register" ? "login" : "register");
+              }}
+            >
+              {authMode === "register"
+                ? "Đã có tài khoản? Đăng nhập"
+                : "Chưa có tài khoản? Đăng ký"}
+            </button>
+            <div className="auth-divider">hoặc</div>
+            <GoogleSignIn
+              onCredential={(credential) => void googleLogin(credential)}
+              disabled={busy}
+            />
           </form>
         )}
         {message && (
@@ -184,7 +322,7 @@ export function AiSettings({
       >
         <KeyRound size={28} />
         <h2 id="ai-settings-title">Kết nối AI</h2>
-        <p>Chọn OpenAI hoặc Claude, dùng key cá nhân hay key chung của hệ thống.</p>
+        <p>Chọn nhà cung cấp và dùng key cá nhân hoặc key chung của hệ thống.</p>
         {!profile && (
           <div className="ai-login-prompt">
             <p>Đăng nhập tài khoản dự án để thêm hoặc quản lý kết nối AI.</p>
@@ -202,6 +340,12 @@ export function AiSettings({
                 setChoice({
                   ...choice,
                   provider: e.target.value as typeof choice.provider,
+                  credential_source: choice.credential_source === "chatgpt" ? "auto" : choice.credential_source,
+                  engine: ["deepseek", "openrouter"].includes(e.target.value)
+                    ? "opencode"
+                    : e.target.value === "anthropic" ? "direct" : choice.engine,
+                  retrieval_mode: ["deepseek", "openrouter"].includes(e.target.value)
+                    ? "keyword" : choice.retrieval_mode,
                   model: "",
                 });
                 setKey("");
@@ -209,6 +353,30 @@ export function AiSettings({
             >
               <option value="openai">OpenAI API</option>
               <option value="anthropic">Claude API (Anthropic)</option>
+              <option value="deepseek">DeepSeek API</option>
+              <option value="openrouter">OpenRouter API</option>
+            </select>
+          </label>
+          <label>
+            Engine xử lý
+            <select
+              value={choice.engine}
+              onChange={(e) =>
+                setChoice({
+                  ...choice,
+                  engine: e.target.value as typeof choice.engine,
+                  credential_source: e.target.value === "direct" && choice.credential_source === "chatgpt" ? "auto" : choice.credential_source,
+                  retrieval_mode: e.target.value === "opencode" ? "keyword" : choice.retrieval_mode,
+                })
+              }
+            >
+              <option value="direct" disabled={["deepseek", "openrouter"].includes(choice.provider)}>Gọi model trực tiếp</option>
+              <option
+                value="opencode"
+                disabled={!options?.engines?.opencode || choice.provider === "anthropic"}
+              >
+                OpenCode (thử nghiệm local)
+              </option>
             </select>
           </label>
           <label>
@@ -219,6 +387,7 @@ export function AiSettings({
                 setChoice({
                   ...choice,
                   credential_source: e.target.value as typeof choice.credential_source,
+                  retrieval_mode: e.target.value === "chatgpt" ? "keyword" : choice.retrieval_mode,
                 })
               }
             >
@@ -227,6 +396,9 @@ export function AiSettings({
               </option>
               <option value="personal">Chỉ key cá nhân</option>
               <option value="shared">Chỉ key chung của hệ thống</option>
+              {choice.provider === "openai" && choice.engine === "opencode" && chatgptAvailable && (
+                <option value="chatgpt" disabled={!chatgpt.connected}>ChatGPT Plus/Pro cá nhân</option>
+              )}
             </select>
           </label>
           <label>
@@ -237,7 +409,7 @@ export function AiSettings({
               placeholder={
                 choice.provider === "openai"
                   ? "Để trống dùng model mặc định"
-                  : "Nhập ID model Claude được cấp trong Console"
+                  : choice.provider === "anthropic" ? "Nhập ID model Claude được cấp trong Console" : "Nhập ID model của nhà cung cấp"
               }
               onChange={(e) => setChoice({ ...choice, model: e.target.value })}
             />
@@ -253,7 +425,7 @@ export function AiSettings({
                 })
               }
             >
-              <option value="hybrid">
+              <option value="hybrid" disabled={choice.credential_source === "chatgpt"}>
                 Kết hợp ngữ nghĩa + từ khóa (cần key OpenAI cho embeddings)
               </option>
               <option value="keyword">Từ khóa (không gọi API embeddings)</option>
@@ -330,9 +502,26 @@ export function AiSettings({
         </div>
         <div className="ai-oauth-status">
           <p>
-            <strong>ChatGPT Plus OAuth</strong>: chưa khả dụng cho website này; cần quyền tích hợp
-            hosted từ OpenAI.
+            <strong>OpenCode Free</strong>: chưa khả dụng; đang chờ xác minh kết nối và điều kiện
+            sử dụng cho website dùng chung.
           </p>
+          <p><strong>ChatGPT Plus/Pro qua OpenCode</strong></p>
+          {!chatgptAvailable ? <p>Chưa bật OAuth trong môi trường này.</p> : !profile ? (
+            <p>Đăng nhập tài khoản dự án để kết nối ChatGPT.</p>
+          ) : (
+            <>
+              <p>{chatgpt.connected ? "Đã kết nối cho phiên local." : chatgpt.pending ? "Đang chờ đăng nhập ChatGPT." : "Chưa kết nối."}</p>
+              {chatgpt.instructions && <p>{chatgpt.instructions}</p>}
+              {chatgpt.url && <p><a href={chatgpt.url} target="_blank" rel="noreferrer noopener">Mở trang đăng nhập OpenAI</a></p>}
+              <div className="ai-actions">
+                {!chatgpt.pending && !chatgpt.connected && <button className="secondary-button" disabled={busy} onClick={() => void chatgptAction("start")}>Kết nối ChatGPT Plus/Pro</button>}
+                {chatgpt.pending && chatgpt.url && <button className="secondary-button" disabled={busy} onClick={() => void chatgptAction("finish")}>Tôi đã đăng nhập</button>}
+                {chatgpt.connected && choice.credential_source !== "chatgpt" && <button className="secondary-button" disabled={busy} onClick={() => setChoice({...choice, provider: "openai", engine: "opencode", credential_source: "chatgpt", retrieval_mode: "keyword", model: "gpt-5.6-luna"})}>Sử dụng ChatGPT đã kết nối</button>}
+                {(chatgpt.pending || chatgpt.connected) && <button className="secondary-button" disabled={busy} onClick={() => void chatgptAction("disconnect")}>Ngắt kết nối</button>}
+              </div>
+              <p className="small-print">Phiên thử nghiệm local hết hạn sau khoảng một giờ hoặc khi backend khởi động lại.</p>
+            </>
+          )}
           <p>
             <strong>Claude Pro OAuth</strong>: nhà cung cấp không hỗ trợ đăng nhập Pro cho ứng dụng
             bên ngoài gọi model.

@@ -42,12 +42,13 @@ Test tự cố định các host 127.0.0.1 và project demo-legal-api. Không c�
 - [Runbook](../../docs/backend-operations.md): admin provisioning, đối soát, triển khai, khôi phục.
 - [Data schema](../../docs/database-schema.md).
 - [Kế hoạch phạm vi](../../docs/backend-plan.md).
+- [Xác thực và quản lý phiên](../../docs/auth-plan.md): đăng ký bcrypt, Google Sign-In, cookie và cấu hình production.
 
 ## RAG integration
 
 Module từ `AI_RAG` cung cấp `POST /api/v1/rag/ask` với body
-`{"question": "Câu hỏi pháp luật", "top_k": 5}`. Endpoint yêu cầu Firebase ID token
-và profile đã bootstrap, đang active, theo cùng cơ chế xác thực của backend.
+`{"question": "Câu hỏi pháp luật", "top_k": 5}`. Endpoint yêu cầu phiên ứng dụng hoặc Firebase ID token
+và profile đang active, theo cùng cơ chế xác thực của backend.
 
 RAG đọc tối đa 100 chunk chuẩn bị sẵn từ Firestore `document_chunks`, xếp hạng
 bằng embedding/keyword rồi sinh câu trả lời kèm nguồn; không đọc PDF trực tiếp
@@ -63,3 +64,5 @@ Các test tích hợp route dùng AI giả lập, không gọi API tính phí.
 ## AI connection options
 
 Xem [AI connections](../../docs/ai-connections.md) cho key cá nhân/key chung của OpenAI và Anthropic, cấu hình mã hóa, lựa chọn provider/source và trạng thái OAuth cho website hosted. `POST /api/v1/rag/ask` nhận thêm provider, credential_source, model và retrieval_mode; request cũ tiếp tục dùng mặc định OpenAI/auto/hybrid.
+
+Engine OpenCode thử nghiệm cho API RAG bằng OpenAI API key: [cấu hình và giới hạn local](../../docs/ai-connections.md#engine-opencode-thử-nghiệm-local).

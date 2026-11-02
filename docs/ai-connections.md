@@ -25,7 +25,7 @@ UI và `GET /api/v1/ai/connections` thể hiện hai phương thức OAuth là c
 2. Không ghi khóa mã hóa vào Git. Giữ nó qua restart/deploy; mất khóa thì cần nhập lại các API key. Đổi khóa cần quy trình giải mã/mã hóa lại dữ liệu trước khi loại khóa cũ; phiên bản này chưa có lệnh tự xoay khóa.
 3. Cấu hình Web API key Firebase công khai trong `apps/web/.env.local` bằng `NEXT_PUBLIC_FIREBASE_API_KEY`; bật provider Email/Password và tạo tài khoản dự án bằng quy trình Firebase hiện có. Không đặt API key AI trong biến `NEXT_PUBLIC_*`.
 4. Frontend dùng `NEXT_PUBLIC_API_URL`, backend CORS phải cho phép origin frontend. Online cần HTTPS. Auth emulator chỉ dùng loopback trong development bằng `NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_URL`.
-5. Bấm **Đăng nhập** ở góc phải header (sau đăng nhập đổi thành **Tài khoản**). **Kết nối AI** có ở cả header, sidebar và lời nhắc trên màn Hỏi đáp; các nút đưa tới đúng phần cấu hình. Trên mobile, nút AI rút gọn còn chữ **AI**. Đăng nhập tại form tài khoản dự án. Phiên Firebase chỉ ở bộ nhớ, tự refresh trong phiên, không lưu ID/refresh token vào localStorage. Tải lại trang cần đăng nhập lại. Đây là tài khoản dự án, không phải tài khoản ChatGPT/Claude.
+5. Bấm **Đăng nhập** ở góc phải header (sau đăng nhập đổi thành **Tài khoản**). **Kết nối AI** có ở cả header, sidebar và lời nhắc trên màn Hỏi đáp; các nút đưa tới đúng phần cấu hình. Trên mobile, nút AI rút gọn còn chữ **AI**. Đăng nhập tại form tài khoản dự án. Phiên dự án dùng cookie HttpOnly và được khôi phục khi tải lại trang; có thể quản lý hoặc thu hồi phiên trong Tài khoản. Đây là tài khoản dự án, không phải tài khoản ChatGPT/Claude.
 6. Chọn OpenAI hoặc Claude, chọn quản lý key cá nhân; admin có thêm scope key chung. API key được nhập một lần, không đọc lại. Sau khi lưu, trạng thái là đã cấu hình; provider xác minh key khi gửi yêu cầu thực tế.
 7. Chọn nguồn key: auto (ưu tiên cá nhân đang bật), personal hoặc shared. Sai key/rate limit không tự chuyển nguồn để tránh thay đổi tài khoản thanh toán ngoài ý muốn. `AI_ALLOW_SHARED_KEYS=false` chặn dùng key chung ở cấp server.
 8. Chọn model Claude đúng ID tài khoản được cấp, hoặc đặt `ANTHROPIC_MODEL` trên server. OpenAI tiếp tục dùng DEFAULT_LLM_MODEL khi người dùng không chỉ định model.
@@ -37,7 +37,7 @@ Không gọi API trả phí chỉ để lưu key. Adapter dùng timeout, không 
 
 ## API
 
-Tất cả yêu cầu phải có Firebase ID token, profile active. Path provider chỉ nhận `openai` hoặc `anthropic`.
+Yêu cầu cần phiên cookie hợp lệ hoặc Firebase ID token và profile active. Path provider chỉ nhận `openai` hoặc `anthropic`.
 
 | Endpoint | Quyền | Payload/hành vi |
 |---|---|---|
@@ -80,3 +80,24 @@ Test dùng key giả và provider HTTP mock: mã hóa, cách ly account, admin g
 - Ruff lint/format, compileall, frontend typecheck và production build đều đạt.
 - Chromium smoke test đạt login/bootstrap, key cá nhân + key chung của admin, gửi câu hỏi theo provider/source/model/retrieval đã chọn, cách ly secret khỏi localStorage, dọn phiên khi logout và layout desktop/mobile.
 - Không dùng credential thật hoặc gửi inference tính phí. Chưa cấu hình deploy cloud/quyền hosted OAuth.
+
+## Engine OpenCode thử nghiệm local
+
+`POST /api/v1/rag/ask` nhận `engine: "direct" | "opencode"`; mặc định là `direct` để request hiện tại không đổi. OpenCode hỗ trợ API key OpenAI, DeepSeek và OpenRouter của cá nhân hoặc hệ thống; chọn model thuộc provider đó (OpenRouter dùng ID như `openai/gpt-4o-mini`). Ngoài ra có thể thử ChatGPT OAuth cá nhân theo hướng dẫn bên dưới. Bản này giới hạn cho local development, không dùng trong production hoặc qua public reverse proxy. Không đặt Docker socket vào container FastAPI.
+
+Để chạy local trên host có Docker:
+
+1. Cài [OpenCode](https://opencode.ai/docs/) phiên bản `1.17.11` và cài các dependency backend. Tạo Python image local: `docker build -f infra/docker/Dockerfile.api -t legal-api-backend:verify apps/api`.
+2. Đặt `APP_ENV=development`, `OPENCODE_LOCAL_ENABLED=true`, `OPENCODE_BINARY=/đường/dẫn/đến/opencode` và `OPENCODE_IMAGE=legal-api-backend:verify` trong `apps/api/.env`. Thiết lập `AI_CREDENTIAL_ENCRYPTION_KEY` ổn định trước khi lưu API key; không thay khóa khi còn credential đã mã hóa.
+3. Chạy API **trực tiếp trên host**, bind `127.0.0.1` với `--no-proxy-headers`; không chạy runner này trong container API và không đưa API ra mạng công cộng. Backend host cần quyền dùng Docker; Docker daemon là quyền quản trị máy, chỉ dùng môi trường phát triển tin cậy.
+4. Đăng nhập ứng dụng, lưu API key của provider tại **Kết nối AI**, chọn **Engine xử lý → OpenCode** và model. UI chọn mặc định tra cứu từ khóa để không phát sinh embeddings; hybrid vẫn cần OpenAI API key cùng nguồn. API key có billing riêng, không tính vào ChatGPT Plus.
+
+Mỗi câu hỏi OpenCode tạo Docker network nội bộ, gateway và worker riêng; worker non-root, tắt tools/plugins, dùng filesystem tạm, không mount workspace hay credential Firebase. Gateway chỉ chuyển request HTTPS tới endpoint cố định của provider đã chọn, kiểm tra TLS và địa chỉ IP công cộng, tối đa ba request và giới hạn output; key được truyền tới worker qua stdin. Có giới hạn thời gian và dọn container/network sau request. Đây là cấu hình local thử nghiệm: chưa kiểm thử đầy đủ OAuth, daemon crash recovery, tải nhiều replica, cơ chế cô lập production hoặc inference thành công bằng API key thật; không dùng làm worker production.
+
+### Thử ChatGPT OAuth local
+
+Đặt `OPENCODE_CHATGPT_LOCAL_ENABLED=true` và `OPENCODE_LOCAL_ENABLED=true` trên máy phát triển, rồi khởi động lại backend. Tại **Kết nối AI**, chọn **Kết nối ChatGPT Plus/Pro**, mở trang OpenAI theo hướng dẫn, sau đó bấm **Tôi đã đăng nhập**. Ứng dụng chọn nguồn ChatGPT cá nhân và tra cứu từ khóa; có thể đổi model OpenAI nếu tài khoản có quyền. Không chia sẻ mã đăng nhập hay token.
+
+Mỗi người dùng có một container OpenCode riêng, credential ở filesystem tạm trong container, không ghi vào Firestore và không dùng key dự phòng. Mạng của worker đi qua tunnel cho phép các domain OpenAI cố định. Đây là phiên thử nghiệm một tiến trình: backend khởi động lại hoặc phiên hết hạn sau tối đa một giờ sẽ phải kết nối lại. Giới hạn tối đa hai phiên; chưa phải giải pháp production, chưa có lưu và làm mới credential bền vững, đồng bộ nhiều replica, khôi phục sau sự cố, hoặc giới hạn số token ở gateway cho OAuth.
+
+OpenCode Free chưa được bật: các lần kiểm tra thực tế tại môi trường này chưa nhận được phản hồi và [tài liệu OpenCode](https://opencode.ai/v2/docs/console/api/inference/) giới hạn free tier cho OpenCode. Chưa xác minh được quyền và tính ổn định khi vận hành worker cho website dùng chung. Không tự chuyển sang model có phí. [OpenAI Docs](https://developers.openai.com/siwc/token-sharing-open-source) hướng dẫn đăng ký quan tâm đối với ứng dụng hosted từ xa; phiên OAuth này chỉ dành cho thử nghiệm local.

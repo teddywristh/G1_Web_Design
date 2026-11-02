@@ -1289,3 +1289,50 @@ td {
     width: 100%;
   }
 }
+
+.auth-mode-link {
+  justify-self: start;
+  color: #426044;
+  text-decoration: underline;
+  font-size: 13px;
+}
+.auth-divider {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.account-sessions {
+  border-top: 1px solid var(--line);
+  margin-top: 22px;
+  padding-top: 16px;
+}
+.account-sessions h3 {
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+.account-sessions ul {
+  padding: 0;
+  list-style: none;
+  margin-bottom: 14px;
+}
+.account-sessions li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf0ed;
+}
+.account-sessions li small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.account-sessions > button {
+  margin: 0 8px 8px 0;
+}
+@media (max-width: 420px) {
+  .breadcrumb strong {
+    display: none;
+  }
+}
