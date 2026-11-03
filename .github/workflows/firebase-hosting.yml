@@ -1,0 +1,63 @@
+name: Firebase Hosting CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase-hosting-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Validate frontend modules
+        run: |
+          for file in apps/web/js/*.js; do
+            node --input-type=module --check < "$file"
+          done
+      - name: Build and inspect public assets
+        run: |
+          python3 scripts/build-firebase-hosting.py --api-url https://example.invalid
+          python3 scripts/check-hosting-build.py
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Build and inspect public assets
+        env:
+          PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
+        run: |
+          test -n "$PUBLIC_API_URL" || { echo 'Set the PUBLIC_API_URL Actions variable.'; exit 1; }
+          python3 scripts/build-firebase-hosting.py --api-url "$PUBLIC_API_URL"
+          python3 scripts/check-hosting-build.py
+      - name: Authenticate with short-lived Google credentials
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        with:
+          workload_identity_provider: ${{ vars.FIREBASE_WIF_PROVIDER }}
+          service_account: ${{ vars.FIREBASE_DEPLOY_SERVICE_ACCOUNT }}
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools@15.12.0
+      - name: Deploy Firebase Hosting
+        run: firebase deploy --only hosting --project legal-ai-dev-aeb51 --non-interactive

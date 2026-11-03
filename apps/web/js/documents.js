@@ -216,6 +216,12 @@ async function openDocument(id) {
   $("#pdf-empty-title").textContent = "Đang tải PDF…";
   $("#pdf-empty-note").textContent = status?.nextAction ? ACTION_TEXT[status.nextAction] || "" : "";
   if (!$("#document-dialog").open) $("#document-dialog").showModal();
+  if (doc.fileState === "upload_failed") {
+    $("#pdf-empty-title").textContent = "PDF chưa được tải lên";
+    $("#pdf-empty-note").textContent = ACTION_TEXT.check_storage;
+    $("#download-pdf").hidden = true;
+    return;
+  }
   try {
     const blob = await api.blob(downloadPath(doc));
     if (state.documentId !== id) return;

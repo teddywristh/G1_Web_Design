@@ -39,7 +39,7 @@ const ACTION_TEXT = {
   await_admin_review: "Quản trị viên cần xuất bản bản dựng mới.",
   upload_public_pdf:
     "Hãy tải lại tài liệu công khai và xác nhận tài liệu không có dữ liệu cá nhân hoặc thông tin mật.",
-  check_storage: "Tải lên thất bại. Kiểm tra Firebase Storage rồi thử lại bằng tài liệu mới.",
+  check_storage: "Lần tải trước không lưu được PDF. Hãy xóa mục này và tải lại tệp PDF gốc như một tài liệu mới.",
   check_job:
     "Không tìm thấy job với cấu hình embedding hiện tại. Liên hệ quản trị viên để kiểm tra.",
   reindex: "Model embedding đã đổi. Mở tài liệu và chọn xử lý lại để lập chỉ mục local.",

@@ -103,7 +103,7 @@ function assistantBubble(message) {
           "",
           `[${index + 1}] ${citation.document_title}${place ? " · " + place : ""}`,
         ),
-        element("small", "", SOURCE_TEXT[citation.source_type] || ""),
+        element("small", "", `${citation.provision_version_id ? "PDF trong kho" : "Nguồn web"}${SOURCE_TEXT[citation.source_type] ? " · " + SOURCE_TEXT[citation.source_type] : ""}${citation.page_number ? " · trang " + citation.page_number : ""}`),
       );
       button.addEventListener("click", () => openEvidence(citation));
       block.append(button);
@@ -296,12 +296,12 @@ $("#provider").addEventListener("change", () => {
 $("#engine").addEventListener("change", () => {
   if ($("#engine").value === "direct" && $("#credential-source").value === "chatgpt")
     $("#credential-source").value = "auto";
-  if ($("#engine").value === "opencode") $("#retrieval-mode").value = "keyword";
+  if ($("#engine").value === "opencode" && !["local", "openrouter"].includes(state.aiOptions?.embedding?.provider)) $("#retrieval-mode").value = "keyword";
   syncAiControls();
   persist();
 });
 $("#credential-source").addEventListener("change", () => {
-  if ($("#credential-source").value === "chatgpt") $("#retrieval-mode").value = "keyword";
+  if ($("#credential-source").value === "chatgpt" && !["local", "openrouter"].includes(state.aiOptions?.embedding?.provider)) $("#retrieval-mode").value = "keyword";
   syncAiControls();
   renderChatgpt();
   persist();

@@ -24,7 +24,7 @@ function selectChatgpt() {
   $("#provider").value = "openai";
   $("#engine").value = "opencode";
   $("#credential-source").value = "chatgpt";
-  $("#retrieval-mode").value = "keyword";
+  $("#retrieval-mode").value = ["local", "openrouter"].includes(state.aiOptions?.embedding?.provider) ? "hybrid" : "keyword";
   $("#model").value = "gpt-5.6-luna";
   syncAiControls();
   persist();
@@ -34,9 +34,9 @@ function selectChatgpt() {
 function renderChatgpt() {
   const connection = state.chatgpt;
   $("#chatgpt-status").textContent = !connection.available
-    ? "Chưa bật trong môi trường này; OAuth OpenCode hiện chỉ hỗ trợ local."
+    ? "ChatGPT qua OpenCode chưa được bật trên máy chủ."
     : connection.connected
-      ? "Đã kết nối cho phiên local."
+      ? "Đã kết nối ChatGPT cho phiên của bạn."
       : connection.pending
         ? connection.url
           ? "Đang chờ đăng nhập ChatGPT."
@@ -182,7 +182,7 @@ async function chatgptAction(action) {
       state.chatgpt = { available: true, pending: false, connected: Boolean(result.connected) };
       if (result.connected) {
         selectChatgpt();
-        notify("Đã kết nối ChatGPT cho phiên local.");
+        notify("Đã kết nối ChatGPT cho phiên của bạn.");
       }
     } else {
       state.chatgpt = { available: true, pending: false, connected: false };

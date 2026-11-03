@@ -1,4 +1,9 @@
 {
+  "hosting": {
+    "public": "dist/hosting",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "headers": [{"source": "**", "headers": [{"key": "X-Content-Type-Options", "value": "nosniff"}]}]
+  },
   "firestore": {
     "rules": "infra/firebase/firestore.rules",
     "indexes": "infra/firebase/firestore.indexes.json"
