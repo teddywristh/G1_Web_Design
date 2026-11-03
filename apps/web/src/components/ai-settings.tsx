@@ -17,7 +17,7 @@ type Connection = {
 type Options = {
   credentialStorageReady: boolean;
   connections: Connection[];
-  engines?: { opencode: boolean };
+  engines?: { opencode: boolean; opencodeApiKeys: boolean };
   methods?: { id: string; available: boolean }[];
 };
 
@@ -357,19 +357,27 @@ export function AiSettings({
             Engine xử lý
             <select
               value={choice.engine}
-              onChange={(e) =>
+              onChange={(e) => {
+                if (e.target.value === "opencode" && !options?.engines?.opencodeApiKeys) {
+                  if (!chatgpt.connected || choice.provider !== "openai") {
+                    setMessage("Hãy kết nối ChatGPT trước khi dùng OpenCode.");
+                    return;
+                  }
+                  setChoice({...choice, engine: "opencode", credential_source: "chatgpt", model: "gpt-5.6-luna"});
+                  return;
+                }
                 setChoice({
                   ...choice,
                   engine: e.target.value as typeof choice.engine,
                   credential_source: e.target.value === "direct" && choice.credential_source === "chatgpt" ? "auto" : choice.credential_source,
                   retrieval_mode: e.target.value === "opencode" ? "keyword" : choice.retrieval_mode,
-                })
-              }
+                });
+              }}
             >
               <option value="direct">Gọi model trực tiếp</option>
               <option
                 value="opencode"
-                disabled={!options?.engines?.opencode || choice.provider === "anthropic"}
+                disabled={!options?.engines?.opencode || choice.provider === "anthropic" || (!options.engines.opencodeApiKeys && choice.provider !== "openai")}
               >
                 OpenCode (thử nghiệm local)
               </option>
@@ -387,11 +395,11 @@ export function AiSettings({
                 })
               }
             >
-              <option value="auto">
+              <option value="auto" disabled={choice.engine === "opencode" && !options?.engines?.opencodeApiKeys}>
                 Tự động: cá nhân trước, key chung khi chưa có key cá nhân
               </option>
-              <option value="personal">Chỉ key cá nhân</option>
-              <option value="shared">Chỉ key chung của hệ thống</option>
+              <option value="personal" disabled={choice.engine === "opencode" && !options?.engines?.opencodeApiKeys}>Chỉ key cá nhân</option>
+              <option value="shared" disabled={choice.engine === "opencode" && !options?.engines?.opencodeApiKeys}>Chỉ key chung của hệ thống</option>
               {choice.provider === "openai" && choice.engine === "opencode" && chatgptAvailable && (
                 <option value="chatgpt" disabled={!chatgpt.connected}>ChatGPT Plus/Pro cá nhân</option>
               )}

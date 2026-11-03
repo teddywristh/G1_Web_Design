@@ -7,8 +7,13 @@ function syncAiControls() {
   const engine = $("#engine").value;
   const source = $("#credential-source").value;
   const available = Boolean(state.aiOptions?.engines?.opencode);
-  $("#engine option[value=opencode]").disabled = !available || provider === "anthropic";
+  const apiKeysAvailable = Boolean(state.aiOptions?.engines?.opencodeApiKeys);
+  $("#engine option[value=opencode]").disabled =
+    !available || provider === "anthropic" || (!apiKeysAvailable && provider !== "openai");
   $("#engine option[value=direct]").disabled = false;
+  for (const value of ["auto", "personal", "shared"]) {
+    $(`#credential-source option[value=${value}]`).disabled = engine === "opencode" && !apiKeysAvailable;
+  }
   const chatgptOption = $("#credential-source option[value=chatgpt]");
   chatgptOption.hidden = provider !== "openai" || engine !== "opencode" || !state.chatgpt.available;
   chatgptOption.disabled = !state.chatgpt.connected;
@@ -69,7 +74,10 @@ async function loadConnections({ restore = false } = {}) {
       const status = await api.get("/ai/chatgpt");
       if (state.user?.id !== userId) return;
       state.chatgpt = { ...state.chatgpt, ...status, available };
-      if (restore && status.connected) selectChatgpt();
+      if (status.connected && (restore || (
+        !options.engines?.opencodeApiKeys && $("#provider").value === "openai" &&
+        $("#engine").value === "opencode" && $("#credential-source").value === "auto"
+      ))) selectChatgpt();
     } else {
       state.chatgpt = { available: false, connected: false, pending: false };
     }
@@ -205,4 +213,4 @@ $("#chatgpt-finish").addEventListener("click", () => chatgptAction("finish"));
 $("#chatgpt-use").addEventListener("click", selectChatgpt);
 $("#chatgpt-disconnect").addEventListener("click", () => chatgptAction("disconnect"));
 
-export { loadConnections, renderChatgpt, syncAiControls };
+export { loadConnections, renderChatgpt, selectChatgpt, syncAiControls };

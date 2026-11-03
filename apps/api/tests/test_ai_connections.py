@@ -195,6 +195,15 @@ def test_server_shared_policy_and_storage_readiness(repo, configured_crypto):
         save(repo, {"id": "reader", "role": "user"})
 
 
+def test_hosted_chatgpt_does_not_advertise_opencode_api_keys(repo, configured_crypto, monkeypatch):
+    monkeypatch.setattr(configured_crypto, "opencode_local_enabled", False)
+    monkeypatch.setattr(configured_crypto, "opencode_chatgpt_hosted_enabled", True)
+    monkeypatch.setattr(configured_crypto, "opencode_binary", "/test/opencode")
+    engines = connections.options(repo, {"id": "reader"}, configured_crypto)["engines"]
+    assert engines["opencode"] is True
+    assert engines["opencodeApiKeys"] is False
+
+
 def test_ciphertext_cannot_be_reassigned_to_another_account(repo):
     save(repo, {"id": "reader", "role": "user"})
     row = repo.get("ai_connections", connections.connection_id("user:reader", "openai"))

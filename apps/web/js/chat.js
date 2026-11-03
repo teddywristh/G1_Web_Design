@@ -13,7 +13,7 @@ import {
 } from "./core.js";
 import { openEvidence } from "./evidence.js";
 import { navigate } from "./navigation.js";
-import { renderChatgpt, syncAiControls } from "./settings.js";
+import { renderChatgpt, selectChatgpt, syncAiControls } from "./settings.js";
 
 // Câu hỏi, câu trả lời và lịch sử hội thoại
 function activeChat() {
@@ -173,6 +173,10 @@ $("#question-form").addEventListener("submit", async (event) => {
     showAuth("Đăng nhập để đặt câu hỏi và kết nối AI.");
     return;
   }
+  if ($("#engine").value === "opencode" && !state.aiOptions?.engines?.opencodeApiKeys && $("#credential-source").value !== "chatgpt") {
+    notify("Hãy kết nối ChatGPT và chọn dùng ChatGPT trong Thiết lập, hoặc chọn engine Trực tiếp cho API key.");
+    return;
+  }
   const hasReadyKb = state.kbs.some((kb) => kb.ready && state.selected.has(kb.id));
   if (
     hasReadyKb &&
@@ -290,6 +294,14 @@ $("#provider").addEventListener("change", () => {
   persist();
 });
 $("#engine").addEventListener("change", () => {
+  if ($("#engine").value === "opencode" && !state.aiOptions?.engines?.opencodeApiKeys) {
+    if (state.chatgpt.connected && $("#provider").value === "openai") {
+      selectChatgpt();
+      return;
+    }
+    $("#engine").value = "direct";
+    notify("Hãy kết nối ChatGPT trong Thiết lập trước khi dùng OpenCode.");
+  }
   if ($("#engine").value === "direct" && $("#credential-source").value === "chatgpt")
     $("#credential-source").value = "auto";
   if ($("#engine").value === "opencode" && !["local", "openrouter"].includes(state.aiOptions?.embedding?.provider)) $("#retrieval-mode").value = "keyword";
