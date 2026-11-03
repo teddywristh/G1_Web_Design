@@ -283,11 +283,7 @@ $("#delete-chat").addEventListener("click", () => {
 $("#provider").addEventListener("change", () => {
   const provider = $("#provider").value;
   $("#model").value = "";
-  if (["deepseek", "openrouter"].includes(provider)) {
-    $("#engine").value = "opencode";
-    $("#retrieval-mode").value = "keyword";
-  }
-  if (provider === "anthropic") $("#engine").value = "direct";
+  $("#engine").value = "direct";
   if (provider !== "openai" && $("#credential-source").value === "chatgpt")
     $("#credential-source").value = "auto";
   syncAiControls();

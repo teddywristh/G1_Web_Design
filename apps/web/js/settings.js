@@ -8,7 +8,7 @@ function syncAiControls() {
   const source = $("#credential-source").value;
   const available = Boolean(state.aiOptions?.engines?.opencode);
   $("#engine option[value=opencode]").disabled = !available || provider === "anthropic";
-  $("#engine option[value=direct]").disabled = ["deepseek", "openrouter"].includes(provider);
+  $("#engine option[value=direct]").disabled = false;
   const chatgptOption = $("#credential-source option[value=chatgpt]");
   chatgptOption.hidden = provider !== "openai" || engine !== "opencode" || !state.chatgpt.available;
   chatgptOption.disabled = !state.chatgpt.connected;

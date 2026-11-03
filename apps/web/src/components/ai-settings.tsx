@@ -341,11 +341,7 @@ export function AiSettings({
                   ...choice,
                   provider: e.target.value as typeof choice.provider,
                   credential_source: choice.credential_source === "chatgpt" ? "auto" : choice.credential_source,
-                  engine: ["deepseek", "openrouter"].includes(e.target.value)
-                    ? "opencode"
-                    : e.target.value === "anthropic" ? "direct" : choice.engine,
-                  retrieval_mode: ["deepseek", "openrouter"].includes(e.target.value)
-                    ? "keyword" : choice.retrieval_mode,
+                  engine: "direct",
                   model: "",
                 });
                 setKey("");
@@ -370,7 +366,7 @@ export function AiSettings({
                 })
               }
             >
-              <option value="direct" disabled={["deepseek", "openrouter"].includes(choice.provider)}>Gọi model trực tiếp</option>
+              <option value="direct">Gọi model trực tiếp</option>
               <option
                 value="opencode"
                 disabled={!options?.engines?.opencode || choice.provider === "anthropic"}

@@ -67,6 +67,9 @@ async function enterSession(session) {
   $("#model").value = prefs.model || "";
   $("#engine").value = prefs.engine || "direct";
   $("#credential-source").value = prefs.credentialSource || "auto";
+  // Earlier versions forced these providers through a local-only OpenCode worker.
+  if (["deepseek", "openrouter"].includes($("#provider").value) && $("#credential-source").value !== "chatgpt")
+    $("#engine").value = "direct";
   $("#retrieval-mode").value = prefs.retrievalMode || "hybrid";
   $("#as-of").value = "";
   $("#auth-view").hidden = true;

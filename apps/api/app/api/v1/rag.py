@@ -7,7 +7,7 @@ from app.core.errors import APIError
 from app.dependencies import current_user, get_repository
 from app.schemas.rag import AskRequest, AskResponse
 from app.services import qa
-from app.services.ai import AnthropicService, OpenAIService
+from app.services.ai import AnthropicService, CompatibleChatService, OpenAIService
 from app.services.ai_connections import Credential, resolve
 from app.services.embeddings import LocalEmbedding, OpenRouterEmbedding, requires_public_input
 from app.services.opencode import OpenCodeService
@@ -53,8 +53,8 @@ def ask_question(
             raise APIError(422, "invalid_provider", "This provider is not enabled for OpenCode")
         if request.provider != "openai" and not request.model:
             raise APIError(422, "invalid_model", "Select a model for this provider")
-    elif request.provider not in {"openai", "anthropic"}:
-        raise APIError(422, "invalid_provider", "This provider requires OpenCode")
+    elif request.provider in {"deepseek", "openrouter"} and not request.model:
+        raise APIError(422, "invalid_model", "Select a model for this provider")
     if request.credential_source == "chatgpt":
         if (
             request.engine != "opencode"
@@ -78,9 +78,12 @@ def ask_question(
     elif request.provider == "openai":
         selected = resolve(repo, user, request.provider, request.credential_source, settings)
         ai = OpenAIService(openai_settings(settings, selected, request.model))
-    else:
+    elif request.provider == "anthropic":
         selected = resolve(repo, user, request.provider, request.credential_source, settings)
         ai = AnthropicService(settings, selected.api_key, request.model)
+    else:
+        selected = resolve(repo, user, request.provider, request.credential_source, settings)
+        ai = CompatibleChatService(settings, selected.api_key, request.model, request.provider)
     try:
         embedder = None
         kbs, _ = qa.resolve_scope(repo, user, request.knowledge_base_ids, settings)

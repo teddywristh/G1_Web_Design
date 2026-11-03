@@ -11,7 +11,7 @@ from app.core.errors import APIError
 from app.schemas.ai_connections import ConnectionPut
 from app.schemas.rag import StoredChunk
 from app.services import ai_connections as connections
-from app.services.ai import AnthropicService
+from app.services.ai import AnthropicService, CompatibleChatService
 from tests.stubs import stub_qa
 
 from .test_backend import api as api  # noqa: F401
@@ -20,6 +20,52 @@ from .test_backend import repo as repo  # noqa: F401
 
 PERSONAL = "sk-test-personal-not-a-real-key"
 SHARED = "sk-test-shared-not-a-real-key"
+
+
+def test_openrouter_direct_uses_selected_model_and_personal_key(configured_crypto):
+    recorded = []
+
+    def handler(request):
+        recorded.append(request)
+        return httpx.Response(
+            200,
+            json={"choices": [{"finish_reason": "stop", "message": {"content": "Câu trả lời"}}]},
+        )
+
+    service = CompatibleChatService(
+        configured_crypto, PERSONAL, "vendor/model:free", "openrouter", httpx.MockTransport(handler)
+    )
+    assert service.answer("Câu hỏi", []) == "Câu trả lời"
+    assert str(recorded[0].url) == "https://openrouter.ai/api/v1/chat/completions"
+    assert recorded[0].headers["authorization"] == "Bearer " + PERSONAL
+    assert json.loads(recorded[0].content)["model"] == "vendor/model:free"
+
+
+def test_openrouter_direct_request_selects_personal_key(api, repo, monkeypatch):
+    from app.core.database import get_database
+
+    client, app, _ = api
+    identity(app)
+    profile(repo)
+    app.dependency_overrides[get_database] = lambda: Mock()
+    save(repo, {"id": "reader", "role": "user"}, provider="openrouter")
+    service = Mock(return_value=Mock(answer=Mock(return_value="Câu trả lời")))
+    monkeypatch.setattr("app.api.v1.rag.CompatibleChatService", service)
+    stub_qa(monkeypatch)
+    response = client.post(
+        "/api/v1/rag/ask",
+        json={
+            "question": "Câu hỏi pháp luật",
+            "provider": "openrouter",
+            "credential_source": "personal",
+            "engine": "direct",
+            "retrieval_mode": "keyword",
+            "model": "vendor/model:free",
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert service.call_args.args[1:] == (PERSONAL, "vendor/model:free", "openrouter")
+    assert response.json()["credential_source"] == "personal"
 
 
 @pytest.fixture(autouse=True)
