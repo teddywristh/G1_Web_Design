@@ -56,7 +56,12 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(default="", repr=False)
     default_llm_model: str = "gpt-4o-mini"
     default_embedding_model: str = "text-embedding-3-small"
-    embedding_provider: Literal["openai", "openrouter"] = "openai"
+    embedding_provider: Literal["openai", "openrouter", "local"] = "openai"
+    local_embedding_url: str = "http://127.0.0.1:8010"
+    local_embedding_model: str = "nvidia/Nemotron-3.5-Embed-1B-BF16"
+    local_embedding_api_key: SecretStr = SecretStr("")
+    local_embedding_timeout_seconds: int = Field(default=120, ge=1, le=300)
+    local_embedding_profile_version: str = "bf16-sdpa-512-l2-v1"
     openrouter_embedding_model: str = ""
     openrouter_embedding_api_key: SecretStr = SecretStr("")
     rag_top_k: int = Field(default=5, ge=1, le=20)

@@ -41,6 +41,7 @@ const ACTION_TEXT = {
   upload_public_pdf: "Hãy tải lại tài liệu công khai và xác nhận tài liệu không có dữ liệu cá nhân hoặc thông tin mật.",
   check_storage: "Tải lên thất bại. Kiểm tra Firebase Storage rồi thử lại bằng tài liệu mới.",
   check_job: "Không tìm thấy job với cấu hình embedding hiện tại. Liên hệ quản trị viên để kiểm tra.",
+  reindex: "Model embedding đã đổi. Mở tài liệu và chọn xử lý lại để lập chỉ mục local.",
   wait_rate_limit: "Đang giãn lượt embedding. Worker sẽ tự thử lại sau.",
 };
 const STAGE_TEXT = { upload: "tải PDF", parse: "đọc PDF", embed: "tạo embeddings", publish: "tạo chỉ mục" };
@@ -1113,7 +1114,7 @@ function syncAiControls() {
   const chatgptOption = $("#credential-source option[value=chatgpt]");
   chatgptOption.hidden = provider !== "openai" || engine !== "opencode" || !state.chatgpt.available;
   chatgptOption.disabled = !state.chatgpt.connected;
-  $("#retrieval-mode option[value=hybrid]").disabled = source === "chatgpt" && state.aiOptions?.embedding?.provider !== "openrouter";
+  $("#retrieval-mode option[value=hybrid]").disabled = source === "chatgpt" && !["openrouter", "local"].includes(state.aiOptions?.embedding?.provider);
   $("#query-public-label").hidden = !(state.aiOptions?.embedding?.requiresPublicInput && $("#retrieval-mode").value === "hybrid");
   $("#model").placeholder = provider === "openai" ? "Để trống dùng mặc định" : "Nhập ID model";
 }
@@ -1173,7 +1174,9 @@ async function loadConnections({ restore = false } = {}) {
   list.replaceChildren();
   renderChatgpt();
   const embedding = state.aiOptions?.embedding;
-  $("#embedding-info").textContent = embedding?.provider === "openrouter"
+  $("#embedding-info").textContent = embedding?.provider === "local"
+    ? `Embedding chạy trên GPU local (${embedding.model}); không cần khóa OpenRouter.`
+    : embedding?.provider === "openrouter"
     ? `Embedding dùng OpenRouter (${embedding.model || "chưa chọn model"}) với key chung do hệ thống cấu hình${embedding.configured ? "." : "; chưa cấu hình đầy đủ."}`
     : "Embedding dùng khóa OpenAI; nếu không có khóa OpenAI, hãy dùng mục tìm theo số hiệu/điều.";
   $("#connection-scope option[value=shared]").hidden = !isAdmin();

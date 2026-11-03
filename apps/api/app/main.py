@@ -16,6 +16,7 @@ from starlette.exceptions import HTTPException
 
 from app.api.v1.ai_connections import router as ai_connections_router
 from app.api.v1.auth import router as auth_router
+from app.api.v1.embeddings import router as embeddings_router
 from app.api.v1.knowledge import router as knowledge_router
 from app.api.v1.rag import router as rag_router
 from app.api.v1.routes import router
@@ -154,6 +155,7 @@ def create_app():
     api.include_router(router)
     api.include_router(auth_router)
     api.include_router(ai_connections_router)
+    api.include_router(embeddings_router)
     api.include_router(knowledge_router)
     api.include_router(rag_router, prefix="/api/v1", dependencies=[Depends(current_user)])
     return api

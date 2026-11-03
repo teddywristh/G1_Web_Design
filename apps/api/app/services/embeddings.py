@@ -142,3 +142,70 @@ class OpenRouterEmbedding:
                 "embedding_request_failed reason=%s inputs=%s", type(exc).__name__, len(texts)
             )
             raise APIError(503, "ai_unavailable", "OpenRouter embedding request failed") from None
+
+
+class LocalEmbedding:
+    """Use the dedicated local GPU host without provider keys or free-tier quotas."""
+
+    def __init__(self, settings, *, input_type, transport=None):
+        self.settings = settings
+        self.input_type = {"search_query": "query", "search_document": "passage"}.get(
+            input_type, input_type
+        )
+        if self.input_type not in {"query", "passage"}:
+            raise ValueError("Invalid embedding input type")
+        self.transport = transport
+
+    def embed(self, texts):
+        vectors = []
+        key = self.settings.local_embedding_api_key.get_secret_value()
+        try:
+            with httpx.Client(
+                timeout=self.settings.local_embedding_timeout_seconds,
+                transport=self.transport,
+            ) as client:
+                # One text per call keeps lease heartbeats frequent and avoids large GPU batches.
+                for text in texts:
+                    response = client.post(
+                        self.settings.local_embedding_url.rstrip("/") + "/v1/embeddings",
+                        headers={"Authorization": "Bearer " + key} if key else {},
+                        json={
+                            "model": self.settings.local_embedding_model,
+                            "input": [text],
+                            "input_type": self.input_type,
+                            "dimensions": self.settings.embedding_dimensions,
+                        },
+                    )
+                    if response.status_code == 429:
+                        raise APIError(
+                            503, "embedding_busy", "Local embedding host is busy; retry shortly"
+                        )
+                    response.raise_for_status()
+                    result = response.json()
+                    data = result["data"]
+                    if result.get("model") != self.settings.local_embedding_model:
+                        raise ValueError("Unexpected model")
+                    if len(data) != 1 or data[0]["index"] != 0:
+                        raise ValueError("Invalid embedding order")
+                    vector = data[0]["embedding"]
+                    if (
+                        not isinstance(vector, list)
+                        or len(vector) != self.settings.embedding_dimensions
+                        or not all(
+                            isinstance(n, (int, float))
+                            and not isinstance(n, bool)
+                            and math.isfinite(n)
+                            for n in vector
+                        )
+                    ):
+                        raise ValueError("Invalid embedding vector")
+                    norm = math.sqrt(sum(n * n for n in vector))
+                    if abs(norm - 1) > 0.001:
+                        raise ValueError("Embedding is not normalized")
+                    vectors.append(vector)
+            return vectors
+        except APIError:
+            raise
+        except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+            logger.warning("local_embedding_failed reason=%s", type(exc).__name__)
+            raise APIError(503, "ai_unavailable", "Local embedding host unavailable") from None

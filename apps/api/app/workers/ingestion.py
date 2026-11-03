@@ -17,7 +17,12 @@ from app.ingestion.validation import Cancelled, NeedsOCR, PermanentError
 from app.repositories.backend import BackendRepository, utcnow
 from app.services.ai import OpenAIService
 from app.services.ai_connections import resolve
-from app.services.embeddings import EmbeddingQuotaWait, OpenRouterEmbedding, requires_public_input
+from app.services.embeddings import (
+    EmbeddingQuotaWait,
+    LocalEmbedding,
+    OpenRouterEmbedding,
+    requires_public_input,
+)
 
 logger = logging.getLogger("legal_api")
 CLAIMABLE = ["queued", "retry_wait", "running"]
@@ -86,6 +91,8 @@ def make_embedder(repo, settings, job):
     owner = repo.get("users", job["ownerUid"])
     if not owner or not owner.get("isActive"):
         raise APIError(503, "ai_not_configured", "Job owner is unavailable")
+    if settings.embedding_provider == "local":
+        return LocalEmbedding(settings, input_type="passage")
     if settings.embedding_provider == "openrouter":
         if requires_public_input(settings) and not job.get("publicEmbeddingInputConfirmed"):
             raise APIError(

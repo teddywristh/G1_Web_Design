@@ -52,3 +52,13 @@ embedding dùng chung được cấu hình ở backend và tách biệt khỏi k
 miễn phí không nhận nội dung mật hoặc dữ liệu cá nhân; xác nhận điều kiện tại form trước khi gửi.
 
 Bản Next.js cũ vẫn còn trong `src/` để tham khảo, nhưng không được tải bởi bản HTML này.
+
+## Embedding local (Nemotron)
+
+Backend và worker dùng `EMBEDDING_PROVIDER=local`, endpoint nội bộ
+`http://127.0.0.1:8010`. Không cần key OpenRouter cho upload/tìm kiếm ngữ nghĩa.
+Chạy `bash scripts/local-embed-demo.sh` sau khi emulator và embedding host sẵn sàng.
+Mở http://127.0.0.1:8085, đăng nhập, tạo kho riêng mới và tải PDF. Khi trạng thái
+Sẵn sàng, chọn kho đó trong Hỏi đáp và chế độ hybrid. Model trả lời vẫn cần API key
+hoặc phiên ChatGPT được kết nối trong Thiết lập. Xem
+[hướng dẫn embedding](../embedding/README.md).

@@ -153,3 +153,7 @@ docker-compose.override.yml
 *~
 tmp/
 scratch/
+
+# Local embedding weights and isolated runtime
+/models/
+.venv-embed/

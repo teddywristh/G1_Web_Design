@@ -15,6 +15,13 @@ class EmbeddingProfile:
 
 
 def profile_from(settings):
+    if settings.embedding_provider == "local":
+        return EmbeddingProfile(
+            "local",
+            settings.local_embedding_model,
+            settings.embedding_dimensions,
+            settings.local_embedding_profile_version,
+        )
     if settings.embedding_provider == "openrouter":
         return EmbeddingProfile(
             "openrouter", settings.openrouter_embedding_model, settings.embedding_dimensions

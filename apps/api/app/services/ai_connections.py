@@ -185,16 +185,22 @@ def options(repo, user, settings):
         },
         "embedding": {
             "provider": settings.embedding_provider,
-            "model": settings.openrouter_embedding_model
+            "model": settings.local_embedding_model
+            if settings.embedding_provider == "local"
+            else settings.openrouter_embedding_model
             if settings.embedding_provider == "openrouter"
             else settings.default_embedding_model,
-            "configured": bool(
+            "configured": bool(settings.local_embedding_url)
+            if settings.embedding_provider == "local"
+            else bool(
                 settings.openrouter_embedding_model
                 and settings.openrouter_embedding_api_key.get_secret_value()
             )
             if settings.embedding_provider == "openrouter"
             else None,
-            "scope": "system" if settings.embedding_provider == "openrouter" else "selected",
+            "scope": "system"
+            if settings.embedding_provider in {"openrouter", "local"}
+            else "selected",
             "requiresPublicInput": requires_public_input(settings),
         },
         "connections": [

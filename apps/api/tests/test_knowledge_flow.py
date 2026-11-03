@@ -3,7 +3,6 @@ import json
 from datetime import date, datetime, timezone
 
 import pytest
-
 from app.core.config import Settings
 from app.core.errors import APIError
 from app.ingestion import parser, pipeline
@@ -11,6 +10,7 @@ from app.schemas.knowledge import EvidenceOut
 from app.schemas.rag import AskRequest
 from app.services import documents, evidence, knowledge, qa, users
 from app.workers import ingestion as worker
+
 from tests.memory_repo import FakeBucket, MemoryRepo
 
 PAGES = [
@@ -162,7 +162,6 @@ def test_empty_kb_can_use_opted_in_web_without_embedding(env, monkeypatch):
 
 def test_web_workflow_broadens_query_and_answers_with_verified_source(env, monkeypatch):
     import httpx
-
     from app.services import web_sources
 
     repo, _ = env
@@ -629,11 +628,10 @@ def test_too_many_knowledge_bases_rejected(env, tmp_path):
 
 
 def test_routes_hide_other_users_private_knowledge_bases(env, monkeypatch):
-    from fastapi.testclient import TestClient
-
     from app.core.security import verify_firebase_token
     from app.dependencies import get_bucket, get_repository
     from app.main import create_app
+    from fastapi.testclient import TestClient
 
     repo, bucket = env
     app = create_app()
@@ -662,3 +660,18 @@ def test_routes_hide_other_users_private_knowledge_bases(env, monkeypatch):
         assert (
             client.post("/api/v1/admin/knowledge-bases/shared/publish", json={}).status_code == 403
         )
+
+
+def test_reprocess_after_profile_change_preserves_pdf_and_queues_new_job(env, tmp_path):
+    repo, bucket = env
+    kb, doc = upload(repo, bucket, tmp_path)
+    changed = SETTINGS.model_copy(update={"embedding_provider": "local"})
+    before = knowledge.processing(repo, doc, changed)
+    assert before["retryable"] and before["nextAction"] == "reindex"
+    result = knowledge.reprocess(repo, doc, user(repo, "alice"), doc["version"], "t", changed)
+    assert result["status"] == "queued"
+    jobs = repo.query("processing_jobs")
+    assert len(jobs) == 2
+    local = next(j for j in jobs if j["embeddingProfileId"].startswith("local:"))
+    assert local["sourceFence"]["storagePath"] == doc["storagePath"]
+    assert local["sourceFence"]["sha256"] == doc["sha256"]

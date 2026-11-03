@@ -192,8 +192,8 @@ def processing(repo, document, settings):
                 "status": "failed",
                 "stage": "upload",
                 "errorCode": "processing_job_missing",
-                "nextAction": "check_job",
-                "retryable": False,
+                "nextAction": "reindex",
+                "retryable": True,
                 "legalValidity": "unknown",
             }
         return {"status": "queued", "stage": "upload", "legalValidity": "unknown"}
@@ -218,6 +218,26 @@ def processing(repo, document, settings):
 def reprocess(repo, document, user, version, request_id, settings):
     check_version(document, version)
     job = find_job(repo, document, settings)
+    if not job and document.get("fileState") == "available":
+        # A provider/profile change needs a new job, preserving the existing PDF.
+        rows = pipeline.job_outbox(
+            document["kbId"],
+            "knowledge_documents",
+            document["id"],
+            user["id"],
+            "auto",
+            settings,
+        )(document)
+        collection, key, fields = rows[0]
+        repo.mutate(
+            collection,
+            key,
+            lambda current: fields if current is None else None,
+            actor=user["id"],
+            event="job.reindex",
+            request_id=request_id,
+        )
+        return processing(repo, document, settings)
     if not job or job["status"] not in RETRYABLE | {"needs_ocr", "needs_review"}:
         raise APIError(409, "not_retryable", "This document cannot be reprocessed now")
     keep_stage = job["status"] in RETRYABLE and job.get("documentVersionId")
