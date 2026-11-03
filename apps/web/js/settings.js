@@ -76,7 +76,7 @@ async function loadConnections({ restore = false } = {}) {
       state.chatgpt = { ...state.chatgpt, ...status, available };
       if (status.connected && (restore || (
         !options.engines?.opencodeApiKeys && $("#provider").value === "openai" &&
-        $("#engine").value === "opencode" && $("#credential-source").value === "auto"
+        $("#engine").value === "opencode" && $("#credential-source").value !== "chatgpt"
       ))) selectChatgpt();
     } else {
       state.chatgpt = { available: false, connected: false, pending: false };
