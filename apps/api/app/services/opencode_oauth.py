@@ -1,4 +1,4 @@
-"""Local-only, ephemeral OpenCode OAuth sessions, isolated per application user."""
+"""Isolated OpenCode workers with encrypted per-user OAuth recovery."""
 
 import json
 import secrets
@@ -9,10 +9,12 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from app.core.errors import APIError
+from app.services import oauth_store
 
 WORKER_DIR = Path(__file__).resolve().parents[1] / "opencode_worker"
 SESSIONS = {}
 LOCK = threading.RLock()
+RESTORE_LOCK = threading.RLock()
 
 
 def docker(args, **kwargs):
@@ -34,7 +36,11 @@ def cleanup(session):
 def expire():
     now = time.monotonic()
     with LOCK:
-        expired = [key for key, session in SESSIONS.items() if now >= session["expires"]]
+        expired = [
+            key
+            for key, session in SESSIONS.items()
+            if now >= session["expires"] and not (session.get("lock") and session["lock"].locked())
+        ]
         sessions = [SESSIONS.pop(key) for key in expired]
     for session in sessions:
         cleanup(session)
@@ -73,7 +79,7 @@ def invoke(session, payload, timeout):
         raise APIError(503, "opencode_unavailable", "OpenCode OAuth worker failed") from None
 
 
-def start(user_id, settings):
+def start(user_id, settings, credential=None):
     expire()
     binary = Path(settings.opencode_binary).resolve()
     if not binary.is_file():
@@ -171,6 +177,12 @@ def start(user_id, settings):
             ],
             timeout=20,
         )
+        if credential is not None:
+            result = invoke(session, {"action": "restore", "credential": credential}, 90)
+            if not result.get("restored"):
+                raise ValueError("OAuth restore failed")
+            session["connected"] = True
+            return {"connected": True}
         result = invoke(session, {"action": "start"}, 90)
         url = result.get("url", "")
         parsed = urlsplit(url)
@@ -193,12 +205,24 @@ def start(user_id, settings):
         raise APIError(503, "opencode_unavailable", "Could not start ChatGPT sign-in") from None
 
 
-def get(user_id):
+def get(user_id, repo=None, settings=None, _restored=False):
     expire()
     with LOCK:
         session = SESSIONS.get(user_id)
     if not session:
-        return None
+        if repo is None or settings is None:
+            return None
+        with RESTORE_LOCK:
+            with LOCK:
+                session = SESSIONS.get(user_id)
+            if not session:
+                credential = oauth_store.load(repo, settings, user_id)
+                if credential is None:
+                    return None
+                start(user_id, settings, credential=credential)
+                _restored = True
+                with LOCK:
+                    session = SESSIONS.get(user_id)
     try:
         running = (
             docker(
@@ -214,10 +238,14 @@ def get(user_id):
         if SESSIONS.get(user_id) is session:
             SESSIONS.pop(user_id, None)
     cleanup(session)
+    if repo is not None and settings is not None and not _restored:
+        return get(user_id, repo, settings, _restored=True)
+    if _restored:
+        raise APIError(503, "opencode_unavailable", "Could not restore ChatGPT worker")
     return None
 
 
-def finish(user_id):
+def finish(user_id, repo=None, settings=None):
     session = get(user_id)
     if not session:
         raise APIError(404, "oauth_not_started", "Start ChatGPT sign-in first")
@@ -225,24 +253,40 @@ def finish(user_id):
         data = invoke(session, {"action": "finish"}, 250)
         if not data.get("connected"):
             raise APIError(503, "ai_authentication_failed", "ChatGPT sign-in was not completed")
+        if repo is not None and settings is not None:
+            credential = invoke(session, {"action": "export"}, 15).get("credential")
+            oauth_store.save(repo, settings, user_id, credential)
         session["connected"] = True
     return {"connected": True}
 
 
-def disconnect(user_id):
-    with LOCK:
-        session = SESSIONS.pop(user_id, None)
+def disconnect(user_id, repo=None):
+    # Serialize disconnect with restore and in-flight token refresh/save.
+    with RESTORE_LOCK:
+        with LOCK:
+            session = SESSIONS.get(user_id)
+        if session:
+            with session["lock"]:
+                if repo is not None:
+                    oauth_store.remove(repo, user_id)
+                with LOCK:
+                    if SESSIONS.get(user_id) is session:
+                        SESSIONS.pop(user_id, None)
+        elif repo is not None:
+            oauth_store.remove(repo, user_id)
     if session:
         cleanup(session)
 
 
 class OAuthAnswer:
-    def __init__(self, user_id, model):
+    def __init__(self, user_id, model, repo=None, settings=None):
         self.user_id = user_id
         self.model = model or "gpt-5.6-luna"
+        self.repo = repo
+        self.settings = settings
 
     def require_session(self):
-        session = get(self.user_id)
+        session = get(self.user_id, self.repo, self.settings) if self.repo else get(self.user_id)
         if not session or not session["connected"]:
             raise APIError(409, "chatgpt_disconnected", "Reconnect ChatGPT in AI connections")
         return session
@@ -251,15 +295,32 @@ class OAuthAnswer:
         session = self.require_session()
         context = "\n\n".join(f"[{i}] {c.text}" for i, c in enumerate(chunks, 1))
         with session["lock"]:
-            data = invoke(
-                session,
-                {
-                    "action": "answer",
-                    "model": self.model,
-                    "prompt": f"Câu hỏi: {question}\n\nNguồn:\n{context}",
-                },
-                90,
-            )
+            try:
+                data = invoke(
+                    session,
+                    {
+                        "action": "answer",
+                        "model": self.model,
+                        "prompt": f"Câu hỏi: {question}\n\nNguồn:\n{context}",
+                    },
+                    90,
+                )
+            except APIError:
+                # A provider error can occur after a successful token rotation.
+                # Persist the latest credential if the worker is still alive.
+                if self.repo is not None and self.settings is not None:
+                    with LOCK:
+                        still_active = SESSIONS.get(self.user_id) is session
+                    if still_active:
+                        try:
+                            credential = invoke(session, {"action": "export"}, 15).get("credential")
+                            oauth_store.save(self.repo, self.settings, self.user_id, credential)
+                        except APIError:
+                            pass
+                raise
+            if self.repo is not None and self.settings is not None:
+                credential = invoke(session, {"action": "export"}, 15).get("credential")
+                oauth_store.save(self.repo, self.settings, self.user_id, credential)
         error = data.get("error")
         if error:
             raise APIError(

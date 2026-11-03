@@ -70,7 +70,7 @@ def ask_question(
         }:
             raise APIError(422, "invalid_retrieval", "ChatGPT sign-in requires keyword retrieval")
         selected = Credential("openai", "", "chatgpt")
-        ai = OAuthAnswer(user["id"], request.model)
+        ai = OAuthAnswer(user["id"], request.model, repo, settings)
         ai.require_session()
     elif request.engine == "opencode":
         selected = resolve(repo, user, request.provider, request.credential_source, settings)

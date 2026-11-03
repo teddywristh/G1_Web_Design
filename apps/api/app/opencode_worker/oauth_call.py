@@ -43,6 +43,18 @@ try:
         with open("/tmp/data/opencode/auth.json", encoding="utf-8") as f:
             credential = json.load(f).get("openai", {})
         print(json.dumps({"connected": credential.get("type") == "oauth"}))
+    elif job["action"] == "export":
+        with open("/tmp/data/opencode/auth.json", encoding="utf-8") as f:
+            credential = json.load(f).get("openai", {})
+        if credential.get("type") != "oauth":
+            raise ValueError("OAuth credential unavailable")
+        print(json.dumps({"credential": credential}))
+    elif job["action"] == "restore":
+        credential = job.get("credential")
+        if not isinstance(credential, dict) or credential.get("type") != "oauth":
+            raise ValueError("Invalid OAuth credential")
+        call("PUT", "/auth/openai", credential)
+        print(json.dumps({"restored": True}))
     elif job["action"] == "answer":
         session = call("POST", "/session", {"title": "legal-ai"})["id"]
         try:

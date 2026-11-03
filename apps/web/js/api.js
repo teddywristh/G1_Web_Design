@@ -17,7 +17,7 @@ const ERROR_TEXT = {
   unauthenticated: "Vui lòng đăng nhập.",
   ai_not_configured: "Chưa có khóa AI phù hợp. Hãy thêm khóa trong Thiết lập.",
   chatgpt_disconnected:
-    "Phiên ChatGPT đã hết hoặc backend vừa khởi động lại. Vào Thiết lập → Kết nối AI để kết nối ChatGPT lại.",
+    "Phiên ChatGPT đã hết hạn hoặc không còn hợp lệ. Vào Thiết lập → Kết nối AI để kết nối lại.",
   ai_authentication_failed: "Nhà cung cấp AI từ chối khóa đã chọn.",
   ai_rate_limited: "Nhà cung cấp AI đang giới hạn lượt dùng. Thử lại sau.",
   ai_unavailable: "Dịch vụ AI tạm thời không phản hồi.",

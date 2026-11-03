@@ -34,6 +34,7 @@ def test_hosted_chatgpt_requires_flag_and_authenticated_user(api, repo, monkeypa
         "start",
         Mock(return_value={"url": "https://auth.openai.com/test", "instructions": "code"}),
     )
+    monkeypatch.setattr(opencode_oauth, "get", lambda *_: None)
     assert client.post("/api/v1/ai/chatgpt/start", json={}).status_code == 401
     identity(app)
     profile(repo)
@@ -52,9 +53,12 @@ def test_oauth_routes_are_local_gated_and_bound_to_user(api, repo, monkeypatch):
     monkeypatch.setattr(settings, "opencode_chatgpt_local_enabled", True)
     start = Mock(return_value={"url": "https://auth.openai.com/test", "instructions": "code"})
     monkeypatch.setattr(opencode_oauth, "start", start)
-    monkeypatch.setattr(opencode_oauth, "get", lambda user_id: {"connected": user_id == "reader"})
+    monkeypatch.setattr(opencode_oauth, "get", lambda *_: None)
     assert client.post("/api/v1/ai/chatgpt/start").status_code == 200
     assert start.call_args.args[0] == "reader"
+    monkeypatch.setattr(
+        opencode_oauth, "get", lambda user_id, *_: {"connected": user_id == "reader"}
+    )
     assert client.get("/api/v1/ai/chatgpt").json()["connected"] is True
     identity(app, "other")
     profile(repo, "other")
@@ -86,7 +90,7 @@ def test_chatgpt_rag_uses_personal_oauth_without_api_key_or_fallback(api, repo, 
     assert response.status_code == 200, response.text
     assert response.json()["credential_source"] == "chatgpt"
     assert response.json()["citations"][0]["chunk_id"] == "c"
-    factory.assert_called_once_with("reader", "gpt-5.6-luna")
+    factory.assert_called_once_with("reader", "gpt-5.6-luna", repo, settings)
     resolve.assert_not_called()
     assert (
         client.post("/api/v1/rag/ask", json={**payload, "retrieval_mode": "hybrid"}).status_code
@@ -102,7 +106,7 @@ def test_disconnected_chatgpt_is_reported_before_search(api, repo, monkeypatch):
     settings = get_settings()
     monkeypatch.setattr(settings, "opencode_local_enabled", True)
     monkeypatch.setattr(settings, "opencode_chatgpt_local_enabled", True)
-    monkeypatch.setattr(opencode_oauth, "get", lambda _: None)
+    monkeypatch.setattr(opencode_oauth, "get", lambda *_: None)
     search = Mock(side_effect=AssertionError("must not search before checking session"))
     monkeypatch.setattr("app.api.v1.rag.qa.answer", search)
     response = client.post(

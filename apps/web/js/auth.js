@@ -188,7 +188,8 @@ async function logout(all) {
   }
   clearTimeout(state.pollTimer);
   // Chat history and cited text must not outlive the session on a shared computer.
-  ["chats", "saved", "prefs"].forEach((name) => localStorage.removeItem(storeKey(name)));
+  // Keep only non-secret per-account connection preferences; credentials stay on the backend.
+  ["chats", "saved"].forEach((name) => localStorage.removeItem(storeKey(name)));
   Object.assign(state, { kbs: [], docs: [], chats: [], chatId: null, saved: new Set() });
   Object.assign(state, {
     selected: new Set(),

@@ -24,9 +24,9 @@ def local_oauth(request):
 
 
 @router.get("/ai/chatgpt")
-def chatgpt_status(request: Request, user=Depends(current_user)):
-    local_oauth(request)
-    session = opencode_oauth.get(user["id"])
+def chatgpt_status(request: Request, user=Depends(current_user), repo=Depends(get_repository)):
+    settings = local_oauth(request)
+    session = opencode_oauth.get(user["id"], repo, settings)
     return {
         "connected": bool(session and session["connected"]),
         "pending": bool(session and not session["connected"]),
@@ -34,20 +34,23 @@ def chatgpt_status(request: Request, user=Depends(current_user)):
 
 
 @router.post("/ai/chatgpt/start")
-def chatgpt_start(request: Request, user=Depends(current_user)):
-    return opencode_oauth.start(user["id"], local_oauth(request))
+def chatgpt_start(request: Request, user=Depends(current_user), repo=Depends(get_repository)):
+    settings = local_oauth(request)
+    if opencode_oauth.get(user["id"], repo, settings):
+        raise APIError(409, "oauth_exists", "Disconnect the current ChatGPT session first")
+    return opencode_oauth.start(user["id"], settings)
 
 
 @router.post("/ai/chatgpt/finish")
-def chatgpt_finish(request: Request, user=Depends(current_user)):
-    local_oauth(request)
-    return opencode_oauth.finish(user["id"])
+def chatgpt_finish(request: Request, user=Depends(current_user), repo=Depends(get_repository)):
+    settings = local_oauth(request)
+    return opencode_oauth.finish(user["id"], repo, settings)
 
 
 @router.delete("/ai/chatgpt")
-def chatgpt_disconnect(request: Request, user=Depends(current_user)):
+def chatgpt_disconnect(request: Request, user=Depends(current_user), repo=Depends(get_repository)):
     local_oauth(request)
-    opencode_oauth.disconnect(user["id"])
+    opencode_oauth.disconnect(user["id"], repo)
     return {"connected": False}
 
 

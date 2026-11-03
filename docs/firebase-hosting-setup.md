@@ -58,3 +58,21 @@ frontend assets, Actions variables, or the Hosting directory. The build checks
 for common private-key patterns, but it is not a complete secret scanner.
 CI deploys the frontend only. The backend, worker, local PDF storage and GPU
 still require the host and Quick Tunnel to be running.
+
+## AI connection persistence
+
+Personal API keys and ChatGPT/OpenCode OAuth credentials are encrypted with
+`AI_CREDENTIAL_ENCRYPTION_KEY` before being stored separately per user in
+Firestore. Keep that key stable and back it up securely; changing or losing it
+makes stored connections unreadable. Never expose it through the frontend or CI.
+After a successful ChatGPT authorization, the backend saves the credential and
+refreshes the encrypted copy after answers, allowing the single API process to
+recreate its isolated worker after a restart. API and worker must keep using the
+same Firebase project and encryption key. Multiple API processes/replicas are
+not supported for OAuth refresh: they could race rotating credentials.
+
+Disconnect removes the stored local credential; it does not confirm revocation
+with OpenAI. Users may revoke the app in ChatGPT settings. A provider can still
+expire or revoke a connection, in which case a new sign-in is required. If
+Firestore is unavailable, existing credentials are retained and recovery is
+retried later.
