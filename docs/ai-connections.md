@@ -25,11 +25,11 @@ UI và `GET /api/v1/ai/connections` thể hiện hai phương thức OAuth là c
 2. Không ghi khóa mã hóa vào Git. Giữ nó qua restart/deploy; mất khóa thì cần nhập lại các API key. Đổi khóa cần quy trình giải mã/mã hóa lại dữ liệu trước khi loại khóa cũ; phiên bản này chưa có lệnh tự xoay khóa.
 3. Frontend HTML không cần biến môi trường. Tài khoản đăng ký ngay trên màn hình đăng nhập; tài khoản Firebase Email/Password cũ cần `FIREBASE_WEB_API_KEY` ở backend. Không đặt API key AI vào HTML/JS.
 4. Địa chỉ API đặt ở `<meta name="api-base">` trong `apps/web/index.html`; `BACKEND_CORS_ORIGINS` phải có origin frontend (mặc định gồm cổng 3000 và 8085). Online cần HTTPS.
-5. Đăng nhập ở màn hình đầu tiên; khóa AI nằm trong **Thiết lập → Kết nối AI**, nhà cung cấp chọn ngay trên màn Hỏi đáp. Phiên dự án dùng cookie HttpOnly và được khôi phục khi tải lại trang; có thể đăng xuất một hoặc mọi thiết bị trong Thiết lập. Đây là tài khoản dự án, không phải tài khoản ChatGPT/Claude.
-6. Chọn OpenAI hoặc Claude, chọn quản lý key cá nhân; admin có thêm scope key chung. API key được nhập một lần, không đọc lại. Sau khi lưu, trạng thái là đã cấu hình; provider xác minh key khi gửi yêu cầu thực tế.
-7. Chọn nguồn key: auto (ưu tiên cá nhân đang bật), personal hoặc shared. Sai key/rate limit không tự chuyển nguồn để tránh thay đổi tài khoản thanh toán ngoài ý muốn. `AI_ALLOW_SHARED_KEYS=false` chặn dùng key chung ở cấp server.
-8. Chọn model Claude đúng ID tài khoản được cấp, hoặc đặt `ANTHROPIC_MODEL` trên server. OpenAI tiếp tục dùng DEFAULT_LLM_MODEL khi người dùng không chỉ định model.
-9. Chọn hybrid nếu có key OpenAI cho embedding, hoặc keyword để tra cứu không gọi embedding API. Claude + personal + hybrid cần cả key Claude và OpenAI cá nhân; không mượn key OpenAI chung khi đã chọn personal-only.
+5. Đăng nhập ở màn hình đầu tiên; khóa AI nằm trong **Thiết lập → Kết nối AI**. Phiên dự án dùng cookie HttpOnly và được khôi phục khi tải lại trang; có thể đăng xuất một hoặc mọi thiết bị trong Thiết lập. Đây là tài khoản dự án, không phải tài khoản ChatGPT/Claude.
+6. Có thể cấu hình nhiều kết nối cùng lúc: API key OpenAI, Claude (Anthropic), DeepSeek, OpenRouter (key cá nhân; admin có thêm key chung) và ChatGPT Plus/Pro qua OAuth. API key được nhập một lần, không đọc lại.
+7. Trên màn Hỏi đáp chỉ có một ô **Model AI**: combobox gom model theo từng kết nối đã cấu hình, có ô tìm kiếm. Danh sách lấy từ `GET /api/v1/ai/models`: với API key, backend gọi endpoint liệt kê model của provider (kết quả cache 10 phút, không lưu key); với ChatGPT, worker OpenCode của người dùng trả về các model OpenAI mà phiên đăng nhập được dùng. Khi provider không trả danh sách, có thể gõ ID model và chọn mục **Dùng ID tự nhập**.
+8. Mỗi nhóm trong combobox ghi rõ nguồn key đang dùng (cá nhân, dùng chung hoặc tài khoản ChatGPT); request gửi đúng nguồn đó. Sai key/rate limit không tự chuyển nguồn để tránh thay đổi tài khoản thanh toán ngoài ý muốn. `AI_ALLOW_SHARED_KEYS=false` chặn dùng key chung ở cấp server.
+9. Mọi câu trả lời chạy qua OpenCode; không còn lựa chọn engine. Tra cứu luôn là ngữ nghĩa + số hiệu/điều. Khi embedding không dùng được (ví dụ embedding OpenAI mà không có key OpenAI phù hợp), hệ thống tự tra theo số hiệu/điều và ghi chú `embedding_unavailable` trong câu trả lời; không mượn key OpenAI chung khi đã chọn key cá nhân.
 
 Key env `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` vẫn hoạt động như key chung legacy nếu chưa có bản ghi shared. Bản ghi shared đã tắt/gỡ sẽ chặn fallback về env, tránh vô tình dùng lại key cũ. Key ở env được quản lý qua cấu hình server; UI chỉ gỡ bản ghi đã lưu. API usage theo billing/hạn mức tài khoản sở hữu key, không tương đương plan usage OAuth.
 
@@ -37,11 +37,12 @@ Không gọi API trả phí chỉ để lưu key. Adapter dùng timeout, không 
 
 ## API
 
-Yêu cầu cần phiên cookie hợp lệ hoặc Firebase ID token và profile active. Path provider chỉ nhận `openai` hoặc `anthropic`.
+Yêu cầu cần phiên cookie hợp lệ hoặc Firebase ID token và profile active. Path provider nhận `openai`, `anthropic`, `deepseek` hoặc `openrouter`.
 
 | Endpoint | Quyền | Payload/hành vi |
 |---|---|---|
 | GET `/api/v1/ai/connections` | User | Metadata key cá nhân hiện tại + key chung; trạng thái kho mã hóa và phương thức OAuth |
+| GET `/api/v1/ai/models` | User | `{groups: [{id, provider, source, label, models: [{id, name}], error}], apiKeysAvailable}` cho các kết nối dùng được; lỗi từng provider nằm trong `error`, không làm hỏng cả danh sách |
 | PUT `/api/v1/ai/connections/{provider}` | User | `{apiKey, expectedVersion, enabled}`; chỉ key của chính UID |
 | DELETE `/api/v1/ai/connections/{provider}` | User | If-Match bằng version hiện tại |
 | PUT `/api/v1/admin/ai/connections/{provider}` | Admin | Payload tương tự; key chung cho hệ thống |
@@ -49,7 +50,7 @@ Yêu cầu cần phiên cookie hợp lệ hoặc Firebase ID token và profile a
 
 expectedVersion=0 cho lần tạo đầu; dùng version được trả về khi thay/gỡ key. Version sai trả 409. Body từ chối ownerId và trường dư. Lỗi validation không echo key. API không trả credential, ciphertext hay fingerprint của key.
 
-Ví dụ request RAG mới, tương thích request cũ nếu không truyền thêm option:
+Ví dụ request RAG (giao diện điền `provider`, `credential_source` và `model` theo mục đã chọn trong combobox):
 
 ```json
 {
@@ -57,12 +58,11 @@ Ví dụ request RAG mới, tương thích request cũ nếu không truyền th�
   "top_k": 5,
   "provider": "anthropic",
   "credential_source": "personal",
-  "model": "MODEL_ID_FROM_YOUR_CONSOLE",
-  "retrieval_mode": "keyword"
+  "model": "MODEL_ID_FROM_YOUR_CONSOLE"
 }
 ```
 
-`provider=openai`, `credential_source=auto`, `retrieval_mode=hybrid` là mặc định. Response bổ sung provider và credential_source thực tế để giao diện hiển thị key cá nhân/key chung đã chọn. Hybrid giữ cách xếp hạng hiện có; keyword dùng điểm trùng từ khóa, không tương đương tìm kiếm ngữ nghĩa. Cả hai vẫn chỉ lấy tối đa 100 chunk theo thiết kế RAG hiện có.
+`engine` chỉ nhận `opencode` (mặc định); `credential_source=chatgpt` chỉ đi với `provider=openai`. `retrieval_mode` mặc định `hybrid`; `keyword` vẫn được API chấp nhận nhưng giao diện không còn hiển thị lựa chọn này. Response bổ sung provider và credential_source thực tế để giao diện hiển thị nguồn đã dùng. Cả hai chế độ vẫn chỉ lấy tối đa 100 chunk theo thiết kế RAG hiện có.
 
 ## Lưu trữ và kiểm thử
 
@@ -81,22 +81,22 @@ Test dùng key giả và provider HTTP mock: mã hóa, cách ly account, admin g
 - Chromium smoke test đạt login/bootstrap, key cá nhân + key chung của admin, gửi câu hỏi theo provider/source/model/retrieval đã chọn, cách ly secret khỏi localStorage, dọn phiên khi logout và layout desktop/mobile.
 - Không dùng credential thật hoặc gửi inference tính phí. Chưa cấu hình deploy cloud/quyền hosted OAuth.
 
-## Engine OpenCode thử nghiệm local
+## OpenCode worker
 
-`POST /api/v1/rag/ask` nhận `engine: "direct" | "opencode"`; mặc định là `direct` để request hiện tại không đổi. OpenCode hỗ trợ API key OpenAI, DeepSeek và OpenRouter của cá nhân hoặc hệ thống; chọn model thuộc provider đó (OpenRouter dùng ID như `openai/gpt-4o-mini`). Ngoài ra có thể thử ChatGPT OAuth cá nhân theo hướng dẫn bên dưới. Bản này giới hạn cho local development, không dùng trong production hoặc qua public reverse proxy. Không đặt Docker socket vào container FastAPI.
+`POST /api/v1/rag/ask` luôn chạy qua OpenCode. Worker dùng API key OpenAI, Claude (Anthropic), DeepSeek và OpenRouter của cá nhân hoặc hệ thống, hoặc ChatGPT OAuth cá nhân theo hướng dẫn bên dưới. Mặc định worker API key chỉ phục vụ client local (`OPENCODE_LOCAL_ENABLED`, chỉ cho `APP_ENV=development`). Bản hosted bật `OPENCODE_API_KEYS_HOSTED_ENABLED=true` và `OPENCODE_CHATGPT_HOSTED_ENABLED=true` (xem `scripts/start-cloud-demo.sh`); khi đó máy chạy API phải có Docker, vì mỗi request vẫn dùng container cô lập như local. Không đặt Docker socket vào container FastAPI.
 
 Để chạy local trên host có Docker:
 
 1. Cài [OpenCode](https://opencode.ai/docs/) phiên bản `1.17.11` và cài các dependency backend. Tạo Python image local: `docker build -f infra/docker/Dockerfile.api -t legal-api-backend:verify apps/api`.
 2. Đặt `APP_ENV=development`, `OPENCODE_LOCAL_ENABLED=true`, `OPENCODE_BINARY=/đường/dẫn/đến/opencode` và `OPENCODE_IMAGE=legal-api-backend:verify` trong `apps/api/.env`. Thiết lập `AI_CREDENTIAL_ENCRYPTION_KEY` ổn định trước khi lưu API key; không thay khóa khi còn credential đã mã hóa.
 3. Chạy API **trực tiếp trên host**, bind `127.0.0.1` với `--no-proxy-headers`; không chạy runner này trong container API và không đưa API ra mạng công cộng. Backend host cần quyền dùng Docker; Docker daemon là quyền quản trị máy, chỉ dùng môi trường phát triển tin cậy.
-4. Đăng nhập ứng dụng, lưu API key của provider tại **Kết nối AI**, chọn **Engine xử lý → OpenCode** và model. UI chọn mặc định tra cứu từ khóa để không phát sinh embeddings; hybrid vẫn cần OpenAI API key cùng nguồn. API key có billing riêng, không tính vào ChatGPT Plus.
+4. Đăng nhập ứng dụng, lưu API key của provider tại **Kết nối AI**, rồi chọn model trong ô **Model AI** ở trang Hỏi đáp. API key có billing riêng, không tính vào ChatGPT Plus.
 
-Mỗi câu hỏi OpenCode tạo Docker network nội bộ, gateway và worker riêng; worker non-root, tắt tools/plugins, dùng filesystem tạm, không mount workspace hay credential Firebase. Gateway chỉ chuyển request HTTPS tới endpoint cố định của provider đã chọn, kiểm tra TLS và địa chỉ IP công cộng, tối đa ba request và giới hạn output; key được truyền tới worker qua stdin. Có giới hạn thời gian và dọn container/network sau request. Đây là cấu hình local thử nghiệm: chưa kiểm thử đầy đủ OAuth, daemon crash recovery, tải nhiều replica, cơ chế cô lập production hoặc inference thành công bằng API key thật; không dùng làm worker production.
+Mỗi câu hỏi OpenCode tạo Docker network nội bộ, gateway và worker riêng; worker non-root, tắt tools/plugins, dùng filesystem tạm, không mount workspace hay credential Firebase. Gateway chỉ chuyển request HTTPS tới endpoint cố định của provider đã chọn (Anthropic xác thực bằng header `x-api-key`; các provider khác dùng `Authorization: Bearer`), kiểm tra TLS và địa chỉ IP công cộng, tối đa ba request và giới hạn output; key được truyền tới worker qua stdin. Có giới hạn thời gian và dọn container/network sau request. Đây là cấu hình local thử nghiệm: chưa kiểm thử đầy đủ OAuth, daemon crash recovery, tải nhiều replica, cơ chế cô lập production hoặc inference thành công bằng API key thật; không dùng làm worker production.
 
 ### Thử ChatGPT OAuth local
 
-Đặt `OPENCODE_CHATGPT_LOCAL_ENABLED=true` và `OPENCODE_LOCAL_ENABLED=true` trên máy phát triển, rồi khởi động lại backend. Tại **Kết nối AI**, chọn **Kết nối ChatGPT Plus/Pro**, mở trang OpenAI theo hướng dẫn, sau đó bấm **Tôi đã đăng nhập**. Ứng dụng chọn nguồn ChatGPT cá nhân và tra cứu từ khóa; có thể đổi model OpenAI nếu tài khoản có quyền. Không chia sẻ mã đăng nhập hay token.
+Đặt `OPENCODE_CHATGPT_LOCAL_ENABLED=true` và `OPENCODE_LOCAL_ENABLED=true` trên máy phát triển, rồi khởi động lại backend. Tại **Kết nối AI**, chọn **Kết nối ChatGPT Plus/Pro**, mở trang OpenAI theo hướng dẫn, sau đó bấm **Tôi đã đăng nhập**. Nhóm **ChatGPT Plus/Pro** xuất hiện trong ô Model AI với các model mà phiên đăng nhập được dùng và được chọn sẵn. Không chia sẻ mã đăng nhập hay token.
 
 Mỗi người dùng có một container OpenCode riêng, credential ở filesystem tạm trong container, không ghi vào Firestore và không dùng key dự phòng. Mạng của worker đi qua tunnel cho phép các domain OpenAI cố định. Đây là phiên thử nghiệm một tiến trình: backend khởi động lại hoặc phiên hết hạn sau tối đa một giờ sẽ phải kết nối lại. Giới hạn tối đa hai phiên; chưa phải giải pháp production, chưa có lưu và làm mới credential bền vững, đồng bộ nhiều replica, khôi phục sau sự cố, hoặc giới hạn số token ở gateway cho OAuth.
 

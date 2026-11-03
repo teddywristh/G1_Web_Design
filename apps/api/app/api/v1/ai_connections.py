@@ -5,7 +5,7 @@ from app.core.errors import APIError
 from app.dependencies import admin_user, current_user, expected_version, get_repository
 from app.schemas.ai_connections import ConnectionOut, ConnectionPut, Provider
 from app.services import ai_connections as service
-from app.services import opencode_oauth
+from app.services import ai_models, opencode_oauth
 
 router = APIRouter(prefix="/api/v1", tags=["AI connections"])
 
@@ -57,6 +57,12 @@ def chatgpt_disconnect(request: Request, user=Depends(current_user), repo=Depend
 @router.get("/ai/connections")
 def list_connections(user=Depends(current_user), repo=Depends(get_repository)):
     return service.options(repo, user, get_settings())
+
+
+@router.get("/ai/models")
+def list_models(request: Request, user=Depends(current_user), repo=Depends(get_repository)):
+    host = request.client.host if request.client else None
+    return ai_models.list_models(repo, user, get_settings(), host)
 
 
 @router.put("/ai/connections/{provider}", response_model=ConnectionOut)

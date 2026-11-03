@@ -23,7 +23,8 @@ const ERROR_TEXT = {
   ai_unavailable: "Dịch vụ AI tạm thời không phản hồi.",
   opencode_unavailable: "OpenCode chưa được bật hoặc chưa sẵn sàng trong môi trường này.",
   oauth_exists: "Đã có phiên ChatGPT. Hãy ngắt kết nối trước khi kết nối lại.",
-  invalid_retrieval: "ChatGPT OAuth chỉ hỗ trợ tra theo số hiệu và điều trong phiên này.",
+  invalid_model: "Chọn model cho nhà cung cấp này.",
+  invalid_provider: "Kết nối đã chọn không phục vụ được model này. Hãy chọn lại model.",
   embedding_profile_mismatch:
     "Kho tài liệu dùng embedding model khác; cần lập lại chỉ mục trước khi tìm ngữ nghĩa.",
   embedding_public_input_required:

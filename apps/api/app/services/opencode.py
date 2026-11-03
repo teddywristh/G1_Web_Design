@@ -13,11 +13,29 @@ WORKER_DIR = Path(__file__).resolve().parents[1] / "opencode_worker"
 SLOTS = BoundedSemaphore(2)
 
 
+def worker_access(settings, client_host, *, chatgpt):
+    """Raise unless an OpenCode worker for this credential kind may serve the client."""
+    if chatgpt:
+        hosted = settings.opencode_chatgpt_hosted_enabled
+        enabled = hosted or settings.opencode_chatgpt_local_enabled
+    else:
+        hosted = settings.opencode_api_keys_hosted_enabled
+        enabled = hosted or settings.opencode_local_enabled
+    if not enabled:
+        raise APIError(503, "opencode_unavailable", "OpenCode worker is not enabled")
+    if (
+        not hosted
+        and settings.app_env.lower() != "test"
+        and client_host not in {"127.0.0.1", "::1"}
+    ):
+        raise APIError(403, "forbidden", "OpenCode worker is available only locally")
+
+
 class OpenCodeService:
     def __init__(self, settings, api_key, model, provider="openai"):
         self.settings = settings
         self.api_key = api_key
-        if provider not in {"openai", "deepseek", "openrouter"}:
+        if provider not in {"openai", "anthropic", "deepseek", "openrouter"}:
             raise ValueError("Unsupported provider")
         self.provider = provider
         self.model = model or settings.default_llm_model

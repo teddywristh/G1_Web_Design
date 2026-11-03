@@ -115,6 +115,6 @@ an index` nghĩa là index tương ứng chưa có hoặc chưa build xong, khô
 
 ## AI connection options
 
-Xem [AI connections](../../docs/ai-connections.md) cho key cá nhân/key chung của OpenAI và Anthropic, cấu hình mã hóa, lựa chọn provider/source và trạng thái OAuth cho website hosted. `POST /api/v1/rag/ask` nhận thêm provider, credential_source, model và retrieval_mode; request cũ tiếp tục dùng mặc định OpenAI/auto/hybrid.
+Xem [AI connections](../../docs/ai-connections.md) cho key cá nhân/key chung của OpenAI, Anthropic, DeepSeek và OpenRouter, cấu hình mã hóa, lựa chọn provider/source và trạng thái OAuth cho website hosted. `GET /api/v1/ai/models` liệt kê model theo từng kết nối; `POST /api/v1/rag/ask` nhận provider, credential_source và model, luôn chạy qua OpenCode.
 
-Engine OpenCode thử nghiệm cho API RAG bằng OpenAI API key: [cấu hình và giới hạn local](../../docs/ai-connections.md#engine-opencode-thử-nghiệm-local).
+OpenCode worker cho API RAG: [cấu hình local và hosted](../../docs/ai-connections.md#opencode-worker).

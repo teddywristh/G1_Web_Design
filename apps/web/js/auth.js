@@ -3,6 +3,7 @@ import { renderChat } from "./chat.js";
 import { $, element, isAdmin, notify, readStore, state, storeKey } from "./core.js";
 import { loadKbs, renderKbSelect, renderScope } from "./knowledge-bases.js";
 import { navigate } from "./navigation.js";
+import { loadModels, resetModels } from "./models.js";
 import { loadConnections } from "./settings.js";
 
 let googleTimer;
@@ -63,14 +64,7 @@ async function enterSession(session) {
   state.saved = new Set(readStore("saved", []));
   const prefs = readStore("prefs", {});
   state.selected = new Set(prefs.kbs || []);
-  $("#provider").value = prefs.provider || "openai";
-  $("#model").value = prefs.model || "";
-  $("#engine").value = prefs.engine || "direct";
-  $("#credential-source").value = prefs.credentialSource || "auto";
-  // Earlier versions forced these providers through a local-only OpenCode worker.
-  if (["deepseek", "openrouter"].includes($("#provider").value) && $("#credential-source").value !== "chatgpt")
-    $("#engine").value = "direct";
-  $("#retrieval-mode").value = prefs.retrievalMode || "hybrid";
+  state.ai = prefs.ai || null;
   $("#as-of").value = "";
   $("#auth-view").hidden = true;
   $("#sidebar").hidden = false;
@@ -82,7 +76,9 @@ async function enterSession(session) {
   $("#backend-label").textContent = "Đã kết nối";
   $("#account-info").textContent = `${state.user.displayName} · ${state.user.email || ""}`;
   await loadKbs();
-  await loadConnections({ restore: !prefs.credentialSource });
+  // Listing can wait on a ChatGPT worker restore; the picker shows its own loading state.
+  loadModels();
+  await loadConnections();
   renderChat();
   navigate("chat");
   if (window.google?.accounts?.id) setupGoogle();
@@ -200,11 +196,13 @@ async function logout(all) {
     kbId: null,
     aiOptions: null,
     chatgpt: { connected: false, pending: false },
+    ai: null,
     sessions: [],
     sessionCursor: null,
   });
   setCsrf("");
   $("#messages").replaceChildren();
+  resetModels();
   showGuest();
   setupGoogle();
 }

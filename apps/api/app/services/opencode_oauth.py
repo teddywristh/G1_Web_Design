@@ -278,6 +278,16 @@ def disconnect(user_id, repo=None):
         cleanup(session)
 
 
+def models(user_id, repo=None, settings=None):
+    session = get(user_id, repo, settings)
+    if not session or not session["connected"]:
+        raise APIError(409, "chatgpt_disconnected", "Reconnect ChatGPT in AI connections")
+    data = invoke(session, {"action": "models"}, 30).get("models")
+    if not isinstance(data, list):
+        raise APIError(503, "opencode_unavailable", "OpenCode returned no model list")
+    return data
+
+
 class OAuthAnswer:
     def __init__(self, user_id, model, repo=None, settings=None):
         self.user_id = user_id

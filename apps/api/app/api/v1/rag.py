@@ -7,10 +7,10 @@ from app.core.errors import APIError
 from app.dependencies import current_user, get_repository
 from app.schemas.rag import AskRequest, AskResponse
 from app.services import qa
-from app.services.ai import AnthropicService, CompatibleChatService, OpenAIService
+from app.services.ai import OpenAIService
 from app.services.ai_connections import Credential, resolve
 from app.services.embeddings import LocalEmbedding, OpenRouterEmbedding, requires_public_input
-from app.services.opencode import OpenCodeService
+from app.services.opencode import OpenCodeService, worker_access
 from app.services.opencode_oauth import OAuthAnswer
 
 router = APIRouter(prefix="/rag", tags=["rag"])
@@ -25,6 +25,13 @@ def openai_settings(settings, credential, model=None):
     )
 
 
+class NoEmbedding:
+    """Semantic search is skipped; QA falls back to number/article lookup and says so."""
+
+    def embed(self, texts):
+        raise APIError(503, "ai_not_configured", "No embedding key is available")
+
+
 @router.post("/ask", response_model=AskResponse)
 def ask_question(
     request: AskRequest,
@@ -35,55 +42,20 @@ def ask_question(
     settings = get_settings()
     if not settings.qa_workflow_enabled:
         raise APIError(503, "feature_disabled", "The legal Q&A workflow is disabled")
-    if request.engine == "opencode":
-        hosted_chatgpt = (
-            settings.opencode_chatgpt_hosted_enabled
-            and request.credential_source == "chatgpt"
-            and request.provider == "openai"
-        )
-        if not settings.opencode_local_enabled and not hosted_chatgpt:
-            raise APIError(503, "opencode_unavailable", "OpenCode local worker is not enabled")
-        if (
-            not hosted_chatgpt
-            and settings.app_env.lower() != "test"
-            and (not http_request.client or http_request.client.host not in {"127.0.0.1", "::1"})
-        ):
-            raise APIError(403, "forbidden", "OpenCode worker is available only locally")
-        if request.provider not in {"openai", "deepseek", "openrouter"}:
-            raise APIError(422, "invalid_provider", "This provider is not enabled for OpenCode")
-        if request.provider != "openai" and not request.model:
-            raise APIError(422, "invalid_model", "Select a model for this provider")
-    elif request.provider in {"deepseek", "openrouter"} and not request.model:
-        raise APIError(422, "invalid_model", "Select a model for this provider")
-    if request.credential_source == "chatgpt":
-        if (
-            request.engine != "opencode"
-            or request.provider != "openai"
-            or not (
-                settings.opencode_chatgpt_local_enabled or settings.opencode_chatgpt_hosted_enabled
-            )
-        ):
-            raise APIError(422, "invalid_provider", "ChatGPT sign-in requires local OpenCode")
-        if request.retrieval_mode != "keyword" and settings.embedding_provider not in {
-            "openrouter",
-            "local",
-        }:
-            raise APIError(422, "invalid_retrieval", "ChatGPT sign-in requires keyword retrieval")
+    chatgpt = request.credential_source == "chatgpt"
+    client = http_request.client.host if http_request.client else None
+    worker_access(settings, client, chatgpt=chatgpt)
+    if chatgpt:
+        if request.provider != "openai":
+            raise APIError(422, "invalid_provider", "ChatGPT sign-in serves OpenAI models only")
         selected = Credential("openai", "", "chatgpt")
         ai = OAuthAnswer(user["id"], request.model, repo, settings)
         ai.require_session()
-    elif request.engine == "opencode":
+    else:
+        if request.provider != "openai" and not request.model:
+            raise APIError(422, "invalid_model", "Select a model for this provider")
         selected = resolve(repo, user, request.provider, request.credential_source, settings)
         ai = OpenCodeService(settings, selected.api_key, request.model, provider=request.provider)
-    elif request.provider == "openai":
-        selected = resolve(repo, user, request.provider, request.credential_source, settings)
-        ai = OpenAIService(openai_settings(settings, selected, request.model))
-    elif request.provider == "anthropic":
-        selected = resolve(repo, user, request.provider, request.credential_source, settings)
-        ai = AnthropicService(settings, selected.api_key, request.model)
-    else:
-        selected = resolve(repo, user, request.provider, request.credential_source, settings)
-        ai = CompatibleChatService(settings, selected.api_key, request.model, request.provider)
     try:
         embedder = None
         kbs, _ = qa.resolve_scope(repo, user, request.knowledge_base_ids, settings)
@@ -98,12 +70,16 @@ def ask_question(
                         "Confirm the question contains no confidential or personal information",
                     )
                 embedder = OpenRouterEmbedding(settings, input_type="search_query", repo=repo)
-            elif request.provider == "openai" and request.engine == "direct":
-                embedder = ai
             else:
                 # Never silently borrow a shared embedding key when personal-only was selected.
-                embedding_key = resolve(repo, user, "openai", request.credential_source, settings)
-                embedder = OpenAIService(openai_settings(settings, embedding_key))
+                source = "personal" if chatgpt else request.credential_source
+                try:
+                    embedding_key = resolve(repo, user, "openai", source, settings)
+                    embedder = OpenAIService(openai_settings(settings, embedding_key))
+                except APIError as exc:
+                    if exc.code != "ai_not_configured":
+                        raise
+                    embedder = NoEmbedding()
         result = qa.answer(repo, user, request, ai, embedder, settings)
         return result.model_copy(
             update={

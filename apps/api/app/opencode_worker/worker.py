@@ -19,7 +19,7 @@ class WorkerFailure(Exception):
 try:
     job = json.load(sys.stdin)
     provider = job.get("provider", "openai")
-    if provider not in {"openai", "deepseek", "openrouter"}:
+    if provider not in {"openai", "anthropic", "deepseek", "openrouter"}:
         raise ValueError("Unsupported provider")
     config = {
         "permission": "deny",
@@ -31,7 +31,9 @@ try:
                 "options": {
                     "baseURL": "http://guard:9081/v1",
                     "headers": {"x-worker-secret": job["guardSecret"]},
-                }
+                },
+                # Models listed live by the provider may postdate the binary's bundled catalog.
+                "models": {job["model"]: {"name": job["model"]}},
             }
         },
     }

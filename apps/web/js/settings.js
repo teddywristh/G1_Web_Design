@@ -1,41 +1,8 @@
 import { api } from "./api.js";
-import { $, element, isAdmin, notify, persist, state } from "./core.js";
+import { $, element, isAdmin, notify, state } from "./core.js";
+import { loadModels } from "./models.js";
 
-// Khóa API và kết nối AI
-function syncAiControls() {
-  const provider = $("#provider").value;
-  const engine = $("#engine").value;
-  const source = $("#credential-source").value;
-  const available = Boolean(state.aiOptions?.engines?.opencode);
-  const apiKeysAvailable = Boolean(state.aiOptions?.engines?.opencodeApiKeys);
-  $("#engine option[value=opencode]").disabled =
-    !available || provider === "anthropic" || (!apiKeysAvailable && provider !== "openai");
-  $("#engine option[value=direct]").disabled = false;
-  for (const value of ["auto", "personal", "shared"]) {
-    $(`#credential-source option[value=${value}]`).disabled = engine === "opencode" && !apiKeysAvailable;
-  }
-  const chatgptOption = $("#credential-source option[value=chatgpt]");
-  chatgptOption.hidden = provider !== "openai" || engine !== "opencode" || !state.chatgpt.available;
-  chatgptOption.disabled = !state.chatgpt.connected;
-  $("#retrieval-mode option[value=hybrid]").disabled =
-    source === "chatgpt" && !["openrouter", "local"].includes(state.aiOptions?.embedding?.provider);
-  $("#query-public-label").hidden = !(
-    state.aiOptions?.embedding?.requiresPublicInput && $("#retrieval-mode").value === "hybrid"
-  );
-  $("#model").placeholder = provider === "openai" ? "Để trống dùng mặc định" : "Nhập ID model";
-}
-
-function selectChatgpt() {
-  $("#provider").value = "openai";
-  $("#engine").value = "opencode";
-  $("#credential-source").value = "chatgpt";
-  $("#retrieval-mode").value = ["local", "openrouter"].includes(state.aiOptions?.embedding?.provider) ? "hybrid" : "keyword";
-  $("#model").value = "gpt-5.6-luna";
-  syncAiControls();
-  persist();
-  renderChatgpt();
-}
-
+// Khóa API và kết nối AI; việc chọn model nằm ở models.js
 function renderChatgpt() {
   const connection = state.chatgpt;
   $("#chatgpt-status").textContent = !connection.available
@@ -54,12 +21,10 @@ function renderChatgpt() {
   else $("#chatgpt-link").removeAttribute("href");
   $("#chatgpt-start").hidden = !connection.available || connection.connected || connection.pending;
   $("#chatgpt-finish").hidden = !connection.pending || !connection.url;
-  $("#chatgpt-use").hidden = !connection.connected || $("#credential-source").value === "chatgpt";
   $("#chatgpt-disconnect").hidden = !connection.connected && !connection.pending;
-  syncAiControls();
 }
 
-async function loadConnections({ restore = false } = {}) {
+async function loadConnections() {
   if (!state.user) return;
   const userId = state.user.id;
   try {
@@ -74,10 +39,6 @@ async function loadConnections({ restore = false } = {}) {
       const status = await api.get("/ai/chatgpt");
       if (state.user?.id !== userId) return;
       state.chatgpt = { ...state.chatgpt, ...status, available };
-      if (status.connected && (restore || (
-        !options.engines?.opencodeApiKeys && $("#provider").value === "openai" &&
-        $("#engine").value === "opencode" && $("#credential-source").value !== "chatgpt"
-      ))) selectChatgpt();
     } else {
       state.chatgpt = { available: false, connected: false, pending: false };
     }
@@ -89,12 +50,13 @@ async function loadConnections({ restore = false } = {}) {
   list.replaceChildren();
   renderChatgpt();
   const embedding = state.aiOptions?.embedding;
+  $("#query-public-label").hidden = !embedding?.requiresPublicInput;
   $("#embedding-info").textContent =
     embedding?.provider === "local"
       ? `Embedding chạy trên GPU local (${embedding.model}); không cần khóa OpenRouter.`
       : embedding?.provider === "openrouter"
         ? `Embedding dùng OpenRouter (${embedding.model || "chưa chọn model"}) với key chung do hệ thống cấu hình${embedding.configured ? "." : "; chưa cấu hình đầy đủ."}`
-        : "Embedding dùng khóa OpenAI; nếu không có khóa OpenAI, hãy dùng mục tìm theo số hiệu/điều.";
+        : "Embedding dùng khóa OpenAI; nếu không có khóa OpenAI, hệ thống chỉ tra theo số hiệu/điều.";
   $("#connection-scope option[value=shared]").hidden = !isAdmin();
   const names = {
     openai: "OpenAI",
@@ -122,6 +84,7 @@ async function loadConnections({ restore = false } = {}) {
             const prefix = item.scope === "shared" ? "/admin" : "";
             await api.del(`${prefix}/ai/connections/${item.provider}`, item.version);
             loadConnections();
+            loadModels();
           } catch (error) {
             notify(error.message);
           }
@@ -147,6 +110,7 @@ $("#connection-form").addEventListener("submit", async (event) => {
     });
     notify("Đã lưu khóa. Khóa không được hiển thị lại.");
     loadConnections();
+    loadModels({ prefer: provider });
   } catch (error) {
     notify(error.message);
   } finally {
@@ -160,7 +124,7 @@ $("#connection-scope").addEventListener("change", () => {
 
 async function chatgptAction(action) {
   const userId = state.user?.id;
-  const buttons = ["#chatgpt-start", "#chatgpt-finish", "#chatgpt-use", "#chatgpt-disconnect"];
+  const buttons = ["#chatgpt-start", "#chatgpt-finish", "#chatgpt-disconnect"];
   buttons.forEach((selector) => {
     $(selector).disabled = true;
   });
@@ -189,15 +153,12 @@ async function chatgptAction(action) {
     } else if (action === "finish") {
       state.chatgpt = { available: true, pending: false, connected: Boolean(result.connected) };
       if (result.connected) {
-        selectChatgpt();
+        loadModels({ prefer: "chatgpt" });
         notify("Đã kết nối ChatGPT cho phiên của bạn.");
       }
     } else {
       state.chatgpt = { available: true, pending: false, connected: false };
-      if ($("#credential-source").value === "chatgpt") {
-        $("#credential-source").value = "auto";
-        persist();
-      }
+      loadModels();
     }
     renderChatgpt();
   } catch (error) {
@@ -210,7 +171,6 @@ async function chatgptAction(action) {
 }
 $("#chatgpt-start").addEventListener("click", () => chatgptAction("start"));
 $("#chatgpt-finish").addEventListener("click", () => chatgptAction("finish"));
-$("#chatgpt-use").addEventListener("click", selectChatgpt);
 $("#chatgpt-disconnect").addEventListener("click", () => chatgptAction("disconnect"));
 
-export { loadConnections, renderChatgpt, selectChatgpt, syncAiControls };
+export { loadConnections, renderChatgpt };

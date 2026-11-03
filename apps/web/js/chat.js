@@ -13,7 +13,8 @@ import {
 } from "./core.js";
 import { openEvidence } from "./evidence.js";
 import { navigate } from "./navigation.js";
-import { renderChatgpt, selectChatgpt, syncAiControls } from "./settings.js";
+import { focusPicker, loadModels, selectedModel } from "./models.js";
+import { renderChatgpt } from "./settings.js";
 
 // Câu hỏi, câu trả lời và lịch sử hội thoại
 function activeChat() {
@@ -147,20 +148,15 @@ function renderChat() {
   renderCounts();
 }
 
-function requestBody(question) {
-  const provider = $("#provider").value;
+function requestBody(question, selection) {
   const body = {
     question,
-    provider,
-    credential_source: $("#credential-source").value,
-    engine: $("#engine").value,
+    ...selection,
     knowledge_base_ids: [...state.selected],
-    retrieval_mode: $("#retrieval-mode").value,
     web_mode: $("#web-search").checked ? "official" : "off",
     public_embedding_input_confirmed: $("#query-public-confirm").checked,
   };
   if ($("#as-of").value) body.as_of = $("#as-of").value;
-  if ($("#model").value.trim()) body.model = $("#model").value.trim();
   return body;
 }
 
@@ -173,25 +169,19 @@ $("#question-form").addEventListener("submit", async (event) => {
     showAuth("Đăng nhập để đặt câu hỏi và kết nối AI.");
     return;
   }
-  if ($("#engine").value === "opencode" && !state.aiOptions?.engines?.opencodeApiKeys && $("#credential-source").value !== "chatgpt") {
-    notify("Hãy kết nối ChatGPT và chọn dùng ChatGPT trong Thiết lập, hoặc chọn engine Trực tiếp cho API key.");
+  const selection = selectedModel();
+  if (!selection) {
+    notify("Chọn model AI trước khi gửi câu hỏi.");
+    focusPicker();
     return;
   }
   const hasReadyKb = state.kbs.some((kb) => kb.ready && state.selected.has(kb.id));
   if (
     hasReadyKb &&
     state.aiOptions?.embedding?.requiresPublicInput &&
-    $("#retrieval-mode").value === "hybrid" &&
     !$("#query-public-confirm").checked
   ) {
     notify("Xác nhận câu hỏi không chứa dữ liệu cá nhân hoặc thông tin mật.");
-    return;
-  }
-  if (
-    ["anthropic", "deepseek", "openrouter"].includes($("#provider").value) &&
-    !$("#model").value.trim()
-  ) {
-    notify("Nhập ID model của nhà cung cấp đã chọn.");
     return;
   }
   let active = activeChat();
@@ -214,7 +204,7 @@ $("#question-form").addEventListener("submit", async (event) => {
   $("#assistant-status").textContent = "Đang tra cứu nguồn và soạn câu trả lời…";
   let reply;
   try {
-    const body = requestBody(question);
+    const body = requestBody(question, selection);
     $("#query-public-confirm").checked = false;
     const data = await api.post("/rag/ask", body);
     reply = { role: "assistant", text: data.answer, data: slimResponse(data) };
@@ -222,6 +212,7 @@ $("#question-form").addEventListener("submit", async (event) => {
     if (error.code === "chatgpt_disconnected") {
       state.chatgpt = { ...state.chatgpt, connected: false, pending: false };
       renderChatgpt();
+      loadModels();
     }
     reply = { role: "assistant", text: error.message };
   }
@@ -284,40 +275,4 @@ $("#delete-chat").addEventListener("click", () => {
   persist();
   newChat();
 });
-$("#provider").addEventListener("change", () => {
-  const provider = $("#provider").value;
-  $("#model").value = "";
-  $("#engine").value = "direct";
-  if (provider !== "openai" && $("#credential-source").value === "chatgpt")
-    $("#credential-source").value = "auto";
-  syncAiControls();
-  persist();
-});
-$("#engine").addEventListener("change", () => {
-  if ($("#engine").value === "opencode" && !state.aiOptions?.engines?.opencodeApiKeys) {
-    if (state.chatgpt.connected && $("#provider").value === "openai") {
-      selectChatgpt();
-      return;
-    }
-    $("#engine").value = "direct";
-    notify("Hãy kết nối ChatGPT trong Thiết lập trước khi dùng OpenCode.");
-  }
-  if ($("#engine").value === "direct" && $("#credential-source").value === "chatgpt")
-    $("#credential-source").value = "auto";
-  if ($("#engine").value === "opencode" && !["local", "openrouter"].includes(state.aiOptions?.embedding?.provider)) $("#retrieval-mode").value = "keyword";
-  syncAiControls();
-  persist();
-});
-$("#credential-source").addEventListener("change", () => {
-  if ($("#credential-source").value === "chatgpt" && !["local", "openrouter"].includes(state.aiOptions?.embedding?.provider)) $("#retrieval-mode").value = "keyword";
-  syncAiControls();
-  renderChatgpt();
-  persist();
-});
-$("#retrieval-mode").addEventListener("change", () => {
-  syncAiControls();
-  persist();
-});
-$("#model").addEventListener("change", persist);
-
 export { newChat, renderChat };

@@ -93,8 +93,7 @@ def test_chatgpt_rag_uses_personal_oauth_without_api_key_or_fallback(api, repo, 
     factory.assert_called_once_with("reader", "gpt-5.6-luna", repo, settings)
     resolve.assert_not_called()
     assert (
-        client.post("/api/v1/rag/ask", json={**payload, "retrieval_mode": "hybrid"}).status_code
-        == 422
+        client.post("/api/v1/rag/ask", json={**payload, "provider": "anthropic"}).status_code == 422
     )
     assert client.post("/api/v1/rag/ask", json={**payload, "engine": "direct"}).status_code == 422
 

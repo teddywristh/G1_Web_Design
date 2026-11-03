@@ -438,11 +438,19 @@ def test_rag_route_uses_backend_auth_and_returns_citations(api, repo, monkeypatc
         "app.api.v1.rag.qa.resolve_scope", lambda *_: ([{"id": "shared", "generation": "g"}], [])
     )
     ai = Mock()
+    embedder = Mock()
     factory = Mock(return_value=ai)
-    monkeypatch.setattr("app.api.v1.rag.OpenAIService", factory)
+    monkeypatch.setattr("app.api.v1.rag.OpenCodeService", factory)
+    monkeypatch.setattr("app.api.v1.rag.OpenAIService", Mock(return_value=embedder))
     monkeypatch.setattr(
         "app.api.v1.rag.get_settings",
-        lambda: get_settings().model_copy(update={"openai_api_key": "sk-test-only"}),
+        lambda: get_settings().model_copy(
+            update={
+                "openai_api_key": "sk-test-only",
+                "opencode_local_enabled": True,
+                "embedding_provider": "openai",
+            }
+        ),
     )
     payload = {"question": "Quy định về hợp đồng?", "top_k": 5}
     assert client.post("/api/v1/rag/ask", json=payload).status_code == 401
@@ -457,7 +465,7 @@ def test_rag_route_uses_backend_auth_and_returns_citations(api, repo, monkeypatc
     assert response.status_code == 200, response.text
     assert response.json()["citations"][0]["chunk_id"] == "c"
     assert response.json()["has_sufficient_evidence"] is True
-    assert stub.call_args.args[3] is ai and stub.call_args.args[4] is ai
+    assert stub.call_args.args[3] is ai and stub.call_args.args[4] is embedder
 
 
 def test_rag_without_api_key_is_503_while_core_backend_still_works(api, repo, monkeypatch):

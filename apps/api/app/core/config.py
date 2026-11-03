@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     opencode_local_enabled: bool = False
     opencode_chatgpt_local_enabled: bool = False
     opencode_chatgpt_hosted_enabled: bool = False
+    opencode_api_keys_hosted_enabled: bool = False
     opencode_binary: str = ""
     opencode_models_file: str = str(Path.home() / ".cache/opencode/models.json")
     opencode_image: str = "legal-api-backend:verify"

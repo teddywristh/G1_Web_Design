@@ -9,9 +9,7 @@ from pydantic import SecretStr
 from app.core.config import get_settings
 from app.core.errors import APIError
 from app.schemas.ai_connections import ConnectionPut
-from app.schemas.rag import StoredChunk
 from app.services import ai_connections as connections
-from app.services.ai import AnthropicService, CompatibleChatService
 from tests.stubs import stub_qa
 
 from .test_backend import api as api  # noqa: F401
@@ -20,52 +18,6 @@ from .test_backend import repo as repo  # noqa: F401
 
 PERSONAL = "sk-test-personal-not-a-real-key"
 SHARED = "sk-test-shared-not-a-real-key"
-
-
-def test_openrouter_direct_uses_selected_model_and_personal_key(configured_crypto):
-    recorded = []
-
-    def handler(request):
-        recorded.append(request)
-        return httpx.Response(
-            200,
-            json={"choices": [{"finish_reason": "stop", "message": {"content": "Câu trả lời"}}]},
-        )
-
-    service = CompatibleChatService(
-        configured_crypto, PERSONAL, "vendor/model:free", "openrouter", httpx.MockTransport(handler)
-    )
-    assert service.answer("Câu hỏi", []) == "Câu trả lời"
-    assert str(recorded[0].url) == "https://openrouter.ai/api/v1/chat/completions"
-    assert recorded[0].headers["authorization"] == "Bearer " + PERSONAL
-    assert json.loads(recorded[0].content)["model"] == "vendor/model:free"
-
-
-def test_openrouter_direct_request_selects_personal_key(api, repo, monkeypatch):
-    from app.core.database import get_database
-
-    client, app, _ = api
-    identity(app)
-    profile(repo)
-    app.dependency_overrides[get_database] = lambda: Mock()
-    save(repo, {"id": "reader", "role": "user"}, provider="openrouter")
-    service = Mock(return_value=Mock(answer=Mock(return_value="Câu trả lời")))
-    monkeypatch.setattr("app.api.v1.rag.CompatibleChatService", service)
-    stub_qa(monkeypatch)
-    response = client.post(
-        "/api/v1/rag/ask",
-        json={
-            "question": "Câu hỏi pháp luật",
-            "provider": "openrouter",
-            "credential_source": "personal",
-            "engine": "direct",
-            "retrieval_mode": "keyword",
-            "model": "vendor/model:free",
-        },
-    )
-    assert response.status_code == 200, response.text
-    assert service.call_args.args[1:] == (PERSONAL, "vendor/model:free", "openrouter")
-    assert response.json()["credential_source"] == "personal"
 
 
 @pytest.fixture(autouse=True)
@@ -202,6 +154,9 @@ def test_hosted_chatgpt_does_not_advertise_opencode_api_keys(repo, configured_cr
     engines = connections.options(repo, {"id": "reader"}, configured_crypto)["engines"]
     assert engines["opencode"] is True
     assert engines["opencodeApiKeys"] is False
+    monkeypatch.setattr(configured_crypto, "opencode_api_keys_hosted_enabled", True)
+    engines = connections.options(repo, {"id": "reader"}, configured_crypto)["engines"]
+    assert engines["opencodeApiKeys"] is True
 
 
 def test_ciphertext_cannot_be_reassigned_to_another_account(repo):
@@ -225,39 +180,6 @@ def test_invalid_key_input_does_not_echo_secret(api, repo):
     assert secret not in response.text
 
 
-def test_anthropic_request_and_safe_provider_errors(configured_crypto):
-    recorded = []
-
-    def handler(request):
-        recorded.append(request)
-        return httpx.Response(
-            200,
-            json={
-                "content": [{"type": "text", "text": "Căn cứ Điều 1."}],
-                "stop_reason": "end_turn",
-            },
-        )
-
-    ai = AnthropicService(
-        configured_crypto, PERSONAL, "claude-test-model", httpx.MockTransport(handler)
-    )
-    chunk = StoredChunk(id="c", document_id="d", document_title="Luật mẫu", text="Điều 1", score=1)
-    assert ai.answer("Hỏi?", [chunk]) == "Căn cứ Điều 1."
-    assert recorded[0].url.host == "api.anthropic.com"
-    assert recorded[0].headers["x-api-key"] == PERSONAL
-    assert json.loads(recorded[0].content)["model"] == "claude-test-model"
-    for status, expected in [(401, 502), (429, 429), (500, 502)]:
-        transport = httpx.MockTransport(
-            lambda request: httpx.Response(status, json={"error": PERSONAL})
-        )
-        with pytest.raises(APIError) as error:
-            AnthropicService(configured_crypto, PERSONAL, "claude-test-model", transport).answer(
-                "Hỏi?", [chunk]
-            )
-        assert error.value.status == expected
-        assert PERSONAL not in error.value.message
-
-
 def test_personal_provider_rejection_never_switches_to_shared(api, repo, monkeypatch):
     from app.core.database import get_database
 
@@ -267,6 +189,8 @@ def test_personal_provider_rejection_never_switches_to_shared(api, repo, monkeyp
     save(repo, {"id": "reader", "role": "user"})
     save(repo, {"id": "admin", "role": "admin"}, SHARED, shared=True)
     app.dependency_overrides[get_database] = lambda: Mock()
+    monkeypatch.setattr(get_settings(), "opencode_local_enabled", True)
+    monkeypatch.setattr("app.api.v1.rag.OpenCodeService", Mock())
     error = Exception("provider echoed " + PERSONAL)
     error.status_code = 401
     factory = Mock(return_value=Mock(embed=Mock(side_effect=error)))
@@ -290,11 +214,10 @@ def test_claude_keyword_mode_requires_no_openai_embedding_key(api, repo, monkeyp
     profile(repo)
     save(repo, {"id": "reader", "role": "user"}, provider="anthropic")
     app.dependency_overrides[get_database] = lambda: Mock()
+    monkeypatch.setattr(get_settings(), "opencode_local_enabled", True)
     retrieve = stub_qa(monkeypatch)
-    monkeypatch.setattr(
-        "app.api.v1.rag.AnthropicService",
-        Mock(return_value=Mock(answer=Mock(return_value="Điều 1."))),
-    )
+    factory = Mock(return_value=Mock(answer=Mock(return_value="Điều 1.")))
+    monkeypatch.setattr("app.api.v1.rag.OpenCodeService", factory)
     response = client.post(
         "/api/v1/rag/ask",
         json={
@@ -309,6 +232,7 @@ def test_claude_keyword_mode_requires_no_openai_embedding_key(api, repo, monkeyp
     assert response.json()["provider"] == "anthropic"
     assert response.json()["credential_source"] == "personal"
     assert retrieve.call_args.args[4] is None
+    assert factory.call_args.kwargs["provider"] == "anthropic"
 
 
 def test_openai_answers_have_bounded_output_and_reject_partial_results(configured_crypto):

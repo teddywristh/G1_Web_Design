@@ -61,7 +61,7 @@ class AskRequest(BaseModel):
         default=None, min_length=1, max_length=200, pattern=r"^[A-Za-z0-9][A-Za-z0-9_.:/-]*$"
     )
     retrieval_mode: Literal["hybrid", "keyword"] = "hybrid"
-    engine: Literal["direct", "opencode"] = "direct"
+    engine: Literal["opencode"] = "opencode"
     public_embedding_input_confirmed: bool = False
     knowledge_base_ids: list[str] | None = Field(default=None, max_length=5)
     as_of: date | None = None
@@ -70,7 +70,7 @@ class AskRequest(BaseModel):
 
 
 class AskResponse(BaseModel):
-    engine: Literal["direct", "opencode"] = "direct"
+    engine: Literal["opencode"] = "opencode"
     provider: Provider | None = None
     credential_source: Literal["personal", "shared", "chatgpt"] | None = None
     answer: str

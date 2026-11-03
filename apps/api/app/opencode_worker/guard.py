@@ -21,7 +21,11 @@ PROVIDERS = {
         "/api/v1/chat/completions",
         "max_tokens",
     ),
+    "anthropic": ("api.anthropic.com", "/v1/messages", "/v1/messages", "max_tokens"),
 }
+# Anthropic authenticates with x-api-key and versions its API through request headers.
+KEY_HEADER = "x-api-key" if os.environ.get("OPENCODE_GUARD_PROVIDER") == "anthropic" else None
+FORWARDED = ("anthropic-version", "anthropic-beta") if KEY_HEADER else ()
 HOST, INPUT_PATH, UPSTREAM_PATH, MAX_FIELD = PROVIDERS[
     os.environ.get("OPENCODE_GUARD_PROVIDER", "openai")
 ]
@@ -67,9 +71,20 @@ class Handler(BaseHTTPRequestHandler):
         supplied = self.headers.get("x-worker-secret", "")
         if not supplied.isascii() or not hmac.compare_digest(supplied, SECRET):
             return self.fail(403)
-        authorization = self.headers.get("Authorization", "")
-        if not authorization.startswith("Bearer ") or len(authorization) > 4200:
-            return self.fail(403)
+        if KEY_HEADER:
+            key = self.headers.get(KEY_HEADER, "")
+            if not key or not key.isascii() or len(key) > 4096:
+                return self.fail(403)
+            credentials = {KEY_HEADER: key}
+            for name in FORWARDED:
+                value = self.headers.get(name)
+                if value and value.isascii() and len(value) <= 200:
+                    credentials[name] = value
+        else:
+            authorization = self.headers.get("Authorization", "")
+            if not authorization.startswith("Bearer ") or len(authorization) > 4200:
+                return self.fail(403)
+            credentials = {"Authorization": authorization}
         try:
             size = int(self.headers.get("Content-Length", "0"))
             if not 0 < size <= 1_000_000:
@@ -93,7 +108,7 @@ class Handler(BaseHTTPRequestHandler):
                 UPSTREAM_PATH,
                 body,
                 headers={
-                    "Authorization": authorization,
+                    **credentials,
                     "Content-Type": "application/json",
                     "Accept": "text/event-stream",
                 },

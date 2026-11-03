@@ -9,6 +9,8 @@ const state = {
   connections: [],
   aiOptions: null,
   chatgpt: { connected: false, pending: false },
+  models: { groups: [], apiKeysAvailable: true, loading: false },
+  ai: null,
   sessions: [],
   sessionCursor: null,
   view: "chat",
@@ -141,11 +143,7 @@ function persist() {
   writeStore("saved", [...state.saved]);
   writeStore("prefs", {
     kbs: [...state.selected],
-    provider: $("#provider").value,
-    model: $("#model").value,
-    engine: $("#engine").value,
-    credentialSource: $("#credential-source").value,
-    retrievalMode: $("#retrieval-mode").value,
+    ai: state.ai,
   });
   renderCounts();
 }

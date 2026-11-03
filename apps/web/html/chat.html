@@ -17,51 +17,28 @@
       Mốc thời gian
       <input id="as-of" type="date" />
     </label>
-    <label class="form-field">
-      AI
-      <select id="provider">
-        <option value="openai">OpenAI</option>
-        <option value="anthropic">Claude</option>
-        <option value="deepseek">DeepSeek</option>
-        <option value="openrouter">OpenRouter</option>
-      </select>
-    </label>
-    <details class="advanced-options">
-      <summary>Tùy chọn nâng cao</summary>
-      <div class="advanced-grid">
-        <label class="form-field">
-          Engine
-          <select id="engine">
-            <option value="direct">Trực tiếp</option>
-            <option value="opencode">OpenCode</option>
-          </select>
-        </label>
-        <label class="form-field">
-          Nguồn kết nối
-          <select id="credential-source">
-            <option value="auto">Tự động</option>
-            <option value="personal">Key cá nhân</option>
-            <option value="shared">Key dùng chung</option>
-            <option value="chatgpt" hidden>ChatGPT Plus/Pro</option>
-          </select>
-        </label>
-        <label class="form-field">
-          Tra cứu
-          <select id="retrieval-mode">
-            <option value="hybrid">Ngữ nghĩa + số hiệu/điều</option>
-            <option value="keyword">Số hiệu/điều</option>
-          </select>
-        </label>
-        <label class="form-field" id="model-field">
-          Model
-          <input
-            id="model"
-            maxlength="200"
-            placeholder="Để trống dùng mặc định"
-          />
-        </label>
+    <div class="form-field model-field">
+      <label for="model-picker">Model AI</label>
+      <div class="combobox">
+        <input
+          id="model-picker"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded="false"
+          aria-controls="model-options"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Chọn nhà cung cấp và model"
+        />
+        <ul
+          id="model-options"
+          class="combobox-list"
+          role="listbox"
+          aria-label="Nhà cung cấp và model"
+          hidden
+        ></ul>
       </div>
-    </details>
+    </div>
     <label class="small-print">
       <input id="web-search" type="checkbox" />
       Tìm nguồn pháp luật trên web (câu hỏi được gửi tới trang tìm kiếm).

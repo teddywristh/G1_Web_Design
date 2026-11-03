@@ -55,6 +55,16 @@ try:
             raise ValueError("Invalid OAuth credential")
         call("PUT", "/auth/openai", credential)
         print(json.dumps({"restored": True}))
+    elif job["action"] == "models":
+        # OpenCode filters the OpenAI catalog to what a ChatGPT sign-in may use.
+        providers = call("GET", "/config/providers", timeout=20).get("providers", [])
+        openai = next((item for item in providers if item.get("id") == "openai"), {})
+        models = [
+            {"id": key, "name": value.get("name") or key}
+            for key, value in (openai.get("models") or {}).items()
+            if isinstance(value, dict)
+        ]
+        print(json.dumps({"models": models}, ensure_ascii=False))
     elif job["action"] == "answer":
         session = call("POST", "/session", {"title": "legal-ai"})["id"]
         try:

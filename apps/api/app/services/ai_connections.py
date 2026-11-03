@@ -185,7 +185,10 @@ def options(repo, user, settings):
                 settings.opencode_local_enabled or settings.opencode_chatgpt_hosted_enabled
             )
             and bool(settings.opencode_binary),
-            "opencodeApiKeys": settings.opencode_local_enabled and bool(settings.opencode_binary),
+            "opencodeApiKeys": (
+                settings.opencode_local_enabled or settings.opencode_api_keys_hosted_enabled
+            )
+            and bool(settings.opencode_binary),
         },
         "embedding": {
             "provider": settings.embedding_provider,

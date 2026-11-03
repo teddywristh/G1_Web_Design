@@ -21,7 +21,7 @@ export FIREBASE_AUTH_EMULATOR_HOST='' FIRESTORE_EMULATOR_HOST='' STORAGE_EMULATO
 export BACKEND_CORS_ORIGINS='["https://legal-ai-dev-aeb51.web.app","https://legal-ai-dev-aeb51.firebaseapp.com"]'
 export AUTH_COOKIE_SECURE=true AUTH_COOKIE_SAMESITE=none EMBEDDING_PROVIDER=local
 export OPENCODE_LOCAL_ENABLED=false OPENCODE_CHATGPT_LOCAL_ENABLED=false
-export OPENCODE_CHATGPT_HOSTED_ENABLED=true OPENCODE_BINARY="${OPENCODE_BINARY:-$HOME/.opencode/bin/opencode}"
+export OPENCODE_CHATGPT_HOSTED_ENABLED=true OPENCODE_API_KEYS_HOSTED_ENABLED=true OPENCODE_BINARY="${OPENCODE_BINARY:-$HOME/.opencode/bin/opencode}"
 nohup python -m uvicorn app.main:app --app-dir apps/api --host 127.0.0.1 --port 8002 > "$state/api.log" 2>&1 < /dev/null &
 echo $! > "$state/api.pid"
 nohup env PYTHONPATH=apps/api python -m app.workers.ingestion > "$state/worker.log" 2>&1 < /dev/null &
