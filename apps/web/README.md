@@ -47,6 +47,8 @@ Lịch sử hội thoại và đánh dấu chỉ lưu trong localStorage, tách 
 ChatGPT OAuth cần `OPENCODE_LOCAL_ENABLED=true` và `OPENCODE_CHATGPT_LOCAL_ENABLED=true`,
 Docker và OpenCode theo [hướng dẫn API](../../docs/ai-connections.md#thử-chatgpt-oauth-local).
 Phiên chỉ dành cho thử nghiệm local. Với chế độ này, RAG tra theo số hiệu/điều; để dùng tìm kiếm
-ngữ nghĩa và xử lý PDF vẫn cần OpenAI API key cho embeddings.
+ngữ nghĩa và xử lý PDF cần một nhà cung cấp embedding do backend cấu hình. Với OpenRouter, key
+embedding dùng chung được cấu hình ở backend và tách biệt khỏi key/model trả lời. Model NVIDIA
+miễn phí không nhận nội dung mật hoặc dữ liệu cá nhân; xác nhận điều kiện tại form trước khi gửi.
 
 Bản Next.js cũ vẫn còn trong `src/` để tham khảo, nhưng không được tải bởi bản HTML này.

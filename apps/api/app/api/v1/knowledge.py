@@ -101,6 +101,7 @@ async def document_upload(
     request: Request,
     response: Response,
     credential_source: Literal["auto", "personal", "shared"] = "auto",
+    public_embedding_input_confirmed: bool = False,
     user=Depends(current_user),
     repo=Depends(get_repository),
     bucket=Depends(get_bucket),
@@ -108,7 +109,9 @@ async def document_upload(
 ):
     uploads_enabled()
     knowledge.private_document(repo, user, kb_id, doc_id)
-    options = knowledge.upload_options(user, kb_id, doc_id, credential_source, get_settings())
+    options = knowledge.upload_options(
+        user, kb_id, doc_id, credential_source, get_settings(), public_embedding_input_confirmed
+    )
     result = await receive_pdf(
         request, documents.upload_document, repo, bucket, doc_id, user["id"], version, **options
     )

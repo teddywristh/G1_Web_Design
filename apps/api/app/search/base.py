@@ -15,6 +15,10 @@ class EmbeddingProfile:
 
 
 def profile_from(settings):
+    if settings.embedding_provider == "openrouter":
+        return EmbeddingProfile(
+            "openrouter", settings.openrouter_embedding_model, settings.embedding_dimensions
+        )
     return EmbeddingProfile(
         "openai", settings.default_embedding_model, settings.embedding_dimensions
     )

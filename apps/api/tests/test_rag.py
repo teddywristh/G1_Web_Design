@@ -158,3 +158,123 @@ def test_fetcher_extracts_text_and_classifies_official_source():
     assert "bad()" not in text and "Điều 3" in text
     assert web_sources.classify("vbpl.vn", text, Settings()) == "official_legal_text"
     assert web_sources.classify("blog.example", text, Settings()) == "commentary"
+
+
+def test_public_vbpl_search_and_fetch_need_no_api_key():
+    from types import SimpleNamespace
+
+    def handler(request):
+        if "vbpq-timkiem" in request.url.path:
+            assert "Keyword" in request.url.params
+            return httpx.Response(
+                200,
+                text='<a href="/TW/Pages/vbpq-toanvan.aspx?ItemID=123">Luật</a><a href="https://evil.example/vbpq-toanvan.aspx?ItemID=1">bad</a>',
+                headers={"content-type": "text/html"},
+            )
+        return httpx.Response(
+            200,
+            text="<p>Điều 1. Một</p><p>Điều 2. Hai</p><p>Điều 3. Ba</p>",
+            headers={"content-type": "text/html"},
+        )
+
+    settings = Settings(official_web_enabled=True)
+    items, notes = web_sources.gather(
+        SimpleNamespace(client=None),
+        settings,
+        "Điều 2 quy định gì",
+        "official",
+        {"searches": 0, "fetches": 0},
+        httpx.MockTransport(handler),
+    )
+    assert not notes
+    assert (
+        len(items) == 1
+        and items[0]["sourceUrl"] == "https://vbpl.vn/TW/Pages/vbpq-toanvan.aspx?ItemID=123"
+    )
+    assert items[0]["sourceType"] == "official_legal_text"
+
+
+def test_congbao_search_uses_public_api_and_official_pdfs_only():
+    def handler(request):
+        assert request.url.host == "api-searchcongbao.chinhphu.vn"
+        assert json.loads(request.content)["query"] == "giết người"
+        return httpx.Response(
+            200,
+            json={
+                "success": True,
+                "data": [
+                    {
+                        "type": "van_ban",
+                        "data": {
+                            "loai_van_ban": "Văn bản hợp nhất",
+                            "ngay_ban_hanh": "2025-09-05",
+                            "danh_sach_tep_van_ban": [
+                                {
+                                    "file_extension": "pdf",
+                                    "duong_dan": "https://congbaocdn.chinhphu.vn/doc.pdf",
+                                },
+                                {
+                                    "file_extension": "pdf",
+                                    "duong_dan": "https://evil.example/doc.pdf",
+                                },
+                            ],
+                        },
+                    }
+                ],
+            },
+        )
+
+    urls = web_sources.congbao_search_urls(
+        "Giết người có bị đi tù không", Settings(), httpx.MockTransport(handler)
+    )
+    assert urls == ["https://congbaocdn.chinhphu.vn/doc.pdf"]
+
+
+def test_congbao_search_retries_shorter_query_when_no_documents():
+    queries = []
+
+    def handler(request):
+        query = json.loads(request.content)["query"]
+        queries.append(query)
+        rows = (
+            []
+            if len(queries) == 1
+            else [
+                {
+                    "type": "van_ban",
+                    "data": {
+                        "danh_sach_tep_van_ban": [
+                            {
+                                "file_extension": "pdf",
+                                "duong_dan": "https://congbaocdn.chinhphu.vn/labor.pdf",
+                            }
+                        ]
+                    },
+                }
+            ]
+        )
+        return httpx.Response(200, json={"success": True, "data": rows})
+
+    urls = web_sources.congbao_search_urls(
+        "Hợp đồng lao động có cần ký hợp đồng bằng văn bản không?",
+        Settings(),
+        httpx.MockTransport(handler),
+    )
+    assert len(queries) == 2 and queries[1] == "hợp đồng"
+    assert urls == ["https://congbaocdn.chinhphu.vn/labor.pdf"]
+
+
+def test_relevant_legal_section_keeps_following_penalty():
+    text = "Điều 122. Khác\nNgười phạm tội khác.\nĐiều 123. Tội giết người\nPhạt tù từ 12 năm.\nĐiều 124. Khác\nNội dung khác."
+    window = web_sources.best_window(text, "Giết người có bị đi tù không")
+    assert "Điều 123" in window and "Phạt tù" in window and "Điều 124" not in window
+
+
+def test_relevant_section_prioritizes_topic_over_question_modifiers():
+    text = (
+        "Điều 100. Quy định khác\nNgười gián tiếp liên quan bị tử hình.\n"
+        "Điều 123. Tội giết người\nPhạt tù theo quy định.\n"
+        "Điều 124. Quy định khác\nNội dung khác."
+    )
+    window = web_sources.best_window(text, "Giết người gián tiếp thì bị tử hình hay đi tù")
+    assert "Điều 123" in window and "Điều 100" not in window

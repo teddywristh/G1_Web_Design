@@ -8,6 +8,7 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from app.core.errors import APIError
 from app.schemas.ai_connections import ConnectionOut
+from app.services.embeddings import requires_public_input
 
 COLLECTION = "ai_connections"
 
@@ -181,6 +182,20 @@ def options(repo, user, settings):
         "engines": {
             "direct": True,
             "opencode": settings.opencode_local_enabled and bool(settings.opencode_binary),
+        },
+        "embedding": {
+            "provider": settings.embedding_provider,
+            "model": settings.openrouter_embedding_model
+            if settings.embedding_provider == "openrouter"
+            else settings.default_embedding_model,
+            "configured": bool(
+                settings.openrouter_embedding_model
+                and settings.openrouter_embedding_api_key.get_secret_value()
+            )
+            if settings.embedding_provider == "openrouter"
+            else None,
+            "scope": "system" if settings.embedding_provider == "openrouter" else "selected",
+            "requiresPublicInput": requires_public_input(settings),
         },
         "connections": [
             status(repo, owner, provider, settings).model_dump()

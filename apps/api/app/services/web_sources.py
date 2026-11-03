@@ -5,7 +5,7 @@ import ipaddress
 import re
 import socket
 from html.parser import HTMLParser
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlencode, urljoin, urlparse
 
 import httpx
 import pdfplumber
@@ -44,8 +44,13 @@ class TextExtractor(HTMLParser):
     def __init__(self):
         super().__init__()
         self.parts, self.skip = [], 0
+        self.links = []
 
     def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            href = dict(attrs).get("href")
+            if href:
+                self.links.append(href)
         if tag in {"script", "style"}:
             self.skip += 1
 
@@ -69,7 +74,7 @@ def to_text(body, content_type):
     return re.sub(r"\n\s*\n+", "\n\n", "".join(parser.parts)).strip()
 
 
-def fetch(url, settings, domains=None, transport=None):
+def fetch(url, settings, domains=None, transport=None, links=False):
     """HTTPS only; every redirect is validated again; size and time are bounded."""
     for _ in range(MAX_REDIRECTS + 1):
         parsed = urlparse(url)
@@ -97,18 +102,67 @@ def fetch(url, settings, domains=None, transport=None):
                     body += chunk
                     if len(body) > MAX_BYTES:
                         raise APIError(502, "fetch_failed", "Source is too large")
+        if links:
+            if "html" not in content_type:
+                raise APIError(502, "fetch_failed", "Search page is not HTML")
+            parser = TextExtractor()
+            parser.feed(body.decode("utf-8", errors="replace"))
+            return url, parser.links
         return url, to_text(body, content_type)
     raise APIError(502, "fetch_failed", "Too many redirects")
 
 
 def best_window(text, query, size=1500):
     """Paragraph window that shares the most words with the query."""
-    words = set(re.findall(r"\w+", query.casefold()))
+    tokens = re.findall(r"\w+", query.casefold())
+    stop = {
+        "có",
+        "bị",
+        "đi",
+        "hay",
+        "thì",
+        "không",
+        "những",
+        "được",
+        "trong",
+        "nào",
+        "thế",
+        "nhiêu",
+        "về",
+        "là",
+        "của",
+        "tôi",
+        "muốn",
+        "hỏi",
+    }
+    topic = [token for token in tokens if token not in stop]
+    phrase = " ".join(topic[:2]) if len(topic) >= 2 else ""
+    words = {w for w in tokens if len(w) > 2 and w not in stop}
+
+    def score(section):
+        lower = " ".join(section.casefold().split())
+        return len(words & set(re.findall(r"\w+", lower))) + (
+            8 if phrase and phrase in lower else 0
+        )
+
+    articles = list(ARTICLE.finditer(text))
+    if articles:
+        sections = [
+            text[
+                item.start() : articles[i + 1].start()
+                if i + 1 < len(articles)
+                else item.start() + 4000
+            ]
+            for i, item in enumerate(articles)
+        ]
+        best = max(sections, key=score)
+        if words & set(re.findall(r"\w+", best.casefold())):
+            return best[: max(size, 3000)]
     best, best_score = text[:size], -1
     for paragraph in text.split("\n"):
-        score = len(words & set(re.findall(r"\w+", paragraph.casefold())))
-        if score > best_score and paragraph.strip():
-            best, best_score = paragraph.strip()[:size], score
+        rank = score(paragraph)
+        if rank > best_score and paragraph.strip():
+            best, best_score = paragraph.strip()[:size], rank
     return best
 
 
@@ -124,6 +178,148 @@ def search_urls(client, model, query, domains=None):
             for note in getattr(part, "annotations", None) or []:
                 if getattr(note, "type", "") == "url_citation" and note.url not in urls:
                     urls.append(note.url)
+    return urls
+
+
+def brave_search_urls(key, query, domains):
+    """Search only public sites; never include document contents or credentials in the query."""
+    sites = " OR ".join("site:" + domain for domain in domains)
+    with httpx.Client(timeout=10, follow_redirects=False, trust_env=False) as client:
+        response = client.get(
+            "https://api.search.brave.com/res/v1/web/search",
+            params={"q": f"{query} ({sites})", "count": 10},
+            headers={"Accept": "application/json", "X-Subscription-Token": key},
+        )
+        response.raise_for_status()
+        rows = response.json().get("web", {}).get("results", [])
+    return [row["url"] for row in rows if isinstance(row, dict) and isinstance(row.get("url"), str)]
+
+
+def vbpl_search_urls(query, settings, transport=None):
+    """Use the public VBPL search page without an API key."""
+    stop = {
+        "những",
+        "thông",
+        "tin",
+        "nào",
+        "được",
+        "trong",
+        "theo",
+        "về",
+        "là",
+        "của",
+        "có",
+        "cần",
+        "gì",
+        "như",
+        "thế",
+    }
+    words = [
+        word
+        for word in re.findall(r"[\w/-]+", query.casefold())
+        if len(word) > 1 and word not in stop
+    ]
+    keyword = " ".join(words[:6]) or query[:100]
+    url = "https://vbpl.vn/TW/Pages/vbpq-timkiem.aspx?" + urlencode(
+        {"Keyword": keyword, "SearchIn": "VBPQFulltext", "s": "1", "type": "0"}
+    )
+    base, links = fetch(url, settings, ["vbpl.vn"], transport, links=True)
+    found = []
+    for href in links:
+        candidate = urljoin(base, href)
+        parsed = urlparse(candidate)
+        if (
+            parsed.scheme == "https"
+            and parsed.hostname == "vbpl.vn"
+            and "vbpq-toanvan.aspx" in parsed.path.lower()
+            and candidate not in found
+        ):
+            found.append(candidate)
+    return found[: settings.max_fetched_sources]
+
+
+def congbao_search_urls(query, settings, transport=None):
+    """Search the public Công báo index and return official document PDFs."""
+    stop = {
+        "những",
+        "thông",
+        "tin",
+        "nào",
+        "được",
+        "trong",
+        "theo",
+        "về",
+        "là",
+        "của",
+        "có",
+        "cần",
+        "gì",
+        "như",
+        "thế",
+        "không",
+        "bị",
+        "đi",
+        "tù",
+        "bao",
+        "nhiêu",
+        "thì",
+        "hay",
+    }
+    words = [
+        word
+        for word in re.findall(r"[\w/-]+", query.casefold())
+        if len(word) > 1 and word not in stop
+    ]
+    keywords = list(dict.fromkeys([" ".join(words[:5]) or query[:100], " ".join(words[:2])]))
+    with httpx.Client(
+        timeout=10, transport=transport, follow_redirects=False, trust_env=False
+    ) as client:
+        documents = []
+        for keyword in keywords[:2]:
+            if not keyword:
+                continue
+            response = client.post(
+                "https://api-searchcongbao.chinhphu.vn/search/all",
+                json={"filters": {}, "page": 1, "page_size": 20, "query": keyword},
+            )
+            response.raise_for_status()
+            data = response.json()
+            if not data.get("success") or not isinstance(data.get("data"), list):
+                raise APIError(502, "fetch_failed", "Official search unavailable")
+            documents = [
+                item["data"]
+                for item in data["data"]
+                if item.get("type") == "van_ban"
+                and isinstance(item.get("data"), dict)
+                and any(
+                    f.get("file_extension", "").lower() == "pdf"
+                    for f in item["data"].get("danh_sach_tep_van_ban", [])
+                )
+            ]
+            if documents:
+                break
+    documents.sort(
+        key=lambda doc: (
+            doc.get("loai_van_ban") == "Văn bản hợp nhất",
+            doc.get("ngay_ban_hanh") or "",
+            doc.get("score") or 0,
+        ),
+        reverse=True,
+    )
+    urls = []
+    for doc in documents:
+        for file in doc.get("danh_sach_tep_van_ban", []):
+            url = file.get("duong_dan", "")
+            parsed = urlparse(url)
+            if (
+                file.get("file_extension", "").lower() == "pdf"
+                and parsed.scheme == "https"
+                and parsed.hostname == "congbaocdn.chinhphu.vn"
+                and url not in urls
+            ):
+                urls.append(url)
+                if len(urls) >= settings.max_fetched_sources:
+                    return urls
     return urls
 
 
@@ -156,8 +352,7 @@ def web_item(url, text, query, source_type):
 def gather(ai, settings, query, mode, budget, transport=None):
     """Returns (items, limitations). budget counts searches and fetches already allowed."""
     client = getattr(ai, "client", None)
-    if client is None:
-        return [], ["web_unavailable_for_provider"]
+    brave_key = settings.brave_search_api_key.get_secret_value()
     items, limits = [], []
     plans = []
     if settings.official_web_enabled and budget["searches"] < settings.max_official_searches:
@@ -167,17 +362,33 @@ def gather(ai, settings, query, mode, budget, transport=None):
     for text, search_domains, fetch_domains in plans:
         budget["searches"] += 1
         try:
-            urls = search_urls(client, settings.default_llm_model, text, search_domains)
+            if brave_key and search_domains:
+                urls = brave_search_urls(brave_key, text, search_domains)
+            elif search_domains:
+                try:
+                    urls = congbao_search_urls(text, settings, transport)
+                except (APIError, httpx.HTTPError, ValueError):
+                    urls = vbpl_search_urls(text, settings, transport)
+            elif client is not None:
+                model = getattr(
+                    getattr(ai, "settings", None), "default_llm_model", settings.default_llm_model
+                )
+                urls = search_urls(client, model, text, search_domains)
+            else:
+                limits.append("web_unavailable_for_provider")
+                continue
         except Exception:
             limits.append("web_search_unavailable")
             continue
+        if not urls:
+            limits.append("web_no_results")
         for url in urls:
             if budget["fetches"] >= settings.max_fetched_sources:
                 break
             budget["fetches"] += 1
             try:
                 final_url, body = fetch(url, settings, fetch_domains, transport)
-            except APIError:
+            except (APIError, httpx.HTTPError, ValueError):
                 limits.append("web_source_unreadable")
                 continue
             host = urlparse(final_url).hostname or ""

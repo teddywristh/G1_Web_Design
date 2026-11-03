@@ -62,13 +62,21 @@ class KnowledgeDocumentPage(Out):
     nextCursor: str | None
 
 
+class EmbeddingCoverage(Out):
+    total: int
+    indexed: int
+    start: int
+
+
 class ProcessingOut(Out):
     status: str
     stage: str
     errorCode: str | None = None
     retryable: bool = False
     nextAction: str | None = None
+    nextRunAt: datetime | None = None
     warnings: list[str] = []
+    embeddingCoverage: EmbeddingCoverage | None = None
     legalValidity: str = "unknown"
 
 

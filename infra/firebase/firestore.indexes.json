@@ -354,6 +354,50 @@
       ]
     },
     {
+      "collectionGroup": "provision_versions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "kbId", "order": "ASCENDING"},
+        {"fieldPath": "articleNo", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "provision_versions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "kbId", "order": "ASCENDING"},
+        {"fieldPath": "articleNo", "order": "ASCENDING"},
+        {"fieldPath": "documentNumberNormalized", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "provision_versions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "kbId", "order": "ASCENDING"},
+        {"fieldPath": "articleNo", "order": "ASCENDING"},
+        {"fieldPath": "clauseNo", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "provision_versions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "kbId", "order": "ASCENDING"},
+        {"fieldPath": "articleNo", "order": "ASCENDING"},
+        {"fieldPath": "documentNumberNormalized", "order": "ASCENDING"},
+        {"fieldPath": "clauseNo", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "provision_versions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "documentVersionId", "order": "ASCENDING"},
+        {"fieldPath": "articleNo", "order": "ASCENDING"}
+      ]
+    },
+    {
       "collectionGroup": "processing_jobs",
       "queryScope": "COLLECTION",
       "fields": [

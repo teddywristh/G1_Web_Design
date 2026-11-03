@@ -216,6 +216,9 @@ def test_personal_provider_rejection_never_switches_to_shared(api, repo, monkeyp
     error.status_code = 401
     factory = Mock(return_value=Mock(embed=Mock(side_effect=error)))
     monkeypatch.setattr("app.api.v1.rag.OpenAIService", factory)
+    monkeypatch.setattr(
+        "app.api.v1.rag.qa.resolve_scope", lambda *_: ([{"id": "shared", "generation": "g"}], [])
+    )
     stub_qa(monkeypatch, use_embedder=True)
     response = client.post("/api/v1/rag/ask", json={"question": "Câu hỏi pháp luật"})
     assert response.status_code == 502

@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import math
 from datetime import timedelta
 from tempfile import NamedTemporaryFile
@@ -15,6 +16,7 @@ from app.services.users import check_version
 PARSER_VERSION = "p1"
 CHUNKER_VERSION = "c1"
 SHARED_KB = "shared"
+logger = logging.getLogger("legal_api")
 
 
 def job_id(kb_id, source_id, content_hash, profile_id):
@@ -22,7 +24,15 @@ def job_id(kb_id, source_id, content_hash, profile_id):
     return hashlib.sha256(raw.encode()).hexdigest()[:40]
 
 
-def job_outbox(kb_id, collection, source_id, owner_uid, credential_source, settings):
+def job_outbox(
+    kb_id,
+    collection,
+    source_id,
+    owner_uid,
+    credential_source,
+    settings,
+    public_input_confirmed=False,
+):
     """Rows written in the same transaction that marks the upload available."""
     profile = profile_from(settings)
 
@@ -34,6 +44,7 @@ def job_outbox(kb_id, collection, source_id, owner_uid, credential_source, setti
             "sourceId": source_id,
             "ownerUid": owner_uid,
             "credentialSource": credential_source,
+            "publicEmbeddingInputConfirmed": public_input_confirmed,
             "sourceFence": {"sha256": patch["sha256"], "storagePath": patch["storagePath"]},
             "embeddingProfileId": profile.id,
             "stage": "parse",
@@ -193,7 +204,7 @@ def staged_generation(version_id):
     return "stage-" + version_id
 
 
-def embed_stage(repo, settings, job, embedder):
+def embed_stage(repo, settings, job, embedder, heartbeat=None):
     usable_source(repo, job)
     profile = profile_from(settings)
     if job["embeddingProfileId"] != profile.id:
@@ -203,13 +214,36 @@ def embed_stage(repo, settings, job, embedder):
         "provision_versions", [("documentVersionId", "==", version_id)], limit=20000
     )
     provisions.sort(key=lambda row: row["id"])
-    stage = staged_generation(version_id)
-    chunks = {}
-    for start in range(0, len(provisions), settings.embedding_batch_size):
-        batch = provisions[start : start + settings.embedding_batch_size]
+    total = len(provisions)
+    max_chunks = settings.embedding_max_chunks
+    if max_chunks and total > max_chunks:
+        first = (total - max_chunks) // 2
+        provisions = provisions[first : first + max_chunks]
+    else:
+        first = 0
+    scope = hashlib.sha256(f"{version_id}|{profile.id}|{max_chunks}".encode()).hexdigest()[:40]
+    stage = "stage-" + scope
+    existing = {
+        row["provisionVersionId"]
+        for row in repo.query("search_chunks", [("indexGeneration", "==", stage)], limit=20000)
+    }
+    indexed = len(provisions)
+    batch_size = (
+        1
+        if settings.embedding_provider == "openrouter"
+        and settings.openrouter_embedding_model.endswith(":free")
+        else settings.embedding_batch_size
+    )
+    for start in range(0, len(provisions), batch_size):
+        if heartbeat:
+            heartbeat()
+        batch = [row for row in provisions[start : start + batch_size] if row["id"] not in existing]
+        if not batch:
+            continue
         vectors = embedder.embed([search_text(row) for row in batch])
         if len(vectors) != len(batch):
             raise validation.PermanentError("embedding_count_mismatch")
+        chunks = {}
         for row, vector in zip(batch, vectors):
             if len(vector) != profile.dimensions or not all(math.isfinite(x) for x in vector):
                 raise validation.PermanentError("embedding_invalid")
@@ -226,8 +260,28 @@ def embed_stage(repo, settings, job, embedder):
                 "embeddingProfileId": profile.id,
                 "state": "active",
             }
-    repo.put_many("search_chunks", chunks)
-    return {"chunkCount": len(chunks)}
+        if heartbeat:
+            heartbeat()
+        repo.put_many("search_chunks", chunks)
+        logger.info(
+            json.dumps(
+                {
+                    "event": "embedding_progress",
+                    "jobId": job["id"],
+                    "completed": start + len(provisions[start : start + batch_size]),
+                    "total": indexed,
+                }
+            )
+        )
+    return {
+        "chunkCount": indexed,
+        "stagingGeneration": stage,
+        "embeddingCoverage": {
+            "total": total,
+            "indexed": indexed,
+            "start": first + 1 if total else 0,
+        },
+    }
 
 
 def alive_documents(repo, chunks):
@@ -257,7 +311,7 @@ def publish_stage(repo, bucket, settings, job):
     if not kb or kb.get("deletedAt") is not None:
         raise validation.Cancelled()
     version_id = job["documentVersionId"]
-    stage = staged_generation(version_id)
+    stage = job.get("stagingGeneration") or staged_generation(version_id)
     latest = kb.get("latestGeneration")
     carried = []
     if latest:
@@ -267,6 +321,13 @@ def publish_stage(repo, bucket, settings, job):
             limit=20000,
         )
     alive = alive_documents(repo, carried)
+    if any(
+        alive[chunk["documentId"]]
+        and chunk["documentId"] != source["id"]
+        and chunk.get("embeddingProfileId") != job["embeddingProfileId"]
+        for chunk in carried
+    ):
+        raise validation.PermanentError("embedding_profile_changed")
     new_generation = uuid4().hex
     rows = {}
     for chunk in carried:

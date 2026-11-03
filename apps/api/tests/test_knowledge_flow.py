@@ -115,6 +115,322 @@ def test_upload_creates_one_job_and_processing_reaches_ready(env, tmp_path):
     assert process(repo, bucket) is None
 
 
+def test_parsed_document_is_searchable_while_embedding_waits(env, tmp_path, monkeypatch):
+    repo, bucket = env
+    kb, doc = upload(repo, bucket, tmp_path)
+    monkeypatch.setattr(
+        worker,
+        "make_embedder",
+        lambda *_: (_ for _ in ()).throw(APIError(429, "ai_rate_limited", "limited")),
+    )
+    job = process(repo, bucket)
+    assert job["status"] == "retry_wait" and job["stage"] == "embed"
+    response = ask(repo, "alice", [kb["id"]], FakeAI(good_reply))
+    assert response.status == "answered" and "document_processing" in response.source_limitations
+    monkeypatch.setattr(evidence, "get_settings", lambda: SETTINGS)
+    provision_id = response.citations[0].provision_version_id
+    assert evidence.read(repo, user(repo, "alice"), provision_id)["id"] == provision_id
+    with pytest.raises(APIError):
+        ask(repo, "bob", [kb["id"]], FakeAI(good_reply))
+    with pytest.raises(APIError):
+        evidence.read(repo, user(repo, "bob"), provision_id)
+    repo.rows[("knowledge_documents", doc["id"])]["deletedAt"] = date.today()
+    with pytest.raises(APIError):
+        evidence.read(repo, user(repo, "alice"), provision_id)
+
+
+def test_empty_kb_can_use_opted_in_web_without_embedding(env, monkeypatch):
+    repo, _ = env
+    from app.services import web_sources
+
+    item = web_sources.web_item(
+        "https://vbpl.vn/test", "tối đa là 60 ngày", "60 ngày", "official_legal_text"
+    )
+    monkeypatch.setattr(web_sources, "gather", lambda *_: ([item], []))
+    request = AskRequest(question="Thử việc bao lâu?", knowledge_base_ids=[], web_mode="official")
+    answer = qa.answer(
+        repo,
+        user(repo, "alice"),
+        request,
+        FakeAI(good_reply),
+        None,
+        SETTINGS.model_copy(update={"official_web_enabled": True}),
+    )
+    assert answer.status == "answered" and answer.citations[0].source_url == "https://vbpl.vn/test"
+    assert "web_validity_unverified" in answer.source_limitations
+
+
+def test_web_workflow_broadens_query_and_answers_with_verified_source(env, monkeypatch):
+    import httpx
+
+    from app.services import web_sources
+
+    repo, _ = env
+    queries = []
+
+    def handler(request):
+        if request.method == "POST":
+            queries.append(json.loads(request.content)["query"])
+            rows = (
+                []
+                if len(queries) == 1
+                else [
+                    {
+                        "type": "van_ban",
+                        "data": {
+                            "danh_sach_tep_van_ban": [
+                                {
+                                    "file_extension": "pdf",
+                                    "duong_dan": "https://congbaocdn.chinhphu.vn/law.pdf",
+                                }
+                            ]
+                        },
+                    }
+                ]
+            )
+            return httpx.Response(200, json={"success": True, "data": rows})
+        return httpx.Response(
+            200,
+            text="<p>Điều 1. Quy định chung.</p><p>Điều 2. Thử việc tối đa là 60 ngày.</p><p>Điều 3. Quy định khác.</p>",
+            headers={"content-type": "text/html"},
+        )
+
+    gather = web_sources.gather
+    monkeypatch.setattr(
+        web_sources,
+        "gather",
+        lambda ai, settings, query, mode, budget: gather(
+            ai, settings, query, mode, budget, httpx.MockTransport(handler)
+        ),
+    )
+    request = AskRequest(
+        question="Thử việc gián đoạn thời hạn thế nào?", knowledge_base_ids=[], web_mode="official"
+    )
+    answer = qa.answer(
+        repo,
+        user(repo, "alice"),
+        request,
+        FakeAI(good_reply),
+        None,
+        SETTINGS.model_copy(update={"official_web_enabled": True}),
+    )
+    assert len(queries) == 2 and answer.status == "answered"
+    assert answer.citations[0].source_url == "https://congbaocdn.chinhphu.vn/law.pdf"
+
+
+def test_web_is_never_searched_without_opt_in(env, monkeypatch):
+    repo, _ = env
+    from app.services import web_sources
+
+    def unexpected(*_):
+        pytest.fail("web search must be opt-in")
+
+    monkeypatch.setattr(web_sources, "gather", unexpected)
+    request = AskRequest(question="Thử việc bao lâu?", knowledge_base_ids=[], web_mode="off")
+    result = qa.answer(
+        repo,
+        user(repo, "alice"),
+        request,
+        FakeAI(good_reply),
+        None,
+        SETTINGS.model_copy(update={"official_web_enabled": True}),
+    )
+    assert result.status == "insufficient_evidence"
+
+
+def test_embedding_failure_falls_back_to_exact_search(env, tmp_path):
+    repo, bucket = env
+    kb, _ = upload(repo, bucket, tmp_path)
+    process(repo, bucket)
+
+    class Limited:
+        def embed(self, _):
+            raise APIError(429, "ai_rate_limited", "limited")
+
+    answer = qa.answer(
+        repo,
+        user(repo, "alice"),
+        AskRequest(question="Điều 2 thử việc bao lâu?", knowledge_base_ids=[kb["id"]]),
+        FakeAI(good_reply),
+        Limited(),
+        SETTINGS,
+    )
+    assert answer.status == "answered" and "embedding_unavailable" in answer.source_limitations
+
+
+def test_embedding_limit_selects_middle_and_reports_coverage(env, tmp_path, monkeypatch):
+    repo, bucket = env
+    monkeypatch.setattr(
+        parser,
+        "extract_pages",
+        lambda *_: ["\n".join(f"Điều {i}. Nội dung {i}" for i in range(1, 11))],
+    )
+    _, doc = upload(repo, bucket, tmp_path)
+    limited = SETTINGS.model_copy(update={"embedding_max_chunks": 4})
+    job = worker.run_once(repo, bucket, limited, "w1")
+    assert job["status"] == "succeeded"
+    assert knowledge.processing(repo, doc, limited)["embeddingCoverage"] == {
+        "total": 10,
+        "indexed": 4,
+        "start": 4,
+    }
+    rows = repo.query(
+        "search_chunks",
+        [
+            (
+                "indexGeneration",
+                "==",
+                repo.get("knowledge_bases", doc["kbId"])["activeIndexGeneration"],
+            )
+        ],
+    )
+    assert sorted(int(row["searchText"].split("Điều ")[1].split()[0]) for row in rows) == [
+        4,
+        5,
+        6,
+        7,
+    ]
+
+
+def test_embedding_resumes_successful_batches_after_failure(env, tmp_path, monkeypatch):
+    repo, bucket = env
+    monkeypatch.setattr(
+        parser,
+        "extract_pages",
+        lambda *_: ["\n".join(f"Điều {i}. Nội dung {i}" for i in range(1, 7))],
+    )
+    upload(repo, bucket, tmp_path)
+    job = worker.claim(repo, SETTINGS, "w1")
+    job["documentVersionId"] = pipeline.parse_stage(repo, bucket, SETTINGS, job)[
+        "documentVersionId"
+    ]
+    settings = SETTINGS.model_copy(update={"embedding_batch_size": 2})
+
+    class FailingEmbedder:
+        def __init__(self):
+            self.calls = 0
+
+        def embed(self, texts):
+            self.calls += 1
+            if self.calls == 2:
+                raise APIError(503, "ai_unavailable", "unavailable")
+            return FakeEmbedder().embed(texts)
+
+    with pytest.raises(APIError):
+        pipeline.embed_stage(repo, settings, job, FailingEmbedder())
+    assert len(repo.query("search_chunks")) == 2
+    embedder = FailingEmbedder()
+    embedder.calls = -10
+    result = pipeline.embed_stage(repo, settings, job, embedder)
+    assert embedder.calls == -8
+    assert result["chunkCount"] == 6
+    assert len(repo.query("search_chunks")) == 6
+
+
+def test_failed_upload_is_not_reported_as_queued(env):
+    repo, _ = env
+    result = knowledge.processing(repo, {"fileState": "upload_failed"}, SETTINGS)
+    assert result["status"] == "failed"
+    assert result["stage"] == "upload"
+    assert result["nextAction"] == "check_storage"
+    assert result["retryable"] is False
+
+
+def test_available_file_without_current_job_is_not_reported_as_queued(env):
+    repo, _ = env
+    doc = {"id": "d", "kbId": "k", "fileState": "available", "sha256": "hash"}
+    result = knowledge.processing(repo, doc, SETTINGS)
+    assert result["status"] == "failed"
+    assert result["errorCode"] == "processing_job_missing"
+
+
+def test_public_upload_can_build_and_search_openrouter_embedding_profile(env, tmp_path):
+    repo, bucket = env
+    settings = SETTINGS.model_copy(
+        update={
+            "embedding_provider": "openrouter",
+            "openrouter_embedding_model": "nvidia/nemotron-3.5-embed-1b:free",
+        }
+    )
+    kb = knowledge.create_kb(repo, user(repo, "alice"), "Kho", "t", settings)
+    doc = knowledge.create_document(
+        repo, user(repo, "alice"), kb["id"], {"displayTitle": "Luật mẫu"}, "t"
+    )
+    content = b"%PDF-1 synthetic public test"
+    path = tmp_path / "public.pdf"
+    path.write_bytes(content)
+    options = knowledge.upload_options(
+        user(repo, "alice"), kb["id"], doc["id"], "auto", settings, True
+    )
+    documents.upload_document(
+        repo,
+        bucket,
+        doc["id"],
+        str(path),
+        len(content),
+        hashlib.sha256(content).hexdigest(),
+        "alice",
+        "t",
+        doc["version"],
+        **options,
+    )
+    job = repo.query("processing_jobs")[0]
+    assert job["publicEmbeddingInputConfirmed"] is True
+    assert worker.run_once(repo, bucket, settings, "w-test")["status"] == "succeeded"
+    request = AskRequest(
+        question="Điều 2 thử việc bao lâu?",
+        knowledge_base_ids=[kb["id"]],
+        public_embedding_input_confirmed=True,
+    )
+    result = qa.answer(
+        repo, user(repo, "alice"), request, FakeAI(good_reply), FakeEmbedder(), settings
+    )
+    assert result.status == "answered" and result.citations[0].provision_version_id
+
+
+def test_switching_embedding_profile_never_mixes_existing_generation(env, tmp_path):
+    repo, bucket = env
+    kb, _ = upload(repo, bucket, tmp_path)
+    assert process(repo, bucket)["status"] == "succeeded"
+    previous = repo.get("knowledge_bases", kb["id"])["activeIndexGeneration"]
+    new_settings = SETTINGS.model_copy(
+        update={
+            "embedding_provider": "openrouter",
+            "openrouter_embedding_model": "nvidia/nemotron-3.5-embed-1b:free",
+        }
+    )
+    doc = knowledge.create_document(
+        repo, user(repo, "alice"), kb["id"], {"displayTitle": "Văn bản mới"}, "t"
+    )
+    path = tmp_path / "new.pdf"
+    content = b"%PDF-1 another test"
+    path.write_bytes(content)
+    options = knowledge.upload_options(
+        user(repo, "alice"), kb["id"], doc["id"], "auto", new_settings, True
+    )
+    documents.upload_document(
+        repo,
+        bucket,
+        doc["id"],
+        str(path),
+        len(content),
+        hashlib.sha256(content).hexdigest(),
+        "alice",
+        "t",
+        doc["version"],
+        **options,
+    )
+    result = worker.run_once(repo, bucket, new_settings, "w2")
+    assert result["status"] == "failed" and result["errorCode"] == "embedding_profile_changed"
+    assert repo.get("knowledge_bases", kb["id"])["activeIndexGeneration"] == previous
+    request = AskRequest(question="Điều 2 thử việc bao lâu?", knowledge_base_ids=[kb["id"]])
+    with pytest.raises(APIError) as error:
+        qa.answer(
+            repo, user(repo, "alice"), request, FakeAI(good_reply), FakeEmbedder(), new_settings
+        )
+    assert error.value.code == "embedding_profile_mismatch"
+
+
 def test_answer_has_resolvable_citation_and_isolation(env, tmp_path):
     repo, bucket = env
     kb, _ = upload(repo, bucket, tmp_path)
@@ -176,6 +492,45 @@ def test_temporary_error_retries_then_gives_up(env, monkeypatch, tmp_path):
     monkeypatch.setattr(worker, "make_embedder", boom)
     job = process(repo, bucket)
     assert job["status"] == "retry_wait" and job["stage"] == "embed" and job["failures"] == 1
+
+
+def test_rate_limit_waits_without_exhausting_failure_budget(env, monkeypatch, tmp_path):
+    repo, bucket = env
+    _, doc = upload(repo, bucket, tmp_path)
+
+    def limited(*_):
+        raise APIError(429, "ai_rate_limited", "rate limited")
+
+    monkeypatch.setattr(worker, "make_embedder", limited)
+    job = process(repo, bucket)
+    assert job["status"] == "retry_wait" and job["failures"] == 0
+    assert job["rateLimitFailures"] == 1
+    assert (job["nextRunAt"] - datetime.now(timezone.utc)).total_seconds() > 3500
+    status = knowledge.processing(repo, doc, SETTINGS)
+    assert status["nextAction"] == "wait_rate_limit" and status["nextRunAt"] == job["nextRunAt"]
+    for _ in range(6):
+        repo.rows[("processing_jobs", job["id"])]["nextRunAt"] = datetime(
+            2000, 1, 1, tzinfo=timezone.utc
+        )
+        job = process(repo, bucket)
+    assert job["status"] == "retry_wait" and job["failures"] == 0
+    assert job["rateLimitFailures"] == 7
+
+
+def test_quota_wait_reschedules_without_counting_as_failure(env, monkeypatch, tmp_path):
+    from app.services.embeddings import EmbeddingQuotaWait
+
+    repo, bucket = env
+    upload(repo, bucket, tmp_path)
+    retry_at = datetime(2030, 1, 1, tzinfo=timezone.utc)
+
+    def quota(*_):
+        raise EmbeddingQuotaWait(retry_at)
+
+    monkeypatch.setattr(worker, "make_embedder", quota)
+    job = process(repo, bucket)
+    assert job["status"] == "retry_wait" and job["failures"] == 0
+    assert job["nextRunAt"] == retry_at and job["errorCode"] == "embedding_quota_wait"
 
 
 def test_missing_credentials_need_configuration_without_fallback(env, monkeypatch, tmp_path):

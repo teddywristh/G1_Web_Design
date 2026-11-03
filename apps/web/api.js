@@ -18,16 +18,22 @@ class ApiError extends Error {
 const ERROR_TEXT = {
   unauthenticated: "Vui lòng đăng nhập.",
   ai_not_configured: "Chưa có khóa AI phù hợp. Hãy thêm khóa trong Thiết lập.",
+  chatgpt_disconnected: "Phiên ChatGPT đã hết hoặc backend vừa khởi động lại. Vào Thiết lập → Kết nối AI để kết nối ChatGPT lại.",
   ai_authentication_failed: "Nhà cung cấp AI từ chối khóa đã chọn.",
   ai_rate_limited: "Nhà cung cấp AI đang giới hạn lượt dùng. Thử lại sau.",
   ai_unavailable: "Dịch vụ AI tạm thời không phản hồi.",
   opencode_unavailable: "OpenCode chưa được bật hoặc chưa sẵn sàng trong môi trường này.",
   oauth_exists: "Đã có phiên ChatGPT. Hãy ngắt kết nối trước khi kết nối lại.",
   invalid_retrieval: "ChatGPT OAuth chỉ hỗ trợ tra theo số hiệu và điều trong phiên này.",
+  embedding_profile_mismatch: "Kho tài liệu dùng embedding model khác; cần lập lại chỉ mục trước khi tìm ngữ nghĩa.",
+  embedding_public_input_required: "Model miễn phí chỉ chấp nhận nội dung không có dữ liệu cá nhân hoặc thông tin mật. Hãy xác nhận trước khi tiếp tục.",
   feature_disabled: "Tính năng này đang tắt trên máy chủ.",
   quota_exceeded: "Đã đạt giới hạn số kho riêng.",
   version_conflict: "Dữ liệu vừa thay đổi. Hãy tải lại rồi thử lại.",
   file_too_large: "PDF vượt quá giới hạn dung lượng.",
+  storage_bucket_not_found: "Không tìm thấy bucket Firebase Storage. Kiểm tra cấu hình Storage và gói Firebase.",
+  storage_permission_denied: "Backend không có quyền ghi Firebase Storage. Kiểm tra quyền và gói Firebase.",
+  storage_unavailable: "Không tải được PDF lên Storage. Kiểm tra kết nối và cấu hình Firebase Storage.",
   csrf_failed: "Phiên không hợp lệ. Hãy đăng nhập lại.",
 };
 

@@ -42,6 +42,20 @@ The web UI (PR-07, PR-08) and server-side chat history are not part of this chan
 ## Operating it
 
 - Flags: `KNOWLEDGE_UPLOAD_ENABLED`, `QA_WORKFLOW_ENABLED`, `OFFICIAL_WEB_ENABLED`, `EXAMPLE_SEARCH_ENABLED`.
+- Embeddings can use OpenAI or a separately configured OpenRouter system key. Set
+  `EMBEDDING_PROVIDER=openrouter`, `OPENROUTER_EMBEDDING_MODEL` to the exact OpenRouter model ID,
+  `OPENROUTER_EMBEDDING_API_KEY`, and `EMBEDDING_DIMENSIONS` to the model output size. The API
+  and worker must use the same settings. The example free model
+  `nvidia/nemotron-3.5-embed-1b:free` supports 1,536 dimensions, but NVIDIA prohibits confidential
+  or personal data and logs usage for security and product improvement. The UI asks for explicit
+  confirmation for each PDF and question; old jobs without confirmation are not sent. See the
+  [provider terms](https://openrouter.ai/nvidia/nemotron-3.5-embed-1b:free).
+- An OpenRouter embedding key is a **system-wide** credential, separate from the user's answering
+  model/key. Embedding charges or rate limits apply to the system key; no paid-model fallback is
+  performed. Use a secret manager in deployments and do not commit credentials.
+- Changing the embedding provider, model or dimension changes the profile. Existing index
+  generations must be rebuilt before hybrid search; the worker rejects publication that would
+  mix different profiles. A changed dimension also needs a matching Firestore vector index.
 - Required index: the vector index on `search_chunks` in `infra/firebase/firestore.indexes.json`
   (dimension must equal `EMBEDDING_DIMENSIONS`). The emulator does not run `find_nearest`; verify it on a
   real dev project.

@@ -32,12 +32,18 @@ const PROCESSING_TEXT = {
   failed: "Xử lý lỗi",
   revoked: "Đã thu hồi",
   upload: "Đang chờ tệp",
+  status_unavailable: "Không kiểm tra được trạng thái",
 };
 const ACTION_TEXT = {
   configure_ai_key: "Thêm khóa OpenAI trong Thiết lập rồi chọn Xử lý lại.",
   upload_text_pdf: "Tải lên bản PDF có lớp chữ (chưa hỗ trợ OCR).",
   await_admin_review: "Quản trị viên cần xuất bản bản dựng mới.",
+  upload_public_pdf: "Hãy tải lại tài liệu công khai và xác nhận tài liệu không có dữ liệu cá nhân hoặc thông tin mật.",
+  check_storage: "Tải lên thất bại. Kiểm tra Firebase Storage rồi thử lại bằng tài liệu mới.",
+  check_job: "Không tìm thấy job với cấu hình embedding hiện tại. Liên hệ quản trị viên để kiểm tra.",
+  wait_rate_limit: "Đang giãn lượt embedding. Worker sẽ tự thử lại sau.",
 };
+const STAGE_TEXT = { upload: "tải PDF", parse: "đọc PDF", embed: "tạo embeddings", publish: "tạo chỉ mục" };
 const STATUS_TEXT = {
   answered: "Có căn cứ",
   needs_clarification: "Cần bổ sung thông tin",
@@ -65,7 +71,12 @@ const LIMIT_TEXT = {
   output_validation_failed: "Câu trả lời không qua bước kiểm chứng nguồn",
   web_unavailable_for_provider: "Tra cứu web không khả dụng với nhà cung cấp này",
   web_search_unavailable: "Tra cứu web đang lỗi",
+  web_no_results: "Không tìm thấy nguồn web phù hợp",
   web_source_unreadable: "Có nguồn web không đọc được",
+  web_search_disabled: "Tìm web chưa được bật trên máy chủ",
+  embedding_unavailable: "Tìm kiếm ngữ nghĩa tạm gián đoạn; đã thử nguồn khác",
+  document_processing: "Trích từ PDF đã đọc; embedding vẫn đang xử lý",
+  document_search_unavailable: "Tìm trong tài liệu đang gián đoạn",
   knowledge_base_not_ready: "Kho chưa sẵn sàng",
 };
 let toastTimer;
@@ -359,9 +370,8 @@ async function loadKbs() {
     notify(error.message);
     state.kbs = [];
   }
-  const ready = state.kbs.filter((kb) => kb.ready).map((kb) => kb.id);
-  state.selected = new Set([...state.selected].filter((id) => ready.includes(id)));
-  if (!state.selected.size && ready.includes("shared")) state.selected.add("shared");
+  const ids = state.kbs.map((kb) => kb.id);
+  state.selected = new Set([...state.selected].filter((id) => ids.includes(id)));
   if (!state.kbs.some((kb) => kb.id === state.kbId)) state.kbId = state.kbs[0]?.id || null;
   renderScope();
   renderKbSelect();
@@ -380,7 +390,6 @@ function renderScope() {
     input.type = "checkbox";
     input.value = kb.id;
     input.checked = state.selected.has(kb.id);
-    input.disabled = !kb.ready;
     input.addEventListener("change", () => {
       if (input.checked && state.selected.size >= MAX_KBS) {
         input.checked = false;
@@ -471,6 +480,7 @@ function normalizeDoc(raw, kb) {
     authority: shared ? raw.issuingAuthority : "Của bạn",
     date: raw.createdAt,
     version: raw.version,
+    fileState: raw.fileState,
     processing: null,
   };
 }
@@ -509,26 +519,46 @@ async function refreshProcessing() {
       try {
         doc.processing = await api.get(`/knowledge-bases/${doc.kbId}/documents/${doc.id}/processing`);
       } catch {
-        /* The row keeps its previous status. */
+        doc.processing = { status: "status_unavailable" };
       }
     }),
   );
   if (state.view === "library" || state.view === "saved") renderDocuments();
-  const busy = pending.some((doc) => ["queued", "processing"].includes(doc.processing?.status));
+  const busy = pending.some((doc) => ["queued", "processing", "status_unavailable"].includes(doc.processing?.status));
   if (busy && state.view !== "chat" && state.view !== "settings") {
     pollTimer = setTimeout(refreshProcessing, 4000);
   }
 }
 
+function coverageNote(doc) {
+  const coverage = doc.processing?.embeddingCoverage;
+  if (!coverage || coverage.indexed >= coverage.total) return "";
+  const last = coverage.start + coverage.indexed - 1;
+  return `Chỉ lập chỉ mục đoạn ${coverage.start}–${last} / ${coverage.total}; câu trả lời có thể thiếu thông tin ngoài phạm vi này.`;
+}
+
+function processingNote(doc) {
+  if (doc.fileState === "upload_failed") return ACTION_TEXT.check_storage;
+  if (doc.processing?.nextAction === "wait_rate_limit") {
+    const next = doc.processing.nextRunAt && new Date(doc.processing.nextRunAt);
+    return next && !Number.isNaN(next.valueOf())
+      ? `Đang giãn lượt embedding. Sẽ thử lại sau ${next.toLocaleString("vi-VN")}.`
+      : ACTION_TEXT.wait_rate_limit;
+  }
+  return coverageNote(doc) || ACTION_TEXT[doc.processing?.nextAction] || "";
+}
+
 function statusBadge(doc) {
   if (doc.shared) return element("span", "status-badge ready", "Đã có PDF");
-  const status = doc.processing?.status || "queued";
+  const status = doc.fileState === "upload_failed" ? "failed" : doc.processing?.status || "status_unavailable";
   const good = status === "ready";
   const bad = ["failed", "needs_ocr", "revoked"].includes(status);
+  const label = PROCESSING_TEXT[status] || status;
+  const stage = status === "processing" && STAGE_TEXT[doc.processing?.stage];
   return element(
     "span",
     `status-badge ${good ? "ready" : bad ? "problem" : "uploaded"}`,
-    PROCESSING_TEXT[status] || status,
+    stage ? `${label} · ${stage}` : label,
   );
 }
 
@@ -558,6 +588,9 @@ function renderDocuments() {
     titleCell.append(title);
     const statusCell = element("td");
     statusCell.append(statusBadge(doc));
+    if (processingNote(doc)) {
+      statusCell.append(element("small", "processing-detail", processingNote(doc)));
+    }
     const actions = element("td");
     const saved = state.saved.has(doc.id);
     const bookmark = element("button", "text-button", saved ? "Bỏ lưu" : "Lưu");
@@ -618,7 +651,7 @@ async function openDocument(id) {
   state.documentId = id;
   $("#pdf-error").textContent = "";
   $("#detail-title").textContent = doc.title;
-  $("#detail-meta").textContent = `${doc.number} · ${doc.authority}`;
+  $("#detail-meta").textContent = [doc.number, doc.authority, coverageNote(doc)].filter(Boolean).join(" · ");
   $("#detail-bookmark").textContent = state.saved.has(id) ? "Bỏ đánh dấu" : "Đánh dấu";
   $("#delete-document").hidden = doc.shared && !isAdmin();
   const status = doc.processing;
@@ -707,8 +740,11 @@ function selectUploadFile(file) {
 $("#open-upload").addEventListener("click", () => {
   const shared = currentKb().kind === "shared";
   $("#upload-form").reset();
+  $("#upload-progress").textContent = "";
   selectUploadFile(null);
   $("#shared-fields").hidden = !shared;
+  $("#upload-public-label").hidden = !state.aiOptions?.embedding?.requiresPublicInput;
+  $("#upload-public-confirm").required = Boolean(state.aiOptions?.embedding?.requiresPublicInput);
   $("#upload-notice").textContent = shared
     ? "Văn bản dùng chung. Sau khi xử lý xong, hãy xuất bản bản dựng mới để mọi người tra cứu được."
     : "Chỉ bạn xem được tài liệu này. Hệ thống đọc nền; khi trạng thái là Sẵn sàng tra cứu, hãy chọn kho này trong Hỏi đáp.";
@@ -727,10 +763,17 @@ $("#upload-form").addEventListener("submit", async (event) => {
   const data = new FormData(event.currentTarget);
   const title = String(data.get("title")).trim();
   $("#save-document").disabled = true;
+  $("#upload-progress").textContent = "Đang kiểm tra và tải PDF lên…";
   try {
     const error = await validatePdf(uploadFile);
     if (error || !title) {
       $("#upload-error").textContent = error || "Vui lòng nhập tên tài liệu.";
+      $("#upload-progress").textContent = "";
+      return;
+    }
+    if (state.aiOptions?.embedding?.requiresPublicInput && !$("#upload-public-confirm").checked) {
+      $("#upload-error").textContent = "Xác nhận tài liệu không chứa dữ liệu cá nhân hoặc thông tin mật trước khi xử lý.";
+      $("#upload-progress").textContent = "";
       return;
     }
     let created;
@@ -746,6 +789,7 @@ $("#upload-form").addEventListener("submit", async (event) => {
       };
       if (!body.documentNumber || !body.issuingAuthority || !body.issueDate) {
         $("#upload-error").textContent = "Cần số hiệu, cơ quan ban hành và ngày ban hành.";
+        $("#upload-progress").textContent = "";
         return;
       }
       if (data.get("effectiveDate")) body.effectiveDate = String(data.get("effectiveDate"));
@@ -755,6 +799,8 @@ $("#upload-form").addEventListener("submit", async (event) => {
       created = await api.post(`/knowledge-bases/${kb.id}/documents`, { displayTitle: title });
       filePath = `/knowledge-bases/${kb.id}/documents/${created.id}/file`;
     }
+    if (state.aiOptions?.embedding?.requiresPublicInput && $("#upload-public-confirm").checked)
+      filePath += "?public_embedding_input_confirmed=true";
     await api.upload(filePath, uploadFile, created.version);
     $("#upload-dialog").close();
     notify("Đã tải lên. Tài liệu đang được xử lý nền.");
@@ -762,6 +808,8 @@ $("#upload-form").addEventListener("submit", async (event) => {
     loadDocs(true);
   } catch (error) {
     $("#upload-error").textContent = error.message;
+    $("#upload-progress").textContent = "Chưa hoàn tất tải lên. Hãy kiểm tra thông báo lỗi.";
+    loadDocs(true);
   } finally {
     $("#save-document").disabled = false;
   }
@@ -774,6 +822,7 @@ function activeChat() {
 
 function newChat() {
   state.chatId = null;
+  $("#query-public-confirm").checked = false;
   $("#question-form").reset();
   renderChat();
   navigate("chat");
@@ -891,6 +940,8 @@ function requestBody(question) {
     engine: $("#engine").value,
     knowledge_base_ids: [...state.selected],
     retrieval_mode: $("#retrieval-mode").value,
+    web_mode: $("#web-search").checked ? "official" : "off",
+    public_embedding_input_confirmed: $("#query-public-confirm").checked,
   };
   if ($("#as-of").value) body.as_of = $("#as-of").value;
   if ($("#model").value.trim()) body.model = $("#model").value.trim();
@@ -902,8 +953,9 @@ $("#question-form").addEventListener("submit", async (event) => {
   const question = $("#question").value.trim();
   if (!question) return;
   if (!state.user) { setAuthMode("login"); showAuth("Đăng nhập để đặt câu hỏi và kết nối AI."); return; }
-  if (!state.selected.size) {
-    notify("Hãy chọn ít nhất một kho đã sẵn sàng để tra cứu.");
+  const hasReadyKb = state.kbs.some((kb) => kb.ready && state.selected.has(kb.id));
+  if (hasReadyKb && state.aiOptions?.embedding?.requiresPublicInput && $("#retrieval-mode").value === "hybrid" && !$("#query-public-confirm").checked) {
+    notify("Xác nhận câu hỏi không chứa dữ liệu cá nhân hoặc thông tin mật.");
     return;
   }
   if (["anthropic", "deepseek", "openrouter"].includes($("#provider").value) && !$("#model").value.trim()) {
@@ -925,9 +977,15 @@ $("#question-form").addEventListener("submit", async (event) => {
   $("#assistant-status").textContent = "Đang tra cứu nguồn và soạn câu trả lời…";
   let reply;
   try {
-    const data = await api.post("/rag/ask", requestBody(question));
+    const body = requestBody(question);
+    $("#query-public-confirm").checked = false;
+    const data = await api.post("/rag/ask", body);
     reply = { role: "assistant", text: data.answer, data: slimResponse(data) };
   } catch (error) {
+    if (error.code === "chatgpt_disconnected") {
+      state.chatgpt = { ...state.chatgpt, connected: false, pending: false };
+      renderChatgpt();
+    }
     reply = { role: "assistant", text: error.message };
   }
   $("#assistant-status").textContent =
@@ -955,6 +1013,7 @@ function slimResponse(data) {
 }
 
 $("#question").addEventListener("input", () => {
+  $("#query-public-confirm").checked = false;
   $("#send-question").disabled = !$("#question").value.trim();
 });
 $("#question").addEventListener("keydown", (event) => {
@@ -966,6 +1025,7 @@ $("#question").addEventListener("keydown", (event) => {
 $("#suggestions").addEventListener("click", (event) => {
   const button = event.target.closest("button");
   if (!button) return;
+  $("#query-public-confirm").checked = false;
   $("#question").value = button.textContent;
   $("#send-question").disabled = false;
   $("#question").focus();
@@ -1007,7 +1067,7 @@ $("#credential-source").addEventListener("change", () => {
   if ($("#credential-source").value === "chatgpt") $("#retrieval-mode").value = "keyword";
   syncAiControls(); renderChatgpt(); persist();
 });
-$("#retrieval-mode").addEventListener("change", persist);
+$("#retrieval-mode").addEventListener("change", () => { syncAiControls(); persist(); });
 $("#model").addEventListener("change", persist);
 
 // Evidence viewer: the server re-checks permission, deletion and publication each time.
@@ -1053,7 +1113,8 @@ function syncAiControls() {
   const chatgptOption = $("#credential-source option[value=chatgpt]");
   chatgptOption.hidden = provider !== "openai" || engine !== "opencode" || !state.chatgpt.available;
   chatgptOption.disabled = !state.chatgpt.connected;
-  $("#retrieval-mode option[value=hybrid]").disabled = source === "chatgpt";
+  $("#retrieval-mode option[value=hybrid]").disabled = source === "chatgpt" && state.aiOptions?.embedding?.provider !== "openrouter";
+  $("#query-public-label").hidden = !(state.aiOptions?.embedding?.requiresPublicInput && $("#retrieval-mode").value === "hybrid");
   $("#model").placeholder = provider === "openai" ? "Để trống dùng mặc định" : "Nhập ID model";
 }
 
@@ -1111,6 +1172,10 @@ async function loadConnections({ restore = false } = {}) {
   const list = $("#connection-list");
   list.replaceChildren();
   renderChatgpt();
+  const embedding = state.aiOptions?.embedding;
+  $("#embedding-info").textContent = embedding?.provider === "openrouter"
+    ? `Embedding dùng OpenRouter (${embedding.model || "chưa chọn model"}) với key chung do hệ thống cấu hình${embedding.configured ? "." : "; chưa cấu hình đầy đủ."}`
+    : "Embedding dùng khóa OpenAI; nếu không có khóa OpenAI, hãy dùng mục tìm theo số hiệu/điều.";
   $("#connection-scope option[value=shared]").hidden = !isAdmin();
   const names = { openai: "OpenAI", anthropic: "Claude", deepseek: "DeepSeek", openrouter: "OpenRouter" };
   state.connections

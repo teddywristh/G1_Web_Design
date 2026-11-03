@@ -150,12 +150,18 @@ def list_documents(repo, user, kb_id, limit, cursor):
     )
 
 
-def upload_options(user, kb_id, doc_id, credential_source, settings):
+def upload_options(user, kb_id, doc_id, credential_source, settings, public_input_confirmed=False):
     return {
         "collection": "knowledge_documents",
         "prefix": "knowledge-documents",
         "outbox": pipeline.job_outbox(
-            kb_id, "knowledge_documents", doc_id, user["id"], credential_source, settings
+            kb_id,
+            "knowledge_documents",
+            doc_id,
+            user["id"],
+            credential_source,
+            settings,
+            public_input_confirmed,
         ),
     }
 
@@ -172,14 +178,39 @@ def find_job(repo, document, settings):
 def processing(repo, document, settings):
     job = find_job(repo, document, settings)
     if not job:
+        if document.get("fileState") == "upload_failed":
+            return {
+                "status": "failed",
+                "stage": "upload",
+                "errorCode": document.get("uploadErrorCode") or "storage_unavailable",
+                "nextAction": "check_storage",
+                "retryable": False,
+                "legalValidity": "unknown",
+            }
+        if document.get("fileState") == "available":
+            return {
+                "status": "failed",
+                "stage": "upload",
+                "errorCode": "processing_job_missing",
+                "nextAction": "check_job",
+                "retryable": False,
+                "legalValidity": "unknown",
+            }
         return {"status": "queued", "stage": "upload", "legalValidity": "unknown"}
     return {
         "status": PUBLIC_STATUS[job["status"]],
         "stage": job["stage"],
         "errorCode": job.get("errorCode"),
         "retryable": job["status"] in RETRYABLE,
-        "nextAction": NEXT_ACTION.get(job["status"]),
+        "nextAction": "upload_public_pdf"
+        if job.get("errorCode") == "embedding_public_input_required"
+        else "wait_rate_limit"
+        if job.get("errorCode") in {"ai_rate_limited", "embedding_quota_wait"}
+        and job["status"] == "retry_wait"
+        else NEXT_ACTION.get(job["status"]),
+        "nextRunAt": job.get("nextRunAt"),
         "warnings": job.get("warnings", []),
+        "embeddingCoverage": job.get("embeddingCoverage"),
         "legalValidity": "unknown",
     }
 
@@ -198,6 +229,7 @@ def reprocess(repo, document, user, version, request_id, settings):
             "status": "queued",
             "stage": current["stage"] if keep_stage else "parse",
             "failures": 0,
+            "rateLimitFailures": 0,
             "errorCode": None,
             "nextRunAt": utcnow(),
             "leaseOwner": None,

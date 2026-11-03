@@ -60,3 +60,64 @@ def test_chatgpt_rag_uses_personal_oauth_without_api_key_or_fallback(api, repo, 
         == 422
     )
     assert client.post("/api/v1/rag/ask", json={**payload, "engine": "direct"}).status_code == 422
+
+
+def test_disconnected_chatgpt_is_reported_before_search(api, repo, monkeypatch):
+    client, app, _ = api
+    identity(app)
+    profile(repo)
+    settings = get_settings()
+    monkeypatch.setattr(settings, "opencode_local_enabled", True)
+    monkeypatch.setattr(settings, "opencode_chatgpt_local_enabled", True)
+    monkeypatch.setattr(opencode_oauth, "get", lambda _: None)
+    search = Mock(side_effect=AssertionError("must not search before checking session"))
+    monkeypatch.setattr("app.api.v1.rag.qa.answer", search)
+    response = client.post(
+        "/api/v1/rag/ask",
+        json={
+            "question": "Câu hỏi mẫu",
+            "engine": "opencode",
+            "provider": "openai",
+            "credential_source": "chatgpt",
+            "retrieval_mode": "keyword",
+            "web_mode": "official",
+        },
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "chatgpt_disconnected"
+    search.assert_not_called()
+
+
+def test_chatgpt_hybrid_uses_configured_openrouter_embedding_with_confirmation(
+    api, repo, monkeypatch
+):
+    client, app, _ = api
+    identity(app)
+    profile(repo)
+    monkeypatch.setattr(
+        "app.api.v1.rag.qa.resolve_scope", lambda *_: ([{"id": "shared", "generation": "g"}], [])
+    )
+    settings = get_settings()
+    monkeypatch.setattr(settings, "opencode_local_enabled", True)
+    monkeypatch.setattr(settings, "opencode_chatgpt_local_enabled", True)
+    monkeypatch.setattr(settings, "embedding_provider", "openrouter")
+    monkeypatch.setattr(settings, "openrouter_embedding_model", "nvidia/nemotron-3.5-embed-1b:free")
+    stub_qa(monkeypatch)
+    monkeypatch.setattr("app.api.v1.rag.OAuthAnswer", Mock(return_value=Mock()))
+    embedding = Mock(return_value=Mock())
+    monkeypatch.setattr("app.api.v1.rag.OpenRouterEmbedding", embedding)
+    body = {
+        "question": "Điều 1 quy định gì?",
+        "engine": "opencode",
+        "credential_source": "chatgpt",
+        "retrieval_mode": "hybrid",
+    }
+    assert (
+        client.post("/api/v1/rag/ask", json=body).json()["error"]["code"]
+        == "embedding_public_input_required"
+    )
+    response = client.post(
+        "/api/v1/rag/ask", json={**body, "public_embedding_input_confirmed": True}
+    )
+    assert response.status_code == 200, response.text
+    embedding.assert_called_once_with(settings, input_type="search_query", repo=repo)

@@ -163,6 +163,7 @@ async def document_upload(
     doc_id: str,
     request: Request,
     response: Response,
+    public_embedding_input_confirmed: bool = False,
     user=Depends(admin_user),
     repo=Depends(get_repository),
     bucket=Depends(get_bucket),
@@ -170,7 +171,13 @@ async def document_upload(
 ):
     knowledge.ensure_shared_kb(repo, request.state.request_id)
     outbox = pipeline.job_outbox(
-        knowledge.SHARED, "legal_documents", doc_id, user["id"], "auto", get_settings()
+        knowledge.SHARED,
+        "legal_documents",
+        doc_id,
+        user["id"],
+        "auto",
+        get_settings(),
+        public_embedding_input_confirmed,
     )
     result = await receive_pdf(
         request,

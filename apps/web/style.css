@@ -1059,6 +1059,13 @@ dialog h2 {
 .inline-form input {
   flex: 1 1 160px;
 }
+.processing-detail {
+  display: block;
+  max-width: 280px;
+  margin-top: 6px;
+  color: #9c4738;
+  line-height: 1.5;
+}
 
 .topbar-actions, .ai-actions {
   display: flex;

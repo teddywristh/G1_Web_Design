@@ -17,6 +17,7 @@ from app.ingestion.validation import Cancelled, NeedsOCR, PermanentError
 from app.repositories.backend import BackendRepository, utcnow
 from app.services.ai import OpenAIService
 from app.services.ai_connections import resolve
+from app.services.embeddings import EmbeddingQuotaWait, OpenRouterEmbedding, requires_public_input
 
 logger = logging.getLogger("legal_api")
 CLAIMABLE = ["queued", "retry_wait", "running"]
@@ -85,15 +86,29 @@ def make_embedder(repo, settings, job):
     owner = repo.get("users", job["ownerUid"])
     if not owner or not owner.get("isActive"):
         raise APIError(503, "ai_not_configured", "Job owner is unavailable")
+    if settings.embedding_provider == "openrouter":
+        if requires_public_input(settings) and not job.get("publicEmbeddingInputConfirmed"):
+            raise APIError(
+                503,
+                "embedding_public_input_required",
+                "Confirm the PDF contains no confidential or personal information",
+            )
+        return OpenRouterEmbedding(settings, input_type="search_document", repo=repo)
     credential = resolve(repo, owner, "openai", job["credentialSource"], settings)
     return OpenAIService(settings.model_copy(update={"openai_api_key": credential.api_key}))
 
 
-def run_stage(repo, bucket, settings, job):
+def run_stage(repo, bucket, settings, job, worker_id):
     if job["stage"] == "parse":
         return pipeline.parse_stage(repo, bucket, settings, job)
     if job["stage"] == "embed":
-        return pipeline.embed_stage(repo, settings, job, make_embedder(repo, settings, job))
+        return pipeline.embed_stage(
+            repo,
+            settings,
+            job,
+            make_embedder(repo, settings, job),
+            heartbeat=lambda: heartbeat(repo, settings, job, worker_id),
+        )
     return pipeline.publish_stage(repo, bucket, settings, job)
 
 
@@ -101,11 +116,23 @@ def process(repo, bucket, settings, job, worker_id):
     """Run the remaining stages; each stage result is committed under the lease."""
     try:
         while job["stage"] in STAGES:
+            logger.info(
+                json.dumps(
+                    {"event": "job_stage_started", "jobId": job["id"], "stage": job["stage"]}
+                )
+            )
             heartbeat(repo, settings, job, worker_id)
-            result = run_stage(repo, bucket, settings, job)
+            result = run_stage(repo, bucket, settings, job, worker_id)
             index = STAGES.index(job["stage"])
-            patch = {"failures": 0, "errorCode": None}
-            for key in ("documentVersionId", "quality", "warnings", "generationId"):
+            patch = {"failures": 0, "rateLimitFailures": 0, "errorCode": None}
+            for key in (
+                "documentVersionId",
+                "quality",
+                "warnings",
+                "generationId",
+                "embeddingCoverage",
+                "stagingGeneration",
+            ):
                 if key in result:
                     patch[key] = result[key]
             if index + 1 < len(STAGES):
@@ -117,6 +144,11 @@ def process(repo, bucket, settings, job, worker_id):
                 patch["leaseOwner"] = None
             job = commit(repo, settings, job, worker_id, patch)
             if job["status"] != "running":
+                logger.info(
+                    json.dumps(
+                        {"event": "job_finished", "jobId": job["id"], "status": job["status"]}
+                    )
+                )
                 return job
     except LostLease:
         return None
@@ -132,23 +164,53 @@ def fail(repo, settings, job, worker_id, exc):
         patch = {"status": "needs_ocr", "errorCode": "needs_ocr", **end}
     elif isinstance(exc, PermanentError):
         patch = {"status": "failed", "errorCode": exc.code, **end}
+    elif isinstance(exc, APIError) and exc.code == "embedding_public_input_required":
+        patch = {"status": "needs_configuration", "errorCode": exc.code, **end}
     elif pipeline.is_auth_error(exc) or getattr(exc, "status_code", None) in (401, 403):
         patch = {"status": "needs_configuration", "errorCode": "ai_not_configured", **end}
+    elif isinstance(exc, EmbeddingQuotaWait):
+        patch = {
+            "status": "retry_wait",
+            "errorCode": exc.code,
+            "nextRunAt": exc.retry_at,
+            "leaseOwner": None,
+        }
+    elif isinstance(exc, APIError) and exc.code == "ai_rate_limited":
+        attempts = job.get("rateLimitFailures", 0) + 1
+        delay = min(3600 * 2 ** min(attempts - 1, 4), 43200)
+        patch = {
+            "status": "retry_wait",
+            "errorCode": exc.code,
+            "rateLimitFailures": attempts,
+            "nextRunAt": utcnow() + timedelta(seconds=delay),
+            "leaseOwner": None,
+        }
     else:
         failures = job["failures"] + 1
+        error_code = exc.code if isinstance(exc, APIError) else "temporary_error"
         if failures >= settings.job_max_failures:
-            patch = {"status": "failed", "errorCode": "retries_exhausted", "failures": failures}
+            patch = {"status": "failed", "errorCode": error_code, "failures": failures}
             patch.update(end)
         else:
             patch = {
                 "status": "retry_wait",
-                "errorCode": "temporary_error",
+                "errorCode": error_code,
                 "failures": failures,
                 "nextRunAt": pipeline.next_run(settings, failures),
                 "leaseOwner": None,
             }
     logger.warning(
-        json.dumps({"event": "job_failed", "jobId": job["id"], "type": type(exc).__name__})
+        json.dumps(
+            {
+                "event": "job_waiting" if isinstance(exc, EmbeddingQuotaWait) else "job_failed",
+                "jobId": job["id"],
+                "stage": job["stage"],
+                "type": type(exc).__name__,
+                "errorCode": patch["errorCode"],
+                "status": patch["status"],
+                "nextRunAt": patch["nextRunAt"].isoformat() if patch["nextRunAt"] else None,
+            }
+        )
     )
     try:
         return commit(repo, settings, job, worker_id, patch, event="job.failed")
@@ -160,14 +222,27 @@ def run_once(repo, bucket, settings, worker_id):
     job = claim(repo, settings, worker_id)
     if not job:
         return None
+    logger.info(json.dumps({"event": "job_claimed", "jobId": job["id"]}))
     return process(repo, bucket, settings, job, worker_id)
 
 
 def main(poll_seconds=5):
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
     settings = get_settings()
     clients = initialize_firebase()
     repo = BackendRepository(clients["db"])
     worker_id = uuid4().hex
+    logger.info(
+        json.dumps(
+            {"event": "worker_started", "message": "Worker đang chạy và chờ job PDF"},
+            ensure_ascii=False,
+        )
+    )
     while True:
         if run_once(repo, clients["storage"], settings, worker_id) is None:
             time.sleep(poll_seconds)

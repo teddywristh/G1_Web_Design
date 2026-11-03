@@ -4,7 +4,7 @@ import unicodedata
 from datetime import timedelta
 from uuid import uuid4
 
-from google.api_core.exceptions import NotFound, PreconditionFailed
+from google.api_core.exceptions import Forbidden, NotFound, PreconditionFailed
 
 from app.core.config import get_settings
 from app.core.errors import APIError
@@ -171,12 +171,20 @@ def upload_document(
             timeout=settings.storage_timeout_seconds,
             retry=None,
         )
-    except Exception:
+    except Exception as exc:
+        code = (
+            "storage_bucket_not_found"
+            if isinstance(exc, NotFound)
+            else "storage_permission_denied"
+            if isinstance(exc, Forbidden)
+            else "storage_unavailable"
+        )
+
         # Keep a potentially committed object discoverable until reconciliation.
         def fail(current):
             if ((current or {}).get("uploadLease") or {}).get("id") != attempt:
                 return None
-            return {"fileState": "upload_failed", "updatedBy": actor}
+            return {"fileState": "upload_failed", "uploadErrorCode": code, "updatedBy": actor}
 
         repo.mutate(
             collection,
@@ -187,7 +195,7 @@ def upload_document(
             request_id=request_id,
         )
         raise APIError(
-            503, "storage_unavailable", "Upload failed; reconcile before retrying"
+            503, code, "Upload failed; check storage configuration and reconcile before retrying"
         ) from None
 
     def complete(current):
@@ -197,6 +205,7 @@ def upload_document(
         return {
             "storagePath": object_path,
             "fileState": "available",
+            "uploadErrorCode": None,
             "fileSize": size,
             "sha256": digest,
             "contentType": "application/pdf",

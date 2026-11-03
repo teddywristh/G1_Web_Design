@@ -62,6 +62,7 @@ class AskRequest(BaseModel):
     )
     retrieval_mode: Literal["hybrid", "keyword"] = "hybrid"
     engine: Literal["direct", "opencode"] = "direct"
+    public_embedding_input_confirmed: bool = False
     knowledge_base_ids: list[str] | None = Field(default=None, max_length=5)
     as_of: date | None = None
     session_facts: list[str] = Field(default_factory=list, max_length=10)

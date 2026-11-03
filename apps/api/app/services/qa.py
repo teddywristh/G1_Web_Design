@@ -116,6 +116,7 @@ def resolve_scope(repo, user, kb_ids, settings):
             kbs.append({"id": kb["id"], "generation": kb["activeIndexGeneration"]})
         else:
             notes.append("knowledge_base_not_ready:" + kb["id"])
+            kbs.append({"id": kb["id"], "generation": None})
     return kbs, notes
 
 
@@ -126,9 +127,25 @@ def gather(repo, kbs, request, vector, profile, as_of, settings, notes):
     items = []
     for _ in range(settings.max_retrieval_passes):
         search = SearchRequest(request.question, kbs, as_of, profile, vector, candidate_k)
-        semantic = firestore_vector.search(repo, search) if vector else []
+        semantic_search = (
+            SearchRequest(
+                request.question,
+                [kb for kb in kbs if kb["generation"]],
+                as_of,
+                profile,
+                vector,
+                candidate_k,
+            )
+            if vector
+            else None
+        )
+        semantic = (
+            firestore_vector.search(repo, semantic_search)
+            if semantic_search and semantic_search.kbs
+            else []
+        )
         merged = firestore_vector.merge(structured.search(repo, search), semantic)
-        items = evidence.build(repo, merged, allowed, as_of, final_k)
+        items = evidence.build(repo, merged, allowed, as_of, final_k, settings)
         if len(items) >= final_k or len(merged) < candidate_k:
             break
         candidate_k *= 2
@@ -136,7 +153,7 @@ def gather(repo, kbs, request, vector, profile, as_of, settings, notes):
         notes.append("retrieval_budget_reached")
     if not vector and not items:
         notes.append("no_lexical_index")
-    return evidence.expand(repo, items, allowed, as_of, settings.max_related_provisions)
+    return evidence.expand(repo, items, allowed, as_of, settings.max_related_provisions, settings)
 
 
 def trim(items, settings):
@@ -263,20 +280,42 @@ def answer(repo, user, request, ai, embedder, settings):
     profile = profile_from(settings)
     try:
         vector = None
-        if kbs and request.retrieval_mode == "hybrid":
-            vector = embedder.embed([request.question])[0]
-            if len(vector) != profile.dimensions:
-                raise APIError(503, "embedding_mismatch", "Query embedding has another profile")
+        ready_kbs = [kb for kb in kbs if kb["generation"]]
+        if ready_kbs and request.retrieval_mode == "hybrid":
+            for kb in ready_kbs:
+                publication = repo.get("corpus_publications", f"{kb['id']}-{kb['generation']}")
+                if publication and publication.get("profileId") not in (None, profile.id):
+                    raise APIError(
+                        409,
+                        "embedding_profile_mismatch",
+                        "The selected knowledge base needs reindexing for the configured embedding model",
+                    )
+            try:
+                vector = embedder.embed([request.question])[0]
+                if len(vector) != profile.dimensions:
+                    raise APIError(503, "embedding_mismatch", "Query embedding has another profile")
+            except APIError as exc:
+                if exc.code not in {
+                    "ai_rate_limited",
+                    "ai_unavailable",
+                    "ai_not_configured",
+                    "embedding_quota_wait",
+                }:
+                    raise
+                notes.append("embedding_unavailable")
         items = gather(repo, kbs, request, vector, profile, as_of, settings, notes) if kbs else []
     except GoogleAPICallError:
-        text = "Dịch vụ tra cứu đang gián đoạn, chưa thể kết luận. Vui lòng thử lại sau."
-        return respond("temporarily_unavailable", as_of, answer=text, source_limitations=notes)
+        items = []
+        notes.append("document_search_unavailable")
 
-    web_wanted = request.web_mode != "off" or not items
-    if web_wanted and (settings.official_web_enabled or settings.example_search_enabled):
+    if request.web_mode != "off" and (
+        settings.official_web_enabled or settings.example_search_enabled
+    ):
         budget = {"searches": 0, "fetches": 0}
         found, limits = web_sources.gather(ai, settings, request.question, request.web_mode, budget)
         items, notes = items + found, notes + limits
+    elif request.web_mode != "off":
+        notes.append("web_search_disabled")
     items = trim(items, settings)
     limitations = notes + sorted({x for item in items for x in item["limitations"]})
     if not items:

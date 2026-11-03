@@ -56,12 +56,16 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(default="", repr=False)
     default_llm_model: str = "gpt-4o-mini"
     default_embedding_model: str = "text-embedding-3-small"
+    embedding_provider: Literal["openai", "openrouter"] = "openai"
+    openrouter_embedding_model: str = ""
+    openrouter_embedding_api_key: SecretStr = SecretStr("")
     rag_top_k: int = Field(default=5, ge=1, le=20)
     rag_min_retrieval_score: float = Field(default=0.15, ge=0, le=1)
 
     knowledge_upload_enabled: bool = True
     qa_workflow_enabled: bool = True
     official_web_enabled: bool = False
+    brave_search_api_key: SecretStr = SecretStr("")
     example_search_enabled: bool = False
     official_domains: list[str] = ["vbpl.vn", "congbao.chinhphu.vn", "chinhphu.vn"]
     embedding_dimensions: int = Field(default=1536, ge=1)
@@ -83,6 +87,7 @@ class Settings(BaseSettings):
     job_max_failures: int = Field(default=5, ge=1)
     job_backoff_seconds: int = Field(default=30, ge=1)
     embedding_batch_size: int = Field(default=64, ge=1, le=256)
+    embedding_max_chunks: int = Field(default=0, ge=0, le=20000)
 
     @model_validator(mode="after")
     def validate_environment(self):

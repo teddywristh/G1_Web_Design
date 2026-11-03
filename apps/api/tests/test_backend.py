@@ -232,6 +232,24 @@ def test_upload_failure_retains_lease_for_recovery(repo, document, tmp_path):
     assert state["storagePath"] is None
 
 
+def test_missing_storage_bucket_is_reported_without_exposing_exception(repo, document, tmp_path):
+    from google.api_core.exceptions import NotFound
+
+    source = tmp_path / "source.pdf"
+    source.write_bytes(b"%PDF-")
+    bucket = Mock()
+    bucket.blob.return_value.upload_from_filename.side_effect = NotFound("private provider details")
+    with pytest.raises(APIError) as error:
+        documents.upload_document(
+            repo, bucket, document["id"], str(source), 5, "hash", "admin", "test", 1
+        )
+    assert error.value.code == "storage_bucket_not_found"
+    assert "private provider details" not in error.value.message
+    row = repo.get("legal_documents", document["id"])
+    assert row["fileState"] == "upload_failed"
+    assert row["uploadErrorCode"] == "storage_bucket_not_found"
+
+
 def test_firestore_failure_after_object_upload_is_recoverable(repo, document, tmp_path):
     bucket = Mock()
     bucket.list_blobs.return_value = []
@@ -416,6 +434,9 @@ def test_cursor_preserves_firestore_nanoseconds():
 def test_rag_route_uses_backend_auth_and_returns_citations(api, repo, monkeypatch):
     client, app, _ = api
     stub = stub_qa(monkeypatch)
+    monkeypatch.setattr(
+        "app.api.v1.rag.qa.resolve_scope", lambda *_: ([{"id": "shared", "generation": "g"}], [])
+    )
     ai = Mock()
     factory = Mock(return_value=ai)
     monkeypatch.setattr("app.api.v1.rag.OpenAIService", factory)

@@ -13,6 +13,11 @@ os.environ.update(
         "FIRESTORE_EMULATOR_HOST": "127.0.0.1:8081",
         "STORAGE_EMULATOR_HOST": "http://127.0.0.1:9198",
         "GOOGLE_APPLICATION_CREDENTIALS": "",
+        "EMBEDDING_PROVIDER": "openai",
+        "OPENROUTER_EMBEDDING_API_KEY": "",
+        "OPENROUTER_EMBEDDING_MODEL": "",
+        "OFFICIAL_WEB_ENABLED": "false",
+        "EMBEDDING_MAX_CHUNKS": "0",
     }
 )
 

@@ -1,5 +1,6 @@
 from datetime import date
 
+from app.core.config import get_settings
 from app.core.errors import APIError
 from app.services import applicability, knowledge
 
@@ -39,24 +40,51 @@ def to_item(provision, candidate, limits):
     }
 
 
-def validate(repo, candidate, allowed, as_of, cache):
+def pending_provision(repo, provision, settings):
+    if provision.get("sourceCollection") != "knowledge_documents":
+        return False
+    source = repo.get("knowledge_documents", provision["sourceId"])
+    if (
+        not source
+        or source.get("kbId") != provision.get("kbId")
+        or source.get("deletedAt") is not None
+        or source.get("fileState") != "available"
+    ):
+        return False
+    job = knowledge.find_job(repo, source, settings)
+    return bool(
+        job
+        and job.get("documentVersionId") == provision.get("documentVersionId")
+        and job.get("stage") in {"embed", "publish"}
+        and job.get("status")
+        in {"queued", "running", "retry_wait", "failed", "needs_configuration"}
+        and job.get("sourceFence", {}).get("sha256") == source.get("sha256")
+        and job.get("sourceFence", {}).get("storagePath") == source.get("storagePath")
+    )
+
+
+def validate(repo, candidate, allowed, as_of, cache, settings):
     """Re-read canonical records; index copies are never trusted."""
     provision = repo.get("provision_versions", candidate["provisionVersionId"])
     if not provision or provision["kbId"] not in allowed:
         return None
     if not source_alive(repo, provision, cache):
         return None
-    chunk = repo.get("search_chunks", f"{candidate['generation']}-{provision['id']}")
-    if not chunk or chunk.get("state") != "active":
+    generation = candidate.get("generation")
+    chunk = repo.get("search_chunks", f"{generation}-{provision['id']}") if generation else None
+    pending = not chunk or chunk.get("state") != "active"
+    if pending and not pending_provision(repo, provision, settings):
         return None
     usable, limits = applicability.check(provision, as_of)
+    if pending:
+        limits.append("document_processing")
     return to_item(provision, candidate, limits) if usable else None
 
 
-def build(repo, candidates, allowed, as_of, limit):
+def build(repo, candidates, allowed, as_of, limit, settings):
     cache, items = {}, []
     for candidate in candidates:
-        item = validate(repo, candidate, allowed, as_of, cache)
+        item = validate(repo, candidate, allowed, as_of, cache, settings)
         if item:
             items.append(item)
         if len(items) >= limit:
@@ -64,7 +92,7 @@ def build(repo, candidates, allowed, as_of, limit):
     return items
 
 
-def expand(repo, items, allowed, as_of, limit):
+def expand(repo, items, allowed, as_of, limit, settings):
     """Sibling provisions of the same article, then reviewed relations; bounded by limit."""
     cache, known = {}, {item["provisionVersionId"] for item in items}
     extra = []
@@ -85,7 +113,7 @@ def expand(repo, items, allowed, as_of, limit):
             if row["id"] in known or len(extra) >= limit:
                 continue
             candidate = {"provisionVersionId": row["id"], "generation": item["generation"]}
-            related = validate(repo, candidate, allowed, as_of, cache)
+            related = validate(repo, candidate, allowed, as_of, cache, settings)
             if related:
                 known.add(row["id"])
                 extra.append(related)
@@ -99,11 +127,15 @@ def read(repo, user, provision_id):
         raise APIError(404, "not_found", "Evidence not found")
     kb = knowledge.kb_for_user(repo, user, provision["kbId"])
     generation = kb.get("activeIndexGeneration")
-    if not generation or not source_alive(repo, provision, {}):
+    if not source_alive(repo, provision, {}):
         raise APIError(404, "not_found", "Evidence not found")
-    if not repo.get("search_chunks", f"{generation}-{provision_id}"):
+    published = generation and repo.get("search_chunks", f"{generation}-{provision_id}")
+    pending = not published and pending_provision(repo, provision, get_settings())
+    if not published and not pending:
         raise APIError(404, "not_found", "Evidence not found")
     _, limits = applicability.check(provision, date.today())
+    if pending:
+        limits.append("document_processing")
     return {
         **to_item(provision, {}, limits),
         "id": provision_id,

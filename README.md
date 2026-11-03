@@ -141,12 +141,21 @@ test -e apps/api/.env || cp apps/api/.env.example apps/api/.env
 test -e infra/.env || cp infra/.env.example infra/.env
 ```
 
-### 3. Start Infrastructure (Docker)
-The backend MVP uses Firebase Emulator Suite for local development:
+### 3. Start Firebase Emulator
+Run this from the repository root in its own terminal:
 ```bash
 npm install -g firebase-tools@15.12.0
-firebase emulators:start --project demo-legal-api --only auth,firestore,storage
+firebase emulators:start --project demo-legal-api --only auth,firestore,storage --export-on-exit .emulator-data
 ```
+Stop it with Ctrl+C and wait for export to finish. On subsequent runs, restore the saved
+local accounts, Firestore and files using:
+```bash
+firebase emulators:start --project demo-legal-api --only auth,firestore,storage --import .emulator-data --export-on-exit .emulator-data
+```
+Use the first command if `.emulator-data/firebase-export-metadata.json` does not exist.
+The emulator data is separate from cloud data; a new local account is required. A forced
+shutdown can lose changes since the last export.
+
 Use `apps/api/.env.example` for matching demo configuration (the commands above preserve an existing `apps/api/.env`; check that it points to the emulator and that `BACKEND_CORS_ORIGINS` includes `http://127.0.0.1:8085`). Against a real Firebase project, deploy the indexes first: `firebase deploy --only firestore:indexes --project <id>` (the worker and vector search need them). For Docker API/gateway,
 follow [the operations runbook](docs/backend-operations.md), including the separate
 Docker emulator binding configuration.
@@ -167,7 +176,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements-dev.txt
-uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --reload-dir app --port 8000
 ```
 Run these from `apps/api` with the emulators from step 3 already running.
 - API Health Check: `http://localhost:8000/health`
@@ -177,9 +186,10 @@ Run these from `apps/api` with the emulators from step 3 already running.
 Uploaded PDFs are parsed, embedded and indexed by a separate process. In a third terminal, with the same virtualenv:
 ```bash
 cd apps/api
+source .venv/bin/activate
 python -m app.workers.ingestion
 ```
-Without it, documents stay `queued`. Embedding needs an OpenAI key (personal key in Settings, or a shared key set by an admin). See [docs/knowledge-rag.md](docs/knowledge-rag.md).
+Without it, documents stay `queued`. Embedding needs an OpenAI key or a configured OpenRouter embedding key. See [docs/knowledge-rag.md](docs/knowledge-rag.md).
 
 ### 6. Start Frontend Web (static HTML)
 The web app is plain HTML, CSS and JavaScript. There is nothing to install or build. From the repository root:

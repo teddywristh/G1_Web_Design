@@ -205,10 +205,14 @@ class OAuthAnswer:
         self.user_id = user_id
         self.model = model or "gpt-5.6-luna"
 
-    def answer(self, question, chunks):
+    def require_session(self):
         session = get(self.user_id)
         if not session or not session["connected"]:
-            raise APIError(503, "ai_not_configured", "Connect ChatGPT first")
+            raise APIError(409, "chatgpt_disconnected", "Reconnect ChatGPT in AI connections")
+        return session
+
+    def answer(self, question, chunks):
+        session = self.require_session()
         context = "\n\n".join(f"[{i}] {c.text}" for i, c in enumerate(chunks, 1))
         with session["lock"]:
             data = invoke(

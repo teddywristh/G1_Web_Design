@@ -7,6 +7,7 @@ from app.schemas.rag import AskRequest, AskResponse
 from app.services import qa
 from app.services.ai import AnthropicService, OpenAIService
 from app.services.ai_connections import Credential, resolve
+from app.services.embeddings import OpenRouterEmbedding, requires_public_input
 from app.services.opencode import OpenCodeService
 from app.services.opencode_oauth import OAuthAnswer
 
@@ -52,10 +53,11 @@ def ask_question(
             or not settings.opencode_chatgpt_local_enabled
         ):
             raise APIError(422, "invalid_provider", "ChatGPT sign-in requires local OpenCode")
-        if request.retrieval_mode != "keyword":
+        if request.retrieval_mode != "keyword" and settings.embedding_provider != "openrouter":
             raise APIError(422, "invalid_retrieval", "ChatGPT sign-in requires keyword retrieval")
         selected = Credential("openai", "", "chatgpt")
         ai = OAuthAnswer(user["id"], request.model)
+        ai.require_session()
     elif request.engine == "opencode":
         selected = resolve(repo, user, request.provider, request.credential_source, settings)
         ai = OpenCodeService(settings, selected.api_key, request.model, provider=request.provider)
@@ -67,8 +69,17 @@ def ask_question(
         ai = AnthropicService(settings, selected.api_key, request.model)
     try:
         embedder = None
-        if request.retrieval_mode == "hybrid":
-            if request.provider == "openai" and request.engine == "direct":
+        kbs, _ = qa.resolve_scope(repo, user, request.knowledge_base_ids, settings)
+        if any(kb["generation"] for kb in kbs) and request.retrieval_mode == "hybrid":
+            if settings.embedding_provider == "openrouter":
+                if requires_public_input(settings) and not request.public_embedding_input_confirmed:
+                    raise APIError(
+                        422,
+                        "embedding_public_input_required",
+                        "Confirm the question contains no confidential or personal information",
+                    )
+                embedder = OpenRouterEmbedding(settings, input_type="search_query", repo=repo)
+            elif request.provider == "openai" and request.engine == "direct":
                 embedder = ai
             else:
                 # Never silently borrow a shared embedding key when personal-only was selected.
