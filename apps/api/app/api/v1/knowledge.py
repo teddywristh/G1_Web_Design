@@ -178,6 +178,21 @@ def evidence_get(evidence_id: str, user=Depends(current_user), repo=Depends(get_
     return evidence.read(repo, user, evidence_id)
 
 
+@router.get("/evidence/{evidence_id}/pdf")
+def evidence_pdf(
+    evidence_id: str,
+    user=Depends(current_user),
+    repo=Depends(get_repository),
+    bucket=Depends(get_bucket),
+):
+    item = evidence.read(repo, user, evidence_id)
+    provision = repo.get("provision_versions", evidence_id)
+    source = repo.get(provision["sourceCollection"], item["documentId"])
+    if not source or not source.get("storagePath"):
+        raise APIError(404, "not_found", "Document not found")
+    return send_pdf(bucket, source["storagePath"], f"{item['documentId']}.pdf")
+
+
 @router.post("/admin/knowledge-bases/{kb_id}/publish", response_model=KnowledgeBaseOut)
 def kb_publish(
     kb_id: str,

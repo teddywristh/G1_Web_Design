@@ -2,6 +2,7 @@
 
 import io
 import ipaddress
+import logging
 import re
 import socket
 from html.parser import HTMLParser
@@ -14,6 +15,7 @@ from app.core.errors import APIError
 
 MAX_BYTES = 2 * 1024 * 1024
 MAX_REDIRECTS = 3
+logger = logging.getLogger("legal_api")
 ARTICLE = re.compile(r"^\s*Điều\s+\d+", re.IGNORECASE | re.MULTILINE)
 
 
@@ -217,7 +219,7 @@ def vbpl_search_urls(query, settings, transport=None):
     words = [
         word
         for word in re.findall(r"[\w/-]+", query.casefold())
-        if len(word) > 1 and word not in stop
+        if (len(word) > 1 or word == "ý") and word not in stop
     ]
     keyword = " ".join(words[:6]) or query[:100]
     url = "https://vbpl.vn/TW/Pages/vbpq-timkiem.aspx?" + urlencode(
@@ -241,6 +243,14 @@ def vbpl_search_urls(query, settings, transport=None):
 def congbao_search_urls(query, settings, transport=None):
     """Search the public Công báo index and return official document PDFs."""
     stop = {
+        "bạn",
+        "xem",
+        "giúp",
+        "mình",
+        "tôi",
+        "cho",
+        "biết",
+        "nhưng",
         "những",
         "thông",
         "tin",
@@ -268,7 +278,7 @@ def congbao_search_urls(query, settings, transport=None):
     words = [
         word
         for word in re.findall(r"[\w/-]+", query.casefold())
-        if len(word) > 1 and word not in stop
+        if (len(word) > 1 or word == "ý") and word not in stop
     ]
     keywords = list(dict.fromkeys([" ".join(words[:5]) or query[:100], " ".join(words[:2])]))
     with httpx.Client(
@@ -300,9 +310,9 @@ def congbao_search_urls(query, settings, transport=None):
                 break
     documents.sort(
         key=lambda doc: (
+            doc.get("score") or 0,
             doc.get("loai_van_ban") == "Văn bản hợp nhất",
             doc.get("ngay_ban_hanh") or "",
-            doc.get("score") or 0,
         ),
         reverse=True,
     )
@@ -383,12 +393,17 @@ def gather(ai, settings, query, mode, budget, transport=None):
         if not urls:
             limits.append("web_no_results")
         for url in urls:
-            if budget["fetches"] >= settings.max_fetched_sources:
+            if budget["fetches"] >= budget.get("fetch_limit", settings.max_fetched_sources):
                 break
             budget["fetches"] += 1
             try:
                 final_url, body = fetch(url, settings, fetch_domains, transport)
-            except (APIError, httpx.HTTPError, ValueError):
+            except (APIError, httpx.HTTPError, ValueError) as exc:
+                logger.warning(
+                    "web_source_unreadable host=%s error=%s",
+                    urlparse(url).hostname or "unknown",
+                    getattr(exc, "code", type(exc).__name__),
+                )
                 limits.append("web_source_unreadable")
                 continue
             host = urlparse(final_url).hostname or ""

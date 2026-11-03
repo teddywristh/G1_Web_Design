@@ -3,6 +3,7 @@ import json
 from datetime import date, datetime, timezone
 
 import pytest
+
 from app.core.config import Settings
 from app.core.errors import APIError
 from app.ingestion import parser, pipeline
@@ -10,7 +11,6 @@ from app.schemas.knowledge import EvidenceOut
 from app.schemas.rag import AskRequest
 from app.services import documents, evidence, knowledge, qa, users
 from app.workers import ingestion as worker
-
 from tests.memory_repo import FakeBucket, MemoryRepo
 
 PAGES = [
@@ -115,6 +115,108 @@ def test_upload_creates_one_job_and_processing_reaches_ready(env, tmp_path):
     assert process(repo, bucket) is None
 
 
+def test_upload_and_download_with_local_storage(env, tmp_path):
+    from app.core.local_storage import LocalBucket
+
+    repo, _ = env
+    bucket = LocalBucket(tmp_path / "private-storage")
+    _, doc = upload(repo, bucket, tmp_path)
+    assert doc["fileState"] == "available"
+    saved = tmp_path / "downloaded.pdf"
+    bucket.blob(doc["storagePath"]).download_to_filename(saved)
+    assert saved.read_bytes() == b"%PDF-1 test"
+    assert process(repo, bucket)["status"] == "succeeded"
+
+
+def test_missing_evidence_triggers_one_more_web_search(env, monkeypatch):
+    from app.services import web_sources
+
+    repo, _ = env
+    first = web_sources.web_item(
+        "https://vbpl.vn/first", "Văn bản đầu", "câu hỏi", "official_legal_text"
+    )
+    second = web_sources.web_item(
+        "https://vbpl.vn/second", "Quy định cần tìm", "câu hỏi", "official_legal_text"
+    )
+    searches = []
+
+    def find_sources(ai, settings, query, mode, budget):
+        searches.append(query)
+        budget["searches"] += 1
+        return ([first] if len(searches) == 1 else [second]), []
+
+    monkeypatch.setattr(web_sources, "gather", find_sources)
+    calls = []
+
+    def reply(chunks):
+        calls.append(chunks)
+        if len(calls) == 1:
+            return json.dumps(
+                {
+                    "status": "insufficient_evidence",
+                    "claims": [],
+                    "search_queries": ["quy định cần tìm"],
+                }
+            )
+        return json.dumps(
+            {
+                "status": "answered",
+                "claims": [
+                    {
+                        "claim_id": "c1",
+                        "kind": "legal_rule",
+                        "text": "Quy định cần tìm",
+                        "evidence_ids": ["e1"],
+                        "quote": "Quy định cần tìm",
+                    }
+                ],
+            }
+        )
+
+    request = AskRequest(question="câu hỏi pháp luật", knowledge_base_ids=[], web_mode="official")
+    result = qa.answer(
+        repo,
+        user(repo, "alice"),
+        request,
+        FakeAI(reply),
+        None,
+        SETTINGS.model_copy(update={"official_web_enabled": True}),
+    )
+    assert searches == ["câu hỏi pháp luật", "quy định cần tìm"]
+    assert result.status == "answered"
+    assert result.citations[0].source_url == "https://vbpl.vn/second"
+
+
+def test_insufficient_answer_explains_evidence_reference(env, monkeypatch):
+    from app.services import web_sources
+
+    repo, _ = env
+    item = web_sources.web_item(
+        "https://vbpl.vn/source", "Nguồn chưa đủ", "câu hỏi", "official_legal_text"
+    )
+    monkeypatch.setattr(web_sources, "gather", lambda *_: ([item], []))
+    ai = FakeAI(
+        json.dumps(
+            {
+                "status": "insufficient_evidence",
+                "claims": [],
+                "unresolved_sources": ["e1 thiếu nội dung"],
+            }
+        )
+    )
+    request = AskRequest(question="câu hỏi pháp luật", knowledge_base_ids=[], web_mode="official")
+    result = qa.answer(
+        repo,
+        user(repo, "alice"),
+        request,
+        ai,
+        None,
+        SETTINGS.model_copy(update={"official_web_enabled": True}),
+    )
+    assert "nguồn [1]" in result.answer
+    assert result.citations[0].source_url == "https://vbpl.vn/source"
+
+
 def test_parsed_document_is_searchable_while_embedding_waits(env, tmp_path, monkeypatch):
     repo, bucket = env
     kb, doc = upload(repo, bucket, tmp_path)
@@ -162,6 +264,7 @@ def test_empty_kb_can_use_opted_in_web_without_embedding(env, monkeypatch):
 
 def test_web_workflow_broadens_query_and_answers_with_verified_source(env, monkeypatch):
     import httpx
+
     from app.services import web_sources
 
     repo, _ = env
@@ -628,10 +731,11 @@ def test_too_many_knowledge_bases_rejected(env, tmp_path):
 
 
 def test_routes_hide_other_users_private_knowledge_bases(env, monkeypatch):
+    from fastapi.testclient import TestClient
+
     from app.core.security import verify_firebase_token
     from app.dependencies import get_bucket, get_repository
     from app.main import create_app
-    from fastapi.testclient import TestClient
 
     repo, bucket = env
     app = create_app()

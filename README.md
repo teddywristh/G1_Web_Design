@@ -247,7 +247,7 @@ docs(root): update architecture and setup documentation
 ## Code Quality & Linting
 - **Editor Configuration**: Consistently enforced by [`.editorconfig`](.editorconfig).
 - **Backend Linting**: `ruff check .` and `ruff format .`
-- **Frontend**: static HTML/CSS/ES modules; see [the frontend structure and code map](apps/web/README.md). Run `Get-ChildItem apps/web/js/*.js | ForEach-Object { node --check $_.FullName }` in PowerShell to check JavaScript syntax.
+- **Frontend**: static HTML/CSS/ES modules; see [the frontend structure and code map](apps/web/README.md). Run `for f in apps/web/js/*.js; do node --input-type=module --check < "$f"; done` to check JavaScript syntax.
 - **Automated CI**: GitHub Actions validates linting, type-checking, and test suites on all PRs.
 
 ---

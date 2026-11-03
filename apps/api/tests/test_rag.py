@@ -230,6 +230,44 @@ def test_congbao_search_uses_public_api_and_official_pdfs_only():
     assert urls == ["https://congbaocdn.chinhphu.vn/doc.pdf"]
 
 
+def test_congbao_prioritizes_relevance_and_omits_conversational_words():
+    def handler(request):
+        assert json.loads(request.content)["query"] == "tội cố ý giết người"
+
+        def document(score, kind, filename):
+            return {
+                "type": "van_ban",
+                "data": {
+                    "score": score,
+                    "loai_van_ban": kind,
+                    "danh_sach_tep_van_ban": [
+                        {
+                            "file_extension": "pdf",
+                            "duong_dan": f"https://congbaocdn.chinhphu.vn/{filename}.pdf",
+                        }
+                    ],
+                },
+            }
+
+        return httpx.Response(
+            200,
+            json={
+                "success": True,
+                "data": [
+                    document(0.1, "Văn bản hợp nhất", "unrelated"),
+                    document(0.9, "Quyết định", "relevant"),
+                ],
+            },
+        )
+
+    urls = web_sources.congbao_search_urls(
+        "Bạn xem tội cố ý giết người nhưng nạn nhân chưa thiệt mạng thì có bị tử hình không",
+        Settings(),
+        httpx.MockTransport(handler),
+    )
+    assert urls[0].endswith("/relevant.pdf")
+
+
 def test_congbao_search_retries_shorter_query_when_no_documents():
     queries = []
 

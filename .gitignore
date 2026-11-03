@@ -137,6 +137,7 @@ cypress/screenshots/
 .data/
 chroma_data/
 .emulator-data/
+.firebase/
 firebase-debug.log
 firestore-debug.log
 postgres_data/

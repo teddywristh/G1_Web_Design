@@ -2,6 +2,7 @@
 
 import hashlib
 import hmac
+import logging
 import secrets
 from datetime import timedelta
 
@@ -19,6 +20,7 @@ def digest(token):
 def check_origin(request):
     origin = request.headers.get("origin")
     if origin and origin not in get_settings().backend_cors_origins:
+        logging.getLogger("legal_api").warning("Rejected authentication origin: %r", origin[:200])
         raise APIError(403, "invalid_origin", "Origin is not allowed")
 
 

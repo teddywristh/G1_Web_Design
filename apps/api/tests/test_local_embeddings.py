@@ -2,12 +2,12 @@ import json
 
 import httpx
 import pytest
+
 from app.core.config import get_settings
 from app.core.errors import APIError
 from app.search.base import profile_from
 from app.services.embeddings import LocalEmbedding, requires_public_input
 from app.workers.ingestion import make_embedder
-
 from tests.memory_repo import MemoryRepo
 
 
@@ -72,9 +72,10 @@ def test_busy_is_short_retry_failure_not_openrouter_quota():
 
 
 def test_authenticated_embedding_route_uses_local_adapter(monkeypatch):
+    from fastapi.testclient import TestClient
+
     from app.dependencies import current_user
     from app.main import create_app
-    from fastapi.testclient import TestClient
 
     config = settings()
     monkeypatch.setattr("app.api.v1.embeddings.get_settings", lambda: config)

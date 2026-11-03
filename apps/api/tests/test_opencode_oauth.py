@@ -9,6 +9,39 @@ from tests.test_backend import api, identity, profile, repo
 __all__ = ["api", "repo"]
 
 
+def test_stopped_worker_invalidates_oauth_session(monkeypatch):
+    session = {
+        "expires": float("inf"),
+        "worker": "test-worker",
+        "guard": "test-guard",
+        "network": "test-network",
+    }
+    monkeypatch.setattr(opencode_oauth, "SESSIONS", {"user": session})
+    monkeypatch.setattr(opencode_oauth, "docker", Mock(return_value=Mock(stdout=b"false\n")))
+    cleanup = Mock()
+    monkeypatch.setattr(opencode_oauth, "cleanup", cleanup)
+    assert opencode_oauth.get("user") is None
+    assert "user" not in opencode_oauth.SESSIONS
+    cleanup.assert_called_once_with(session)
+
+
+def test_hosted_chatgpt_requires_flag_and_authenticated_user(api, repo, monkeypatch):
+    client, app, _ = api
+    settings = get_settings()
+    monkeypatch.setattr(settings, "opencode_chatgpt_hosted_enabled", True)
+    monkeypatch.setattr(
+        opencode_oauth,
+        "start",
+        Mock(return_value={"url": "https://auth.openai.com/test", "instructions": "code"}),
+    )
+    assert client.post("/api/v1/ai/chatgpt/start", json={}).status_code == 401
+    identity(app)
+    profile(repo)
+    assert client.post("/api/v1/ai/chatgpt/start", json={}).status_code == 200
+    opencode_oauth.start.assert_called_once()
+    assert opencode_oauth.start.call_args.args[0] == "reader"
+
+
 def test_oauth_routes_are_local_gated_and_bound_to_user(api, repo, monkeypatch):
     client, app, _ = api
     identity(app)

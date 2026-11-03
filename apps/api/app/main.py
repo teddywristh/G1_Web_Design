@@ -4,6 +4,7 @@ import json
 import logging
 import re
 import time
+from collections import deque
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Request
@@ -37,6 +38,7 @@ logger.propagate = False
 def create_app():
     settings = get_settings()  # validates production configuration before accepting traffic
     api = FastAPI(title=settings.app_name, version="1.0.0")
+    public_rate_events = {"auth": deque(), "rag": deque(), "upload": deque()}
     api.add_middleware(
         CORSMiddleware,
         allow_origins=settings.backend_cors_origins,
@@ -105,6 +107,30 @@ def create_app():
             supplied if re.fullmatch(r"[A-Za-z0-9_-]{1,64}", supplied) else uuid4().hex
         )
         started = time.monotonic()
+        if settings.app_env.lower() in {"prod", "production"}:
+            path = request.url.path
+            if path == "/api/v1/embeddings":
+                return error(request, 404, "not_found", "Not found")
+            group = None
+            if request.method == "POST" and path in {
+                "/api/v1/auth/login",
+                "/api/v1/auth/register",
+                "/api/v1/auth/google",
+            }:
+                group, limit = "auth", 20
+            elif request.method == "POST" and path.startswith("/api/v1/rag/"):
+                group, limit = "rag", 30
+            elif request.method in {"POST", "PUT"} and path.endswith("/file"):
+                group, limit = "upload", 20
+            if group:
+                events = public_rate_events[group]
+                while events and events[0] <= started - 60:
+                    events.popleft()
+                if len(events) >= limit:
+                    return error(
+                        request, 429, "rate_limited", "Too many requests; try again shortly"
+                    )
+                events.append(started)
         # Small JSON bodies are bounded before Pydantic parsing. PDF uses streaming limit.
         if request.method in {"POST", "PUT", "PATCH"} and not request.url.path.endswith("/file"):
             size = 0

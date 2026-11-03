@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, Request
 
 from app.core.config import get_settings
@@ -34,10 +36,17 @@ def ask_question(
     if not settings.qa_workflow_enabled:
         raise APIError(503, "feature_disabled", "The legal Q&A workflow is disabled")
     if request.engine == "opencode":
-        if not settings.opencode_local_enabled:
+        hosted_chatgpt = (
+            settings.opencode_chatgpt_hosted_enabled
+            and request.credential_source == "chatgpt"
+            and request.provider == "openai"
+        )
+        if not settings.opencode_local_enabled and not hosted_chatgpt:
             raise APIError(503, "opencode_unavailable", "OpenCode local worker is not enabled")
-        if settings.app_env.lower() != "test" and (
-            not http_request.client or http_request.client.host not in {"127.0.0.1", "::1"}
+        if (
+            not hosted_chatgpt
+            and settings.app_env.lower() != "test"
+            and (not http_request.client or http_request.client.host not in {"127.0.0.1", "::1"})
         ):
             raise APIError(403, "forbidden", "OpenCode worker is available only locally")
         if request.provider not in {"openai", "deepseek", "openrouter"}:
@@ -50,7 +59,9 @@ def ask_question(
         if (
             request.engine != "opencode"
             or request.provider != "openai"
-            or not settings.opencode_chatgpt_local_enabled
+            or not (
+                settings.opencode_chatgpt_local_enabled or settings.opencode_chatgpt_hosted_enabled
+            )
         ):
             raise APIError(422, "invalid_provider", "ChatGPT sign-in requires local OpenCode")
         if request.retrieval_mode != "keyword" and settings.embedding_provider not in {
@@ -106,6 +117,11 @@ def ask_question(
         ) from None
     except Exception as exc:
         # Provider error strings may echo credentials or content; never forward them.
+        logging.getLogger("legal_api").warning(
+            "RAG request failed requestId=%s errorType=%s",
+            getattr(http_request.state, "request_id", ""),
+            type(exc).__name__,
+        )
         status = getattr(exc, "status_code", None)
         if status in (401, 403):
             raise APIError(

@@ -12,6 +12,8 @@ router = APIRouter(prefix="/api/v1", tags=["AI connections"])
 
 def local_oauth(request):
     settings = get_settings()
+    if settings.opencode_chatgpt_hosted_enabled:
+        return settings
     if not settings.opencode_chatgpt_local_enabled:
         raise APIError(503, "opencode_unavailable", "ChatGPT local OAuth is disabled")
     if settings.app_env.lower() != "test" and (

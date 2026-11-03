@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     app_name: str = "legal-api"
     firebase_project_id: str | None = None
     firebase_storage_bucket: str | None = None
+    storage_backend: Literal["firebase", "local"] = "firebase"
+    local_storage_dir: str = ".data/cloud-demo/storage"
     google_application_credentials: str | None = None
     firebase_auth_emulator_host: str | None = None
     firestore_emulator_host: str | None = None
@@ -44,6 +46,7 @@ class Settings(BaseSettings):
     ai_request_timeout_seconds: int = Field(default=30, ge=1, le=120)
     opencode_local_enabled: bool = False
     opencode_chatgpt_local_enabled: bool = False
+    opencode_chatgpt_hosted_enabled: bool = False
     opencode_binary: str = ""
     opencode_models_file: str = str(Path.home() / ".cache/opencode/models.json")
     opencode_image: str = "legal-api-backend:verify"
@@ -108,7 +111,9 @@ class Settings(BaseSettings):
             self.storage_emulator_host,
         )
         if self.app_env.lower() in {"prod", "production"}:
-            if not self.firebase_project_id or not self.firebase_storage_bucket:
+            if not self.firebase_project_id or (
+                self.storage_backend == "firebase" and not self.firebase_storage_bucket
+            ):
                 raise ValueError("Production project and storage bucket are required")
             if not self.auth_cookie_secure:
                 raise ValueError("Production session cookie must use HTTPS")

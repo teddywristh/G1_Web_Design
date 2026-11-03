@@ -181,7 +181,10 @@ def options(repo, user, settings):
         "credentialStorageReady": storage_ready,
         "engines": {
             "direct": True,
-            "opencode": settings.opencode_local_enabled and bool(settings.opencode_binary),
+            "opencode": (
+                settings.opencode_local_enabled or settings.opencode_chatgpt_hosted_enabled
+            )
+            and bool(settings.opencode_binary),
         },
         "embedding": {
             "provider": settings.embedding_provider,
@@ -231,8 +234,12 @@ def options(repo, user, settings):
             {
                 "id": "chatgpt_oauth",
                 "provider": "openai",
-                "available": settings.opencode_chatgpt_local_enabled,
-                "reason": "OpenCode ChatGPT OAuth, local development only",
+                "available": (
+                    settings.opencode_chatgpt_local_enabled
+                    or settings.opencode_chatgpt_hosted_enabled
+                )
+                and bool(settings.opencode_binary),
+                "reason": "OpenCode ChatGPT OAuth",
                 "documentationUrl": "https://developers.openai.com/siwc/token-sharing-open-source",
             },
             {

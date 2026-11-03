@@ -52,6 +52,24 @@ def invoke(session, payload, timeout):
             raise ValueError()
         return data
     except (OSError, ValueError, subprocess.SubprocessError):
+        try:
+            running = (
+                docker(
+                    ["inspect", "-f", "{{.State.Running}}", session["worker"]], timeout=5
+                ).stdout.strip()
+                == b"true"
+            )
+        except (OSError, subprocess.SubprocessError):
+            running = False
+        if not running:
+            with LOCK:
+                for key, value in list(SESSIONS.items()):
+                    if value is session:
+                        SESSIONS.pop(key, None)
+            cleanup(session)
+            raise APIError(
+                409, "chatgpt_disconnected", "ChatGPT worker stopped; reconnect to continue"
+            ) from None
         raise APIError(503, "opencode_unavailable", "OpenCode OAuth worker failed") from None
 
 
@@ -91,7 +109,7 @@ def start(user_id, settings):
             "--pids-limit",
             "80",
             "--memory",
-            "512m",
+            "1024m",
             "--cpus",
             "1",
             "--tmpfs",
@@ -178,7 +196,25 @@ def start(user_id, settings):
 def get(user_id):
     expire()
     with LOCK:
-        return SESSIONS.get(user_id)
+        session = SESSIONS.get(user_id)
+    if not session:
+        return None
+    try:
+        running = (
+            docker(
+                ["inspect", "-f", "{{.State.Running}}", session["worker"]], timeout=5
+            ).stdout.strip()
+            == b"true"
+        )
+    except (OSError, subprocess.SubprocessError):
+        running = False
+    if running:
+        return session
+    with LOCK:
+        if SESSIONS.get(user_id) is session:
+            SESSIONS.pop(user_id, None)
+    cleanup(session)
+    return None
 
 
 def finish(user_id):

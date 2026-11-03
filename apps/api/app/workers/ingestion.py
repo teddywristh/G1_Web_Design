@@ -234,6 +234,8 @@ def run_once(repo, bucket, settings, worker_id):
 
 
 def main(poll_seconds=5):
+    from google.api_core.exceptions import GoogleAPICallError
+
     if not logger.handlers:
         handler = logging.StreamHandler()
         handler.setFormatter(logging.Formatter("%(message)s"))
@@ -251,7 +253,15 @@ def main(poll_seconds=5):
         )
     )
     while True:
-        if run_once(repo, clients["storage"], settings, worker_id) is None:
+        try:
+            job = run_once(repo, clients["storage"], settings, worker_id)
+        except GoogleAPICallError as exc:
+            logger.warning(
+                json.dumps({"event": "worker_database_unavailable", "type": type(exc).__name__})
+            )
+            time.sleep(poll_seconds)
+            continue
+        if job is None:
             time.sleep(poll_seconds)
 
 

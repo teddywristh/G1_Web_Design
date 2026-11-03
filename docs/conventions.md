@@ -108,8 +108,8 @@ Before requesting reviews, ensure:
   - Max line length: 88 characters (PEP 8 compatible)
   - Type hints: Explicit type annotations encouraged for all function signatures.
 - **JavaScript / CSS (apps/web)**:
-  - Plain ES modules-free scripts, no build step; `"use strict"` and `textContent` for any server or user text.
-  - Keep layout in `index.html`, styling in `style.css`, API access in `api.js`.
+  - Plain ES modules and static HTML/CSS; use `textContent` for server or user text.
+  - Keep page fragments in `apps/web/html/`, CSS in `apps/web/css/`, and API access in `apps/web/js/api.js`.
 - **TypeScript / React (legacy `apps/web/src`, packages/ui)**: kept for reference only.
 - **Environment & Secrets**:
   - Never commit real passwords, API tokens, or session secrets.

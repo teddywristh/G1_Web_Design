@@ -21,7 +21,9 @@ def initialize_firebase() -> dict:
     settings = get_settings()
     with _lock:
         if not firebase_admin._apps:
-            if not settings.firebase_project_id or not settings.firebase_storage_bucket:
+            if not settings.firebase_project_id or (
+                settings.storage_backend == "firebase" and not settings.firebase_storage_bucket
+            ):
                 raise ValueError("FIREBASE_PROJECT_ID and FIREBASE_STORAGE_BUCKET required")
             for name in (
                 "firebase_auth_emulator_host",
@@ -35,6 +37,10 @@ def initialize_firebase() -> dict:
                     ):
                         value = "http://" + value
                     os.environ[name.upper()] = value
+                else:
+                    # An empty emulator variable still redirects some Google SDKs
+                    # to an invalid empty endpoint; remove it for Cloud clients.
+                    os.environ.pop(name.upper(), None)
             if settings.firestore_emulator_host:
                 cred = EmulatorCredentials()
             elif settings.google_application_credentials:
@@ -49,4 +55,10 @@ def initialize_firebase() -> dict:
                     "storageBucket": settings.firebase_storage_bucket,
                 },
             )
-    return {"db": firestore.client(), "storage": storage.bucket()}
+    if settings.storage_backend == "local":
+        from app.core.local_storage import LocalBucket
+
+        bucket = LocalBucket(settings.local_storage_dir)
+    else:
+        bucket = storage.bucket()
+    return {"db": firestore.client(), "storage": bucket}
