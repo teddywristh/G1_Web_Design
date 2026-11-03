@@ -1,0 +1,24 @@
+<dialog id="document-dialog" class="dialog-wide" aria-labelledby="detail-title">
+  <button class="close-dialog" data-close aria-label="Đóng">×</button>
+  <h2 id="detail-title"></h2>
+  <p id="detail-meta" class="subtitle"></p>
+  <div class="detail-toolbar">
+    <button id="detail-bookmark" class="secondary-button">Đánh dấu</button>
+    <a id="download-pdf" class="secondary-button" hidden>Tải PDF</a>
+    <button id="retry-document" class="secondary-button" hidden>
+      Xử lý lại
+    </button>
+    <button id="delete-document" class="text-button danger">
+      Xóa tài liệu
+    </button>
+  </div>
+  <iframe id="pdf-viewer" title="Nội dung tài liệu PDF" hidden></iframe>
+  <div id="pdf-empty" class="empty-state">
+    <h3 id="pdf-empty-title">Đang tải PDF…</h3>
+    <p id="pdf-empty-note"></p>
+  </div>
+  <p id="pdf-error" class="error" role="alert"></p>
+  <p class="small-print">
+    Nội dung không thay thế nguồn văn bản chính thức hoặc tư vấn pháp lý.
+  </p>
+</dialog>

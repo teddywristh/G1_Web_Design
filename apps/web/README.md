@@ -2,10 +2,71 @@
 
 Giao diện nối với backend FastAPI của dự án, không cần build.
 
-- `index.html`: bố cục, trang, form và hộp thoại.
-- `style.css`: font, màu sắc và responsive.
-- `api.js`: gọi backend (cookie phiên, CSRF, thông báo lỗi tiếng Việt).
-- `script.js`: đăng nhập, kho tài liệu, hỏi đáp, trích dẫn và thiết lập.
+## Cấu trúc frontend
+
+```text
+apps/web/
+├── index.html
+├── html/
+│   ├── auth.html
+│   ├── sidebar.html
+│   ├── header.html
+│   ├── chat.html
+│   ├── library.html
+│   ├── settings.html
+│   ├── footer.html
+│   ├── upload.html
+│   ├── document.html
+│   └── evidence.html
+├── css/
+│   ├── main.css
+│   ├── base.css
+│   ├── layout.css
+│   ├── chat.css
+│   ├── library.css
+│   ├── dialogs.css
+│   ├── responsive.css
+│   ├── auth.css
+│   ├── retrieval.css
+│   ├── settings.css
+│   └── theme.css
+└── js/
+    ├── main.js
+    ├── app.js
+    ├── core.js
+    ├── api.js
+    ├── auth.js
+    ├── navigation.js
+    ├── knowledge-bases.js
+    ├── documents.js
+    ├── upload.js
+    ├── chat.js
+    ├── evidence.js
+    ├── settings.js
+    └── sessions.js
+```
+
+`index.html` giữ cấu hình API, font/CSS và vị trí các phần giao diện. `js/main.js` tải các tệp HTML cố định, ghép vào trang rồi mới nạp `js/app.js` để gắn sự kiện và khởi tạo phiên. Các tệp HTML con là nội dung được ghép, không phải các trang mở riêng.
+
+`css/main.css` khai báo thứ tự tải CSS. `base.css` chứa biến màu và thành phần dùng chung; `layout.css` là khung trang; `responsive.css` là bố cục màn hình nhỏ. `retrieval.css` định dạng lựa chọn nguồn và trích dẫn. `theme.css` giữ các điều chỉnh giao diện cuối cùng; thứ tự nạp được giữ như trước để bảo toàn cascade.
+
+JavaScript dùng ES modules: hàm dùng giữa các file được khai báo bằng `import/export`. `core.js` chứa state, nhãn trạng thái, helper DOM và lưu trữ trên trình duyệt. `api.js` phụ trách HTTP, cookie phiên, CSRF và lỗi API. `app.js` nối các thao tác chung như menu, chuyển trang và xóa dữ liệu local. Các module chức năng còn lại quản lý sự kiện của phần mình.
+
+## Tìm code theo chức năng
+
+| Phần cần trình bày                         | HTML                                      | JavaScript                      | CSS chính                              |
+| ------------------------------------------ | ----------------------------------------- | ------------------------------- | -------------------------------------- |
+| Đăng nhập, đăng ký, Google                 | `html/auth.html`                          | `js/auth.js`                    | `css/auth.css`                         |
+| Điều hướng, menu mobile                    | `html/sidebar.html`, `html/header.html`   | `js/navigation.js`, `js/app.js` | `css/layout.css`, `css/responsive.css` |
+| Kho riêng, kho chung, xuất bản             | `html/library.html`                       | `js/knowledge-bases.js`         | `css/library.css`                      |
+| Danh sách, tìm kiếm, đánh dấu, đọc/xóa PDF | `html/library.html`, `html/document.html` | `js/documents.js`               | `css/library.css`, `css/dialogs.css`   |
+| Chọn file và tải PDF                       | `html/upload.html`                        | `js/upload.js`                  | `css/dialogs.css`                      |
+| Câu hỏi, lịch sử, câu trả lời              | `html/chat.html`                          | `js/chat.js`                    | `css/chat.css`, `css/retrieval.css`    |
+| Mở đoạn nguồn của trích dẫn                | `html/evidence.html`                      | `js/evidence.js`                | `css/retrieval.css`, `css/dialogs.css` |
+| Khóa API, ChatGPT local                    | `html/settings.html`                      | `js/settings.js`                | `css/settings.css`                     |
+| Danh sách và thu hồi phiên                 | `html/settings.html`                      | `js/sessions.js`                | `css/settings.css`                     |
+
+Khi giải thích một thao tác, bắt đầu từ ID của nút/form trong HTML, tìm ID đó trong module JS tương ứng, rồi theo lệnh `api.get/post/put/del` tới backend. Ví dụ: `#question-form` trong `html/chat.html` → listener submit và `requestBody()` trong `js/chat.js` → `api.post("/rag/ask", ...)` trong `js/api.js`.
 
 ## Chạy
 
@@ -51,7 +112,7 @@ ngữ nghĩa và xử lý PDF cần một nhà cung cấp embedding do backend c
 embedding dùng chung được cấu hình ở backend và tách biệt khỏi key/model trả lời. Model NVIDIA
 miễn phí không nhận nội dung mật hoặc dữ liệu cá nhân; xác nhận điều kiện tại form trước khi gửi.
 
-Bản Next.js cũ vẫn còn trong `src/` để tham khảo, nhưng không được tải bởi bản HTML này.
+Bản Next.js cũ vẫn còn trong `src/` để tham khảo, cùng các tệp cấu hình npm/TypeScript. Chúng không được tải bởi bản HTML này. Các thư mục `html/`, `css/`, `js/` là mã nguồn của frontend hiện tại; không đặt bản sao dự phòng hoặc file thử nghiệm trong đó.
 
 ## Embedding local (Nemotron)
 

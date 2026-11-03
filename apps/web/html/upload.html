@@ -1,0 +1,86 @@
+<dialog id="upload-dialog" aria-labelledby="upload-title">
+  <button class="close-dialog" data-close aria-label="Đóng">×</button>
+  <h2 id="upload-title">Thêm tài liệu PDF</h2>
+  <p class="subtitle">Chọn file và nhập thông tin tài liệu.</p>
+  <form id="upload-form">
+    <label id="drop-zone" class="upload-zone" for="pdf-file">
+      <strong id="file-label">Chọn hoặc kéo thả PDF vào đây</strong>
+      <span>PDF · Tối đa 20 MB</span>
+      <input
+        id="pdf-file"
+        type="file"
+        accept="application/pdf,.pdf"
+        class="sr-only"
+      />
+    </label>
+    <label class="form-field">
+      Tên tài liệu
+      <input name="title" maxlength="300" required />
+    </label>
+    <div id="shared-fields" class="shared-fields" hidden>
+      <div class="form-grid">
+        <label class="form-field">
+          Loại văn bản
+          <select name="category">
+            <option>Bộ luật</option>
+            <option>Luật</option>
+            <option>Nghị định</option>
+            <option>Thông tư</option>
+          </select>
+        </label>
+        <label class="form-field">
+          Số hiệu
+          <input name="number" maxlength="100" />
+        </label>
+      </div>
+      <label class="form-field">
+        Cơ quan ban hành
+        <input name="authority" maxlength="200" />
+      </label>
+      <div class="form-grid">
+        <label class="form-field">
+          Ngày ban hành
+          <input name="issueDate" type="date" />
+        </label>
+        <label class="form-field">
+          Ngày hiệu lực
+          <input name="effectiveDate" type="date" />
+        </label>
+      </div>
+      <label class="form-field">
+        Tình trạng hiệu lực
+        <select name="status">
+          <option value="effective">Còn hiệu lực</option>
+          <option value="not_yet_effective">Chưa có hiệu lực</option>
+          <option value="partially_expired">Hết hiệu lực một phần</option>
+          <option value="expired">Hết hiệu lực</option>
+        </select>
+      </label>
+    </div>
+    <p id="upload-notice" class="form-notice"></p>
+    <label id="upload-public-label" class="small-print" hidden>
+      <input id="upload-public-confirm" type="checkbox" />
+      PDF không chứa dữ liệu cá nhân hoặc thông tin mật. Tôi đồng ý nội dung có
+      thể được NVIDIA ghi nhận để bảo mật và cải thiện dịch vụ.
+      <a
+        href="https://openrouter.ai/nvidia/nemotron-3.5-embed-1b:free"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Điều kiện model</a
+      >
+    </label>
+    <p id="upload-error" class="error" role="alert"></p>
+    <p
+      id="upload-progress"
+      class="small-print"
+      role="status"
+      aria-live="polite"
+    ></p>
+    <div class="dialog-actions">
+      <button type="button" class="secondary-button" data-close>Để sau</button>
+      <button id="save-document" type="submit" class="primary-button">
+        Thêm tài liệu
+      </button>
+    </div>
+  </form>
+</dialog>

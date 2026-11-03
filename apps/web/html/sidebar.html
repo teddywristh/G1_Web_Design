@@ -1,0 +1,68 @@
+<aside id="sidebar" class="sidebar" hidden>
+  <a class="brand" href="index.html">
+    <span class="brand-mark">L</span>
+    <span>
+      Legal AI
+      <small>LEGAL ASSISTANT</small>
+    </span>
+  </a>
+  <button class="new-chat secondary-button" data-action="new-chat">
+    + Cuộc trò chuyện mới
+  </button>
+  <nav aria-label="Điều hướng chính">
+    <button data-view="chat" class="active">
+      <svg
+        aria-hidden="true"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.7"
+      >
+        <path
+          d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H5l-2 2v-7.5A8.5 8.5 0 1 1 21 11.5Z"
+        />
+      </svg>
+      Hỏi đáp
+      <span id="chat-count">0</span>
+    </button>
+    <button data-view="library">
+      <svg
+        aria-hidden="true"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.7"
+      >
+        <path d="M4 19V5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1 0-4h13M8 7h7M8 11h7" />
+      </svg>
+      Thư viện tài liệu
+      <span id="document-count">0</span>
+    </button>
+    <button data-view="saved">
+      <svg
+        aria-hidden="true"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.7"
+      >
+        <path d="M6 3h12v18l-6-4-6 4z" />
+      </svg>
+      Đã lưu
+      <span id="saved-count">0</span>
+    </button>
+  </nav>
+  <div class="sidebar-bottom">
+    <button data-view="settings">Thiết lập</button>
+    <p>
+      <span id="user-name">Không gian cá nhân</span>
+      <small id="user-role"></small>
+    </p>
+  </div>
+</aside>

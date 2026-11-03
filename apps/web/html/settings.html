@@ -1,0 +1,118 @@
+<section
+  id="settings-view"
+  class="view"
+  aria-labelledby="settings-title"
+  hidden
+>
+  <h1 id="settings-title">Thiết lập</h1>
+  <div class="settings-grid">
+    <article class="settings-card" id="account-card" tabindex="-1">
+      <h2>Tài khoản</h2>
+      <p id="account-info"></p>
+      <p class="small-print">Liên kết Google với tài khoản hiện tại:</p>
+      <div id="google-link-button"></div>
+      <button id="logout" class="secondary-button">Đăng xuất</button>
+      <button id="logout-all" class="text-button danger">
+        Đăng xuất mọi thiết bị
+      </button>
+      <h3>Phiên đăng nhập</h3>
+      <ul id="session-list" class="connection-list"></ul>
+      <p id="session-error" class="error" role="alert"></p>
+      <button id="sessions-more" type="button" class="text-button" hidden>
+        Tải thêm
+      </button>
+    </article>
+    <article class="settings-card" id="ai-card" tabindex="-1">
+      <h2>Kết nối AI</h2>
+      <ul id="connection-list" class="connection-list"></ul>
+      <form id="connection-form" class="inline-form">
+        <label class="sr-only" for="connection-provider">Nhà cung cấp</label>
+        <select id="connection-provider">
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Claude (Anthropic)</option>
+          <option value="deepseek">DeepSeek</option>
+          <option value="openrouter">OpenRouter</option>
+        </select>
+        <label class="sr-only" for="connection-scope">Phạm vi khóa</label>
+        <select id="connection-scope">
+          <option value="personal">Key cá nhân</option>
+          <option value="shared" hidden>Key dùng chung</option>
+        </select>
+        <label class="sr-only" for="connection-key">Khóa API</label>
+        <input
+          id="connection-key"
+          type="password"
+          autocomplete="off"
+          placeholder="Khóa API cá nhân"
+          required
+        />
+        <button class="primary-button" type="submit">Lưu khóa</button>
+      </form>
+      <div class="chatgpt-connection">
+        <h3>ChatGPT Plus/Pro qua OpenCode</h3>
+        <p id="chatgpt-status" class="small-print">Đang kiểm tra…</p>
+        <p id="chatgpt-instructions" class="small-print" hidden></p>
+        <a
+          id="chatgpt-link"
+          class="secondary-button"
+          target="_blank"
+          rel="noopener noreferrer"
+          hidden
+          >Mở trang đăng nhập OpenAI</a
+        >
+        <div class="ai-actions">
+          <button
+            id="chatgpt-start"
+            type="button"
+            class="secondary-button"
+            hidden
+          >
+            Kết nối ChatGPT Plus/Pro
+          </button>
+          <button
+            id="chatgpt-finish"
+            type="button"
+            class="secondary-button"
+            hidden
+          >
+            Tôi đã đăng nhập
+          </button>
+          <button
+            id="chatgpt-use"
+            type="button"
+            class="secondary-button"
+            hidden
+          >
+            Sử dụng ChatGPT
+          </button>
+          <button
+            id="chatgpt-disconnect"
+            type="button"
+            class="text-button danger"
+            hidden
+          >
+            Ngắt kết nối
+          </button>
+        </div>
+      </div>
+      <p class="small-print">
+        Khóa được mã hóa ở máy chủ và không bao giờ hiển thị lại. Chỉ hiện trạng
+        thái đã cấu hình.
+        <span id="embedding-info"
+          >Embedding dùng khóa OpenAI; nếu không có khóa OpenAI, hãy dùng mục
+          tìm theo số hiệu/điều.</span
+        >
+      </p>
+    </article>
+    <article class="settings-card">
+      <h2>Dữ liệu trên thiết bị</h2>
+      <p>
+        Lịch sử hội thoại và đánh dấu lưu bằng localStorage, tách theo tài
+        khoản. Tài liệu và kho nằm trên máy chủ.
+      </p>
+      <button id="reset-data" class="secondary-button">
+        Xóa lịch sử trên thiết bị
+      </button>
+    </article>
+  </div>
+</section>

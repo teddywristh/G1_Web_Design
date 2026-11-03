@@ -1,0 +1,73 @@
+/* Thiết lập */
+.connection-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+.connection-list li {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 0;
+}
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.inline-form input,
+.inline-form select {
+  padding: 9px;
+  border: 1px solid #d6ddcd;
+  border-radius: 6px;
+  background: white;
+  min-width: 0;
+}
+.inline-form input {
+  flex: 1 1 160px;
+}
+.processing-detail {
+  display: block;
+  max-width: 280px;
+  margin-top: 6px;
+  color: #9c4738;
+  line-height: 1.5;
+}
+
+.topbar-actions,
+.ai-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chatgpt-connection {
+  border-top: 1px solid var(--line);
+  margin-top: 20px;
+  padding-top: 18px;
+}
+.chatgpt-connection h3,
+#account-card h3 {
+  font-size: 14px;
+  margin-top: 12px;
+}
+.chatgpt-connection .small-print {
+  margin: 8px 0;
+}
+.chatgpt-connection a,
+.ai-actions {
+  margin-top: 8px;
+}
+@media (max-width: 700px) {
+  .topbar-actions .preview-label {
+    display: none;
+  }
+  .topbar-actions .secondary-button {
+    padding: 7px;
+    font-size: 11px;
+  }
+  .scope-bar .form-field {
+    flex: 1 1 140px;
+  }
+}

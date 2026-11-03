@@ -1,0 +1,46 @@
+<section id="auth-view" class="auth-view" aria-labelledby="auth-title" hidden>
+  <form id="auth-form" class="auth-card">
+    <span class="brand-mark">L</span>
+    <h1 id="auth-title">Đăng nhập Legal AI</h1>
+    <label class="form-field" id="name-field" hidden>
+      Tên hiển thị
+      <input name="displayName" maxlength="120" autocomplete="name" />
+    </label>
+    <label class="form-field">
+      Email
+      <input name="email" type="email" required autocomplete="email" />
+    </label>
+    <label class="form-field">
+      Mật khẩu
+      <input
+        name="password"
+        type="password"
+        minlength="8"
+        maxlength="72"
+        required
+        autocomplete="current-password"
+      />
+    </label>
+    <label class="form-field" id="confirm-field" hidden>
+      Xác nhận mật khẩu
+      <input
+        name="confirmation"
+        type="password"
+        minlength="8"
+        maxlength="72"
+        autocomplete="new-password"
+      />
+    </label>
+    <p id="auth-error" class="error" role="alert"></p>
+    <button id="auth-submit" class="primary-button" type="submit">
+      Đăng nhập
+    </button>
+    <div id="google-button"></div>
+    <button id="auth-switch" class="text-button" type="button">
+      Chưa có tài khoản? Đăng ký
+    </button>
+    <button id="guest-back" class="text-button" type="button">
+      Quay lại trải nghiệm
+    </button>
+  </form>
+</section>

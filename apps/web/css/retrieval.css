@@ -1,0 +1,129 @@
+/* Chọn kho, mốc thời gian và nhà cung cấp AI */
+.scope-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
+.scope-bar .form-field {
+  margin-top: 0;
+  min-width: 140px;
+  width: auto;
+}
+#kb-scope {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px 8px;
+  margin: 0;
+  flex: 1 1 280px;
+  font-size: 12px;
+}
+#kb-scope legend {
+  color: var(--muted);
+  font-size: 11px;
+  padding: 0 6px;
+}
+.scope-option {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin-right: 16px;
+}
+.kb-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.kb-bar select {
+  padding: 9px;
+  border: 1px solid #d6ddcd;
+  border-radius: 6px;
+  background: white;
+  min-width: 220px;
+}
+
+/* Câu trả lời, trích dẫn và nguồn */
+.answer-message {
+  margin: 16px 50px 16px 0;
+  background: white;
+  border: 1px solid var(--line);
+  padding: 14px 17px;
+  border-radius: 12px 12px 12px 3px;
+  overflow-wrap: anywhere;
+}
+.answer-message > span {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--olive);
+}
+.answer-head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 6px 0;
+}
+.answer-head small {
+  color: var(--muted);
+}
+.answer-text p {
+  line-height: 1.8;
+  margin-top: 6px;
+}
+.cite {
+  color: var(--olive);
+  font-weight: 600;
+  padding: 0 2px;
+  text-decoration: underline;
+}
+.answer-block {
+  margin-top: 12px;
+  font-size: 13px;
+}
+.answer-block ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.citation-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.citation-row small {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.limit-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.limit-chips span {
+  background: #f6eddc;
+  color: #876c35;
+  font-size: 11px;
+  border-radius: 20px;
+  padding: 3px 9px;
+}
+.evidence-text {
+  margin: 14px 0;
+  padding: 12px 16px;
+  border-left: 3px solid var(--olive);
+  background: #f1f4ec;
+  white-space: pre-wrap;
+  max-height: 45dvh;
+  overflow-y: auto;
+  line-height: 1.8;
+}
+.problem {
+  background: #f6e1de;
+  color: #8f3b32;
+}

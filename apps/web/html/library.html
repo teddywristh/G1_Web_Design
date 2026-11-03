@@ -1,0 +1,65 @@
+<section id="library-view" class="view" aria-labelledby="library-title" hidden>
+  <div class="section-heading page-heading">
+    <div>
+      <h1 id="library-title">Thư viện tài liệu</h1>
+      <p id="library-note" class="subtitle">
+        Tìm kiếm, lưu và đọc tài liệu PDF.
+      </p>
+    </div>
+    <button class="primary-button" id="open-upload">+ Thêm tài liệu</button>
+  </div>
+  <div class="kb-bar">
+    <label class="sr-only" for="kb-select">Chọn kho</label>
+    <select id="kb-select"></select>
+    <button id="new-kb" class="secondary-button">+ Kho riêng</button>
+    <button id="publish-kb" class="secondary-button" hidden>
+      Xuất bản bản dựng mới
+    </button>
+  </div>
+  <div class="filters">
+    <div id="category-tabs" class="tabs" aria-label="Lọc loại tài liệu">
+      <button data-category="Tất cả" class="selected" aria-pressed="true">
+        Tất cả
+      </button>
+      <button data-category="Bộ luật" aria-pressed="false">Bộ luật</button>
+      <button data-category="Luật" aria-pressed="false">Luật</button>
+      <button data-category="Nghị định" aria-pressed="false">Nghị định</button>
+      <button data-category="Thông tư" aria-pressed="false">Thông tư</button>
+    </div>
+    <div class="search-sort">
+      <label class="sr-only" for="search">Tìm tài liệu</label>
+      <input
+        id="search"
+        type="search"
+        placeholder="Tìm tên, số hiệu, cơ quan…"
+      />
+      <label class="sr-only" for="sort">Sắp xếp tài liệu</label>
+      <select id="sort">
+        <option value="newest">Mới nhất</option>
+        <option value="name">Tên A → Z</option>
+      </select>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>TÊN TÀI LIỆU</th>
+          <th>LOẠI</th>
+          <th>NGÀY THÊM</th>
+          <th>TRẠNG THÁI</th>
+          <th><span class="sr-only">Thao tác</span></th>
+        </tr>
+      </thead>
+      <tbody id="document-rows"></tbody>
+    </table>
+    <div id="empty-library" class="empty-state" hidden>
+      <h3>Chưa tìm thấy tài liệu</h3>
+      <p>Thử từ khóa khác hoặc thêm PDF của bạn.</p>
+    </div>
+  </div>
+  <div class="table-footer">
+    <span id="result-count"></span>
+    <button id="load-more" class="text-button" hidden>Tải thêm</button>
+  </div>
+</section>

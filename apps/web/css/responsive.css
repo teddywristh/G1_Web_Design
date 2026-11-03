@@ -1,0 +1,134 @@
+/* Giao diện trên màn hình nhỏ */
+@media (max-width: 1050px) {
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-sort input {
+    flex: 1;
+    width: auto;
+  }
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+  .welcome h1 {
+    font-size: 28px;
+  }
+  .question-content {
+    margin-top: 45px;
+  }
+}
+@media (max-width: 700px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.2s;
+  }
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+  .main-shell {
+    margin-left: 0;
+  }
+  .menu-toggle {
+    display: block;
+  }
+  .topbar {
+    height: 60px;
+    padding: 0 17px;
+    font-size: 10px;
+  }
+  .preview-label {
+    font-size: 9px;
+  }
+  main {
+    padding: 23px 18px 0;
+  }
+  .section-heading {
+    gap: 12px;
+  }
+  .section-heading h2 {
+    font-size: 12px;
+  }
+  .section-heading .secondary-button {
+    font-size: 10px;
+    padding: 9px;
+  }
+  .page-heading {
+    flex-wrap: wrap;
+    margin-top: 0;
+  }
+  h1,
+  .welcome h1 {
+    font-size: 26px;
+  }
+  .subtitle {
+    font-size: 12px;
+  }
+  .page-footer {
+    font-size: 9px;
+    margin-top: 30px;
+  }
+  .question-workspace {
+    min-height: calc(100dvh - 177px);
+  }
+  .welcome > p:last-child {
+    font-size: 12px;
+  }
+  .question-composer {
+    padding: 14px;
+  }
+  .question-composer textarea {
+    font-size: 16px;
+  }
+  .composer-bottom > span {
+    font-size: 9px;
+  }
+  .history-bar {
+    gap: 8px;
+    font-size: 11px;
+  }
+  .history-bar select {
+    font-size: 11px;
+  }
+  .question-message {
+    margin-left: 20px;
+  }
+  .chat-title {
+    font-size: 17px;
+  }
+  .tabs {
+    gap: 3px;
+  }
+  .tabs button {
+    font-size: 11px;
+    padding: 7px 10px;
+  }
+  .search-sort input,
+  .search-sort select {
+    font-size: 11px;
+  }
+  .table-footer {
+    font-size: 9px;
+  }
+  .table-footer > span:last-child {
+    max-width: 185px;
+  }
+  dialog {
+    padding: 28px 20px;
+  }
+  dialog h2 {
+    font-size: 22px;
+  }
+  .toast {
+    width: calc(100% - 28px);
+    font-size: 11px;
+  }
+  .settings-card {
+    padding: 22px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
