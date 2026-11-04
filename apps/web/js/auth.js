@@ -34,6 +34,7 @@ function showGuest(message = "") {
   $("#app-shell").hidden = false;
   $("#user-name").textContent = "Khách trải nghiệm";
   $("#user-role").textContent = "Đăng nhập để sử dụng AI";
+  $("#admin-settings-tab").hidden = true;
   renderScope();
   renderKbSelect();
   renderChat();
@@ -70,6 +71,7 @@ async function enterSession(session) {
   $("#app-shell").hidden = false;
   $("#user-name").textContent = state.user.displayName;
   $("#user-role").textContent = isAdmin() ? "Quản trị viên" : "Người dùng";
+  $("#admin-settings-tab").hidden = !isAdmin();
   $("#account-info").textContent = `${state.user.displayName} · ${state.user.email || ""}`;
   await loadKbs();
   // Listing can wait on a ChatGPT worker restore; the picker shows its own loading state.
