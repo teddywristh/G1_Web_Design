@@ -158,6 +158,7 @@ function renderChat() {
     $("#messages").append(bubble);
   });
   renderProgress();
+  renderComposerError();
   $("#send-question").disabled = Boolean(state.pendingChat) || !$("#question").value.trim();
   renderCounts();
 }
@@ -219,6 +220,7 @@ $("#question-form").addEventListener("submit", async (event) => {
     logs: ["Đã tiếp nhận câu hỏi."],
   };
   state.pendingChat = pending;
+  state.chatError = null;
   active.messages.push({ role: "user", text: question });
   $("#question").value = "";
   fitQuestion();
@@ -227,7 +229,10 @@ $("#question-form").addEventListener("submit", async (event) => {
   renderChat();
   scrollToLatest();
   const timer = setInterval(renderProgress, 1000);
-  const isCurrent = () => state.user?.id === userId && state.pendingChat === pending && state.chats.some(chat => chat.id === chatId);
+  const isCurrent = () =>
+    state.user?.id === userId &&
+    state.pendingChat === pending &&
+    state.chats.some((chat) => chat.id === chatId);
   let reply;
   try {
     const data = await askSources(
@@ -252,6 +257,7 @@ $("#question-form").addEventListener("submit", async (event) => {
     };
   } catch (error) {
     if (!isCurrent()) return;
+    state.chatError = { userId, chatId, question, message: error.message };
     if (error.code === "chatgpt_disconnected") {
       state.chatgpt = { ...state.chatgpt, connected: false, pending: false };
       renderChatgpt();
@@ -273,6 +279,25 @@ $("#question-form").addEventListener("submit", async (event) => {
     renderChat();
     scrollToLatest();
   }
+});
+
+// Lỗi yêu cầu trong thanh nhập
+function renderComposerError() {
+  const error = state.chatError;
+  const visible = error && error.userId === state.user?.id && error.chatId === state.chatId;
+  $("#chat-error").hidden = !visible;
+  $("#chat-error-message").textContent = visible ? error.message : "";
+}
+
+// Khôi phục bản nháp để người dùng kiểm tra trước khi gửi lại
+$("#restore-question").addEventListener("click", () => {
+  const error = state.chatError;
+  if (!error || error.userId !== state.user?.id || error.chatId !== state.chatId) return;
+  $("#question").value = error.question;
+  $("#question").dispatchEvent(new Event("input"));
+  $("#question").focus();
+  state.chatError = null;
+  renderComposerError();
 });
 
 // Tiến trình chỉ hiển thị các bước mà trình duyệt thực sự biết

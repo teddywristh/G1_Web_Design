@@ -35,7 +35,7 @@
       >
         <strong id="progress-title">Đang xử lý yêu cầu</strong>
         <p id="progress-detail"></p>
-        <ol id="progress-log"></ol>
+        <ol id="progress-log" aria-label="Các bước xử lý yêu cầu"></ol>
       </div>
       <p id="assistant-status" class="assistant-status">
         Lịch sử được lưu trên thiết bị này.
@@ -48,7 +48,12 @@
     </div>
   </div>
   <div class="composer-dock">
-    <form id="question-form" class="question-composer">
+    <!-- Câu hỏi và các tùy chọn tra cứu -->
+    <form
+      id="question-form"
+      class="question-composer"
+      aria-label="Gửi câu hỏi pháp luật"
+    >
       <label class="sr-only" for="question">Nhập câu hỏi pháp luật</label>
       <textarea
         id="question"
@@ -56,15 +61,43 @@
         title="Enter để gửi · Shift + Enter để xuống dòng"
         rows="1"
         maxlength="4000"
+        aria-describedby="question-help chat-disclaimer"
         required
       ></textarea>
+      <span id="question-help" class="sr-only"
+        >Enter để gửi. Shift và Enter để xuống dòng.</span
+      >
       <div class="composer-bottom">
         <details class="query-options">
-          <summary class="composer-icon" aria-label="Tùy chọn tra cứu" title="Tùy chọn tra cứu">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg>
+          <summary
+            class="composer-icon"
+            aria-label="Tùy chọn tra cứu"
+            title="Tùy chọn tra cứu"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M9 18h6" />
+              <path d="M10 22h4" />
+              <path
+                d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"
+              />
+            </svg>
           </summary>
-          <div class="query-options-content">
-            <strong>Tùy chọn tra cứu</strong>
+          <div
+            class="query-options-content"
+            role="region"
+            aria-labelledby="query-options-title"
+          >
+            <strong id="query-options-title">Tùy chọn tra cứu</strong>
             <p id="kb-scope">Tra cứu trên tất cả kho được phép truy cập.</p>
             <label class="form-field"
               >Mốc thời gian<input id="as-of" type="date"
@@ -80,18 +113,48 @@
             id="model-button"
             class="model-chip"
             type="button"
-            aria-haspopup="true"
+            aria-haspopup="dialog"
             aria-expanded="false"
             aria-controls="model-popover"
           >
             <span id="model-label">Model</span>
-            <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+            <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true">
+              <path
+                d="M1 1l4 4 4-4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              />
+            </svg>
           </button>
-          <div id="model-popover" class="model-popover" hidden>
-            <div id="model-providers" class="model-providers" role="menu" aria-label="Nhà cung cấp"></div>
+          <div
+            id="model-popover"
+            class="model-popover"
+            role="dialog"
+            aria-labelledby="model-menu-title"
+            hidden
+          >
+            <!-- Chọn kết nối trước rồi chọn model -->
+            <div class="model-popover-heading">
+              <strong id="model-menu-title">Chọn model AI</strong>
+              <p>Chọn kết nối, sau đó tìm model bạn muốn dùng.</p>
+            </div>
+            <div
+              id="model-providers"
+              class="model-providers"
+              role="menu"
+              aria-label="Nhà cung cấp"
+            ></div>
             <div id="model-panel" hidden>
               <div class="model-panel-head">
-                <button id="model-back" type="button" class="composer-icon" aria-label="Quay lại danh sách nhà cung cấp">‹</button>
+                <button
+                  id="model-back"
+                  type="button"
+                  class="composer-icon"
+                  aria-label="Quay lại danh sách nhà cung cấp"
+                >
+                  ‹
+                </button>
                 <strong id="model-provider-name"></strong>
               </div>
               <label class="sr-only" for="model-filter">Tìm model</label>
@@ -105,8 +168,18 @@
                 autocomplete="off"
                 spellcheck="false"
                 placeholder="Tìm hoặc nhập ID model"
+                aria-describedby="model-filter-help"
               />
-              <ul id="model-options" class="model-options" role="listbox" aria-label="Model"></ul>
+              <p id="model-filter-help" class="sr-only">
+                Dùng phím lên xuống để chọn, Enter để xác nhận và Escape để
+                đóng.
+              </p>
+              <ul
+                id="model-options"
+                class="model-options"
+                role="listbox"
+                aria-label="Model"
+              ></ul>
             </div>
           </div>
         </div>
@@ -117,16 +190,39 @@
           aria-label="Gửi câu hỏi"
           disabled
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 19V5" />
+            <path d="m5 12 7-7 7 7" />
+          </svg>
         </button>
       </div>
     </form>
+    <!-- Lỗi yêu cầu và khôi phục câu hỏi -->
+    <div id="chat-error" class="composer-error" role="alert" hidden>
+      <div>
+        <strong>Chưa thể hoàn tất câu trả lời</strong>
+        <p id="chat-error-message"></p>
+      </div>
+      <button id="restore-question" class="text-button" type="button">
+        Đưa câu hỏi về ô nhập
+      </button>
+    </div>
     <label id="query-public-label" class="small-print" hidden
       ><input id="query-public-confirm" type="checkbox" />Câu hỏi không chứa dữ
       liệu cá nhân hoặc thông tin mật; tôi đồng ý với điều kiện của NVIDIA
       free.</label
     >
-    <p class="composer-note">
+    <p id="chat-disclaimer" class="composer-note">
       Câu trả lời có thể có sai sót. Hãy kiểm tra nguồn trước khi sử dụng.
     </p>
   </div>

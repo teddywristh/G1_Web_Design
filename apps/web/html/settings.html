@@ -59,7 +59,13 @@
   <article class="settings-page" id="ai-card" hidden tabindex="-1">
     <h2>Khóa API</h2>
     <ul id="connection-list" class="connection-list"></ul>
-    <form id="connection-form" class="inline-form">
+    <!-- Kết nối dùng để tải danh sách model trong khung chat -->
+    <form
+      id="connection-form"
+      class="inline-form"
+      aria-label="Lưu kết nối AI"
+      aria-describedby="connection-key-help"
+    >
       <label for="connection-provider">Nhà cung cấp</label>
       <select id="connection-provider">
         <option value="openai">OpenAI</option>
@@ -123,15 +129,14 @@
     </div>
     <p class="small-print">
       Có thể cấu hình nhiều nhà cung cấp cùng lúc. Model khả dụng của từng kết
-      nối tự hiện trong ô <strong>Model AI</strong> ở trang Hỏi đáp; mọi câu trả
-      lời chạy qua OpenCode.
+      nối hiện trong menu <strong>Model</strong> ở thanh nhập câu hỏi. Chọn nhà
+      cung cấp trước, sau đó tìm model hoặc nhập ID model tương ứng.
     </p>
-    <p class="small-print">
+    <p id="connection-key-help" class="small-print">
       Khóa được mã hóa ở máy chủ và không bao giờ hiển thị lại. Chỉ hiện trạng
       thái đã cấu hình.
       <span id="embedding-info"
-        >Embedding dùng khóa OpenAI; nếu không có khóa OpenAI, hệ thống chỉ tra
-        theo số hiệu/điều.</span
+        >Thông tin embedding được tải theo cấu hình máy chủ.</span
       >
     </p>
   </article>
