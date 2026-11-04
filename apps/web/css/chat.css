@@ -53,6 +53,54 @@
 .clarification-form .primary-button {
   justify-self: start;
 }
+.visual-search {
+  margin-top: 18px;
+}
+.visual-note {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.visual-results {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.visual-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+  background: white;
+}
+.visual-card:hover {
+  border-color: var(--olive);
+  filter: none;
+}
+.visual-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+.visual-card span,
+.visual-card small {
+  display: block;
+  padding: 7px 8px 0;
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.visual-card small {
+  padding: 2px 8px 7px;
+  color: var(--muted);
+  font-size: 10px;
+}
 .question-workspace {
   height: 100%;
   min-height: 0;

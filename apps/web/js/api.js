@@ -31,6 +31,7 @@ const ERROR_TEXT = {
   embedding_public_input_required:
     "Model miễn phí chỉ chấp nhận nội dung không có dữ liệu cá nhân hoặc thông tin mật. Hãy xác nhận trước khi tiếp tục.",
   feature_disabled: "Tính năng này đang tắt trên máy chủ.",
+  image_search_unavailable: "Không thể tải ảnh minh họa lúc này. Thử lại sau.",
   quota_exceeded: "Đã đạt giới hạn số kho riêng.",
   version_conflict: "Dữ liệu vừa thay đổi. Hãy tải lại rồi thử lại.",
   file_too_large: "PDF vượt quá giới hạn dung lượng.",

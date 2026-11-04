@@ -1,12 +1,12 @@
 import logging
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from app.core.config import get_settings
 from app.core.errors import APIError
 from app.dependencies import current_user, get_repository
 from app.schemas.rag import AskRequest, AskResponse
-from app.services import qa
+from app.services import images, qa
 from app.services.ai import OpenAIService
 from app.services.ai_connections import Credential, resolve
 from app.services.embeddings import LocalEmbedding, OpenRouterEmbedding, requires_public_input
@@ -111,3 +111,11 @@ def ask_question(
                 429, "ai_rate_limited", "The AI provider usage limit was reached"
             ) from None
         raise APIError(503, "ai_unavailable", "The AI request could not be completed") from None
+
+
+@router.get("/images")
+def image_search(q: str = Query(min_length=1, max_length=200)):
+    """Illustrative images for an answer; only scrubbed keywords reach Openverse."""
+    if not get_settings().image_search_enabled:
+        raise APIError(404, "feature_disabled", "Image search is disabled")
+    return {"images": images.search(q)}

@@ -1,3 +1,4 @@
+import { api } from "./api.js";
 import { askSources } from "./requests.js";
 import { renderHistory, removeChat } from "./history.js";
 import { closeEvidence } from "./evidence.js";
@@ -88,6 +89,57 @@ function clarificationForm(data) {
   return form;
 }
 
+// Ảnh minh họa: máy chủ tìm bằng từ khóa chung do model đề xuất, không gửi câu hỏi gốc
+function visualSearch(data) {
+  const section = element("div", "visual-search");
+  const button = element("button", "secondary-button", "Tìm ảnh minh họa");
+  button.type = "button";
+  const results = element("div", "visual-results");
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    button.textContent = "Đang tìm ảnh…";
+    results.replaceChildren();
+    try {
+      const { images } = await api.get(`/rag/images?q=${encodeURIComponent(data.image_query)}`);
+      if (!images.length) {
+        results.append(element("p", "small-print", "Chưa tìm thấy ảnh phù hợp."));
+        return;
+      }
+      images.forEach((image) => {
+        const link = document.createElement("a");
+        link.className = "visual-card";
+        link.href = image.landing_url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.referrerPolicy = "no-referrer";
+        const preview = document.createElement("img");
+        preview.src = image.thumbnail;
+        preview.alt = image.title || "Ảnh minh họa";
+        preview.loading = "lazy";
+        preview.referrerPolicy = "no-referrer";
+        const credit = [image.creator, image.license].filter(Boolean).join(" · ");
+        link.append(
+          preview,
+          element("span", "", image.title || "Xem ảnh và nguồn"),
+          element("small", "", credit || "Openverse"),
+        );
+        results.append(link);
+      });
+    } catch (error) {
+      results.append(element("p", "error", error.message || "Không thể tải ảnh minh họa lúc này."));
+    } finally {
+      button.textContent = "Tìm lại ảnh minh họa";
+      button.disabled = false;
+    }
+  });
+  section.append(
+    button,
+    element("small", "visual-note", `Từ khóa: ${data.image_query} · Ảnh từ Openverse, kiểm tra giấy phép trước khi dùng.`),
+    results,
+  );
+  return section;
+}
+
 function assistantBubble(message) {
   const bubble = element("div", "answer-message");
   bubble.append(element("span", "", "Legal AI"));
@@ -163,6 +215,7 @@ function assistantBubble(message) {
     data.source_limitations.forEach((code) => notes.append(element("span", "", limitText(code))));
     bubble.append(notes);
   }
+  if (data.status === "answered" && data.image_query) bubble.append(visualSearch(data));
   return bubble;
 }
 
@@ -358,6 +411,7 @@ function slimResponse(data, question) {
     scope_errors: data.scope_errors,
     provider: data.provider,
     credential_source: data.credential_source,
+    image_query: data.image_query,
     question,
   };
 }

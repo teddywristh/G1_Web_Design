@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     official_web_enabled: bool = False
     brave_search_api_key: SecretStr = SecretStr("")
     example_search_enabled: bool = False
+    image_search_enabled: bool = True
     official_domains: list[str] = ["vbpl.vn", "congbao.chinhphu.vn", "chinhphu.vn"]
     embedding_dimensions: int = Field(default=1536, ge=1)
     max_kbs_per_request: int = Field(default=5, ge=1)

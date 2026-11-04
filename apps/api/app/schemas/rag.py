@@ -83,4 +83,5 @@ class AskResponse(BaseModel):
     missing_facts: list[str] = []
     claim_citations: list[ClaimCitation] = []
     source_limitations: list[str] = []
+    image_query: str | None = None
     run_id: str | None = None
