@@ -20,6 +20,7 @@ export STORAGE_BACKEND=local LOCAL_STORAGE_DIR="$state/storage"
 export FIREBASE_AUTH_EMULATOR_HOST='' FIRESTORE_EMULATOR_HOST='' STORAGE_EMULATOR_HOST=''
 export BACKEND_CORS_ORIGINS='["https://legal-ai-dev-aeb51.web.app","https://legal-ai-dev-aeb51.firebaseapp.com"]'
 export AUTH_COOKIE_SECURE=true AUTH_COOKIE_SAMESITE=none EMBEDDING_PROVIDER=local
+export OCR_ENABLED=true OCR_BINARY="$root/scripts/tesseract-local.sh"
 export OPENCODE_LOCAL_ENABLED=false OPENCODE_CHATGPT_LOCAL_ENABLED=false
 export OPENCODE_CHATGPT_HOSTED_ENABLED=true OPENCODE_API_KEYS_HOSTED_ENABLED=true OPENCODE_BINARY="${OPENCODE_BINARY:-$HOME/.opencode/bin/opencode}"
 nohup python -m uvicorn app.main:app --app-dir apps/api --host 127.0.0.1 --port 8002 > "$state/api.log" 2>&1 < /dev/null &

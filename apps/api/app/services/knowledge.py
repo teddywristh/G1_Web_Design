@@ -211,6 +211,7 @@ def processing(repo, document, settings):
         "nextRunAt": job.get("nextRunAt"),
         "warnings": job.get("warnings", []),
         "embeddingCoverage": job.get("embeddingCoverage"),
+        "embeddingProgress": job.get("embeddingProgress"),
         "legalValidity": "unknown",
     }
 
@@ -238,7 +239,7 @@ def reprocess(repo, document, user, version, request_id, settings):
             request_id=request_id,
         )
         return processing(repo, document, settings)
-    if not job or job["status"] not in RETRYABLE | {"needs_ocr", "needs_review"}:
+    if not job or job["status"] not in RETRYABLE | {"needs_ocr", "needs_review", "succeeded"}:
         raise APIError(409, "not_retryable", "This document cannot be reprocessed now")
     keep_stage = job["status"] in RETRYABLE and job.get("documentVersionId")
 
@@ -250,6 +251,7 @@ def reprocess(repo, document, user, version, request_id, settings):
             "stage": current["stage"] if keep_stage else "parse",
             "failures": 0,
             "rateLimitFailures": 0,
+            "embeddingProgress": None,
             "errorCode": None,
             "nextRunAt": utcnow(),
             "leaseOwner": None,

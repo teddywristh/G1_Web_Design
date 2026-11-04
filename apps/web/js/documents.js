@@ -141,6 +141,14 @@ function renderDocuments() {
     titleCell.append(title);
     const statusCell = element("td");
     statusCell.append(statusBadge(doc));
+    const progress = doc.processing?.embeddingProgress;
+    if (progress && progress.total > 0) {
+      const bar = element("progress", "embedding-progress");
+      bar.max = progress.total;
+      bar.value = progress.completed;
+      bar.setAttribute("aria-label", `Embedding ${doc.title}: ${progress.completed} trên ${progress.total} đoạn`);
+      statusCell.append(bar, element("small", "embedding-progress-label", `Đã embedding ${progress.completed} / ${progress.total} đoạn (${Math.round(progress.completed / progress.total * 100)}%)`));
+    }
     if (processingNote(doc)) {
       statusCell.append(element("small", "processing-detail", processingNote(doc)));
     }
@@ -210,7 +218,7 @@ async function openDocument(id) {
   $("#detail-bookmark").textContent = state.saved.has(id) ? "Bỏ đánh dấu" : "Đánh dấu";
   $("#delete-document").hidden = doc.shared && !isAdmin();
   const status = doc.processing;
-  $("#retry-document").hidden = !(status && (status.retryable || status.status === "needs_ocr"));
+  $("#retry-document").hidden = !(status && (status.retryable || status.status === "needs_ocr" || status.status === "ready"));
   $("#pdf-viewer").hidden = true;
   $("#pdf-empty").hidden = false;
   $("#pdf-empty-title").textContent = "Đang tải PDF…";

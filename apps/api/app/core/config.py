@@ -91,7 +91,10 @@ class Settings(BaseSettings):
     evidence_run_retention_days: int = Field(default=30, ge=1)
     max_pdf_pages: int = Field(default=300, ge=1)
     max_provision_chars: int = Field(default=2000, ge=200)
-    ocr_enabled: bool = False
+    ocr_enabled: bool = True
+    ocr_binary: str = "tesseract"
+    ocr_tessdata_dir: str = ""
+    ocr_languages: str = "vie+eng"
     job_lease_seconds: int = Field(default=300, ge=30)
     job_max_failures: int = Field(default=5, ge=1)
     job_backoff_seconds: int = Field(default=30, ge=1)

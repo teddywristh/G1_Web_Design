@@ -37,7 +37,7 @@ const PROCESSING_TEXT = {
 };
 const ACTION_TEXT = {
   configure_ai_key: "Thêm khóa OpenAI trong Thiết lập rồi chọn Xử lý lại.",
-  upload_text_pdf: "Tải lên bản PDF có lớp chữ (chưa hỗ trợ OCR).",
+  upload_text_pdf: "Không thể đọc chữ trong PDF. Kiểm tra OCR tiếng Việt rồi chọn Xử lý lại.",
   await_admin_review: "Quản trị viên cần xuất bản bản dựng mới.",
   upload_public_pdf:
     "Hãy tải lại tài liệu công khai và xác nhận tài liệu không có dữ liệu cá nhân hoặc thông tin mật.",

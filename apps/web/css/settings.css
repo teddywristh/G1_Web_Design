@@ -71,3 +71,6 @@
     flex: 1 1 140px;
   }
 }
+
+.embedding-progress { display: block; width: 180px; max-width: 100%; margin-top: 8px; accent-color: #397356; }
+.embedding-progress-label { display: block; margin-top: 3px; color: #42544b; }

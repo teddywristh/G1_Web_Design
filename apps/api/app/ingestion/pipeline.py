@@ -13,14 +13,15 @@ from app.search.base import profile_from
 from app.services.documents import normalize
 from app.services.users import check_version
 
-PARSER_VERSION = "p1"
+PARSER_VERSION = "p2"
+JOB_PARSER_VERSION = "p1"
 CHUNKER_VERSION = "c1"
 SHARED_KB = "shared"
 logger = logging.getLogger("legal_api")
 
 
 def job_id(kb_id, source_id, content_hash, profile_id):
-    raw = "|".join([kb_id, source_id, content_hash, PARSER_VERSION, CHUNKER_VERSION, profile_id])
+    raw = "|".join([kb_id, source_id, content_hash, JOB_PARSER_VERSION, CHUNKER_VERSION, profile_id])
     return hashlib.sha256(raw.encode()).hexdigest()[:40]
 
 
@@ -121,7 +122,7 @@ def kept_review(old):
     return {key: old[key] for key in REVIEW_FIELDS if key in old} if old else {}
 
 
-def parse_stage(repo, bucket, settings, job):
+def parse_stage(repo, bucket, settings, job, heartbeat=None):
     source = usable_source(repo, job)
     shared = job["kbId"] == SHARED_KB
     with NamedTemporaryFile(suffix=".pdf") as handle:
@@ -130,8 +131,8 @@ def parse_stage(repo, bucket, settings, job):
         with open(handle.name, "rb") as saved:
             if hashlib.sha256(saved.read()).hexdigest() != job["sourceFence"]["sha256"]:
                 raise validation.Cancelled()
-        pages = parser.extract_pages(handle.name, settings.max_pdf_pages)
-    quality = validation.check_pages(pages, settings.ocr_enabled)
+        pages = parser.extract_pages(handle.name, settings.max_pdf_pages, settings, heartbeat)
+    quality = validation.check_pages(pages, False)
     provisions = segmenter.segment(pages, settings.max_provision_chars)
     warnings = validation.check_structure(provisions)
     version_id = f"{job['sourceId']}-{job['sourceFence']['sha256'][:16]}-{PARSER_VERSION}"
@@ -204,30 +205,27 @@ def staged_generation(version_id):
     return "stage-" + version_id
 
 
-def embed_stage(repo, settings, job, embedder, heartbeat=None):
+def embed_stage(repo, settings, job, embedder, heartbeat=None, progress=None):
     usable_source(repo, job)
     profile = profile_from(settings)
     if job["embeddingProfileId"] != profile.id:
         raise validation.PermanentError("embedding_profile_changed")
     version_id = job["documentVersionId"]
-    provisions = repo.query(
-        "provision_versions", [("documentVersionId", "==", version_id)], limit=20000
-    )
+    provisions = list(repo.scan(
+        "provision_versions", filters=[("documentVersionId", "==", version_id)]
+    ))
     provisions.sort(key=lambda row: row["id"])
     total = len(provisions)
-    max_chunks = settings.embedding_max_chunks
-    if max_chunks and total > max_chunks:
-        first = (total - max_chunks) // 2
-        provisions = provisions[first : first + max_chunks]
-    else:
-        first = 0
-    scope = hashlib.sha256(f"{version_id}|{profile.id}|{max_chunks}".encode()).hexdigest()[:40]
+    scope = hashlib.sha256(f"{version_id}|{profile.id}|full".encode()).hexdigest()[:40]
     stage = "stage-" + scope
     existing = {
         row["provisionVersionId"]
-        for row in repo.query("search_chunks", [("indexGeneration", "==", stage)], limit=20000)
+        for row in repo.scan("search_chunks", filters=[("indexGeneration", "==", stage)])
     }
     indexed = len(provisions)
+    completed = sum(row["id"] in existing for row in provisions)
+    if progress:
+        progress(completed, indexed)
     batch_size = (
         1
         if settings.embedding_provider == "openrouter"
@@ -263,6 +261,9 @@ def embed_stage(repo, settings, job, embedder, heartbeat=None):
         if heartbeat:
             heartbeat()
         repo.put_many("search_chunks", chunks)
+        completed += len(batch)
+        if progress:
+            progress(completed, indexed)
         logger.info(
             json.dumps(
                 {
@@ -279,7 +280,7 @@ def embed_stage(repo, settings, job, embedder, heartbeat=None):
         "embeddingCoverage": {
             "total": total,
             "indexed": indexed,
-            "start": first + 1 if total else 0,
+            "start": 1 if total else 0,
         },
     }
 
@@ -315,11 +316,10 @@ def publish_stage(repo, bucket, settings, job):
     latest = kb.get("latestGeneration")
     carried = []
     if latest:
-        carried = repo.query(
+        carried = list(repo.scan(
             "search_chunks",
-            [("kbId", "==", kb["id"]), ("indexGeneration", "==", latest)],
-            limit=20000,
-        )
+            filters=[("kbId", "==", kb["id"]), ("indexGeneration", "==", latest)],
+        ))
     alive = alive_documents(repo, carried)
     if any(
         alive[chunk["documentId"]]
@@ -335,7 +335,7 @@ def publish_stage(repo, bucket, settings, job):
             rows[f"{new_generation}-{chunk['provisionVersionId']}"] = regenerate(
                 chunk, new_generation
             )
-    staged = repo.query("search_chunks", [("indexGeneration", "==", stage)], limit=20000)
+    staged = list(repo.scan("search_chunks", filters=[("indexGeneration", "==", stage)]))
     for chunk in staged:
         rows[f"{new_generation}-{chunk['provisionVersionId']}"] = regenerate(chunk, new_generation)
     if not staged:
