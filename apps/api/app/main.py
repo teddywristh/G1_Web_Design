@@ -61,6 +61,17 @@ def create_app():
 
     @api.exception_handler(APIError)
     async def domain_error(request, exc):
+        if exc.status >= 500:
+            logger.warning(
+                json.dumps(
+                    {
+                        "event": "api_error",
+                        "requestId": getattr(request.state, "request_id", ""),
+                        "code": exc.code,
+                        "status": exc.status,
+                    }
+                )
+            )
         return error(request, exc.status, exc.code, exc.message)
 
     @api.exception_handler(RequestValidationError)

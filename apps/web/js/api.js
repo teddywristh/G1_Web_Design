@@ -21,6 +21,7 @@ const ERROR_TEXT = {
   ai_authentication_failed: "Nhà cung cấp AI từ chối khóa đã chọn.",
   ai_rate_limited: "Nhà cung cấp AI đang giới hạn lượt dùng. Thử lại sau.",
   ai_unavailable: "Dịch vụ AI tạm thời không phản hồi.",
+  ai_incomplete: "Model chưa hoàn thành câu trả lời. Hãy thử lại hoặc chọn model khác.",
   opencode_unavailable: "OpenCode chưa được bật hoặc chưa sẵn sàng trong môi trường này.",
   oauth_exists: "Đã có phiên ChatGPT. Hãy ngắt kết nối trước khi kết nối lại.",
   invalid_model: "Chọn model cho nhà cung cấp này.",
@@ -64,11 +65,13 @@ async function request(method, path, { json, body, headers = {}, version, raw } 
   let response;
   try {
     response = await fetch(API + path, options);
-  } catch {
+  } catch (error) {
     throw new ApiError(
       0,
       "network",
-      "Không kết nối được máy chủ. Kiểm tra backend và địa chỉ API.",
+      error?.name === "TimeoutError"
+        ? "Yêu cầu đã quá thời gian chờ. Hãy thử lại hoặc chọn model khác."
+        : "Không kết nối được máy chủ hoặc gateway không phản hồi. Kiểm tra backend và tunnel.",
     );
   }
   if (!response.ok) {
@@ -79,7 +82,10 @@ async function request(method, path, { json, body, headers = {}, version, raw } 
       /* Response was not JSON. */
     }
     const code = info.code || "http_error";
-    throw new ApiError(response.status, code, ERROR_TEXT[code] || info.message || "Có lỗi xảy ra.");
+    const gatewayError = [502, 503, 504].includes(response.status)
+      ? `Máy chủ hoặc gateway tạm thời không phản hồi (HTTP ${response.status}). Hãy thử lại.`
+      : "Có lỗi xảy ra.";
+    throw new ApiError(response.status, code, ERROR_TEXT[code] || info.message || gatewayError);
   }
   if (raw) return response;
   if (response.status === 204) return null;
