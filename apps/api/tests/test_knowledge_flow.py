@@ -387,7 +387,16 @@ def test_embedding_indexes_all_chunks_even_with_legacy_limit(env, tmp_path, monk
         ],
     )
     assert sorted(int(row["searchText"].split("Điều ")[1].split()[0]) for row in rows) == [
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
     ]
 
 
@@ -781,11 +790,11 @@ def test_reprocess_after_profile_change_preserves_pdf_and_queues_new_job(env, tm
 def test_ready_document_can_be_reprocessed_with_new_parser(env, tmp_path):
     repo, bucket = env
     _, doc = upload(repo, bucket, tmp_path)
-    previous = worker.run_once(repo, bucket, SETTINGS, 'w1')
-    assert previous['status'] == 'succeeded'
-    status = knowledge.reprocess(repo, doc, user(repo, 'alice'), doc['version'], 'retry', SETTINGS)
-    assert status['status'] == 'queued'
-    assert repo.get('processing_jobs', previous['id'])['stage'] == 'parse'
-    again = worker.run_once(repo, bucket, SETTINGS, 'w2')
-    assert again['status'] == 'succeeded'
-    assert again['embeddingProgress']['completed'] == again['embeddingProgress']['total']
+    previous = worker.run_once(repo, bucket, SETTINGS, "w1")
+    assert previous["status"] == "succeeded"
+    status = knowledge.reprocess(repo, doc, user(repo, "alice"), doc["version"], "retry", SETTINGS)
+    assert status["status"] == "queued"
+    assert repo.get("processing_jobs", previous["id"])["stage"] == "parse"
+    again = worker.run_once(repo, bucket, SETTINGS, "w2")
+    assert again["status"] == "succeeded"
+    assert again["embeddingProgress"]["completed"] == again["embeddingProgress"]["total"]

@@ -108,7 +108,10 @@ def make_embedder(repo, settings, job):
 def run_stage(repo, bucket, settings, job, worker_id):
     if job["stage"] == "parse":
         return pipeline.parse_stage(
-            repo, bucket, settings, job,
+            repo,
+            bucket,
+            settings,
+            job,
             heartbeat=lambda: heartbeat(repo, settings, job, worker_id),
         )
     if job["stage"] == "embed":
@@ -119,7 +122,10 @@ def run_stage(repo, bucket, settings, job, worker_id):
             make_embedder(repo, settings, job),
             heartbeat=lambda: heartbeat(repo, settings, job, worker_id),
             progress=lambda completed, total: commit(
-                repo, settings, job, worker_id,
+                repo,
+                settings,
+                job,
+                worker_id,
                 {"embeddingProgress": {"completed": completed, "total": total}},
             ),
         )

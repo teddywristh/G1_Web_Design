@@ -21,7 +21,9 @@ logger = logging.getLogger("legal_api")
 
 
 def job_id(kb_id, source_id, content_hash, profile_id):
-    raw = "|".join([kb_id, source_id, content_hash, JOB_PARSER_VERSION, CHUNKER_VERSION, profile_id])
+    raw = "|".join(
+        [kb_id, source_id, content_hash, JOB_PARSER_VERSION, CHUNKER_VERSION, profile_id]
+    )
     return hashlib.sha256(raw.encode()).hexdigest()[:40]
 
 
@@ -211,9 +213,9 @@ def embed_stage(repo, settings, job, embedder, heartbeat=None, progress=None):
     if job["embeddingProfileId"] != profile.id:
         raise validation.PermanentError("embedding_profile_changed")
     version_id = job["documentVersionId"]
-    provisions = list(repo.scan(
-        "provision_versions", filters=[("documentVersionId", "==", version_id)]
-    ))
+    provisions = list(
+        repo.scan("provision_versions", filters=[("documentVersionId", "==", version_id)])
+    )
     provisions.sort(key=lambda row: row["id"])
     total = len(provisions)
     scope = hashlib.sha256(f"{version_id}|{profile.id}|full".encode()).hexdigest()[:40]
@@ -316,10 +318,12 @@ def publish_stage(repo, bucket, settings, job):
     latest = kb.get("latestGeneration")
     carried = []
     if latest:
-        carried = list(repo.scan(
-            "search_chunks",
-            filters=[("kbId", "==", kb["id"]), ("indexGeneration", "==", latest)],
-        ))
+        carried = list(
+            repo.scan(
+                "search_chunks",
+                filters=[("kbId", "==", kb["id"]), ("indexGeneration", "==", latest)],
+            )
+        )
     alive = alive_documents(repo, carried)
     if any(
         alive[chunk["documentId"]]

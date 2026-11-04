@@ -38,11 +38,30 @@ def _run(command, heartbeat=None, env=None):
 def ocr_page(path, number, settings, heartbeat=None):
     with tempfile.TemporaryDirectory(prefix="legal-ocr-") as directory:
         target = str(Path(directory) / "page")
-        _run(["pdftoppm", "-f", str(number), "-l", str(number), "-singlefile", "-r", "200", "-png", path, target], heartbeat)
+        _run(
+            [
+                "pdftoppm",
+                "-f",
+                str(number),
+                "-l",
+                str(number),
+                "-singlefile",
+                "-r",
+                "200",
+                "-png",
+                path,
+                target,
+            ],
+            heartbeat,
+        )
         env = os.environ.copy()
         if settings.ocr_tessdata_dir:
             env["TESSDATA_PREFIX"] = settings.ocr_tessdata_dir
-        output = _run([settings.ocr_binary, target + ".png", "stdout", "-l", settings.ocr_languages], heartbeat, env)
+        output = _run(
+            [settings.ocr_binary, target + ".png", "stdout", "-l", settings.ocr_languages],
+            heartbeat,
+            env,
+        )
         return output.decode("utf-8", errors="replace")
 
 
@@ -61,8 +80,13 @@ def extract_pages(path, max_pages, settings=None, heartbeat=None):
     normalized = [" ".join(text.split()) for text in pages]
     counts = Counter(normalized)
     candidates = [
-        index for index, text in enumerate(normalized)
-        if images[index] and (len(text) < 20 or (len(text) < 120 and counts[text] >= 3 and counts[text] > len(pages) * 0.5))
+        index
+        for index, text in enumerate(normalized)
+        if images[index]
+        and (
+            len(text) < 20
+            or (len(text) < 120 and counts[text] >= 3 and counts[text] > len(pages) * 0.5)
+        )
     ]
     if candidates and settings and settings.ocr_enabled:
         for index in candidates:
