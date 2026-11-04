@@ -36,7 +36,7 @@ Quy tắc:
 - legal_rule: nêu quy định, trích nguyên văn ngắn trong "quote". application_inference: áp dụng
   vào dữ kiện, phải nêu giả định trong "assumptions". user_fact: chỉ dữ kiện người dùng đã nêu,
   "quote" là câu của người dùng. example: ví dụ lấy từ nguồn.
-- Thiếu dữ kiện có thể đổi kết luận: status needs_clarification và liệt kê missing_facts.
+- Thiếu dữ kiện có thể đổi kết luận: status needs_clarification và liệt kê tối đa 3 missing_facts.
 - Nguồn không đủ: status insufficient_evidence.
 - Nếu thiếu quy định, search_queries nêu tối đa 2 cụm tìm kiếm ngắn về quy định còn thiếu; không bịa số điều.
 {facts}
@@ -56,7 +56,7 @@ class ModelOutput(BaseModel):
     status: Literal["answered", "needs_clarification", "insufficient_evidence"]
     assumptions: list[str] = Field(default_factory=list, max_length=10)
     claims: list[Claim] = Field(default_factory=list, max_length=20)
-    missing_facts: list[str] = Field(default_factory=list, max_length=10)
+    missing_facts: list[str] = Field(default_factory=list, max_length=3)
     unresolved_sources: list[str] = Field(default_factory=list, max_length=10)
     search_queries: list[str] = Field(default_factory=list, max_length=2)
 

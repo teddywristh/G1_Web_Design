@@ -63,6 +63,81 @@ function listBlock(title, items) {
   return block;
 }
 
+function clarificationForm(data) {
+  const form = element("form", "clarification-form");
+  form.append(
+    element("strong", "", "Bổ sung thông tin để câu trả lời chính xác hơn"),
+    element("p", "", "Bạn có thể trả lời tối đa 3 câu hỏi dưới đây. Câu hỏi gốc sẽ được giữ nguyên."),
+  );
+  data.missing_facts.slice(0, 3).forEach((question, index) => {
+    const label = element("label", "form-field");
+    label.append(
+      element("span", "", `${index + 1}. ${question}`),
+    );
+    const input = document.createElement("textarea");
+    input.name = `clarification-${index}`;
+    input.rows = 2;
+    input.maxLength = 1000;
+    input.required = true;
+    input.placeholder = "Nhập thông tin bổ sung…";
+    label.append(input);
+    form.append(label);
+  });
+  const submit = element("button", "primary-button", "Tiếp tục với thông tin này");
+  submit.type = "submit";
+  form.append(submit);
+  return form;
+}
+
+function visualSearch(data) {
+  const section = element("div", "visual-search");
+  const button = element("button", "secondary-button", "Tìm ảnh minh họa");
+  button.type = "button";
+  const results = element("div", "visual-results");
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    button.textContent = "Đang tìm ảnh…";
+    results.replaceChildren();
+    try {
+      const query = encodeURIComponent((data.question || "").slice(0, 180));
+      const response = await fetch(
+        `https://api.openverse.org/v1/images/?q=${query}&page_size=4`,
+        { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(15000) },
+      );
+      if (!response.ok) throw new Error("image_search_failed");
+      const payload = await response.json();
+      const images = (payload.results || []).filter((item) => item.thumbnail || item.url).slice(0, 4);
+      if (!images.length) {
+        results.append(element("p", "small-print", "Chưa tìm thấy ảnh phù hợp."));
+        return;
+      }
+      images.forEach((image) => {
+        const link = document.createElement("a");
+        link.className = "visual-card";
+        link.href = image.foreign_landing_url || image.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        const preview = document.createElement("img");
+        preview.src = image.thumbnail || image.url;
+        preview.alt = image.title || "Ảnh minh họa";
+        preview.loading = "lazy";
+        link.append(
+          preview,
+          element("span", "", image.title || "Xem ảnh và nguồn"),
+        );
+        results.append(link);
+      });
+    } catch {
+      results.append(element("p", "error", "Không thể tải ảnh minh họa lúc này."));
+    } finally {
+      button.textContent = "Tìm lại ảnh minh họa";
+      button.disabled = false;
+    }
+  });
+  section.append(button, results);
+  return section;
+}
+
 function assistantBubble(message) {
   const bubble = element("div", "answer-message");
   bubble.append(element("span", "", "Legal AI"));
@@ -101,7 +176,10 @@ function assistantBubble(message) {
     activity.append(list);
     bubble.append(activity);
   }
-  if (data.missing_facts?.length) bubble.append(listBlock("Cần bổ sung", data.missing_facts));
+  if (data.missing_facts?.length) {
+    bubble.append(listBlock("Cần bổ sung", data.missing_facts.slice(0, 3)));
+    if (data.status === "needs_clarification") bubble.append(clarificationForm(data));
+  }
   if (data.assumptions?.length) bubble.append(listBlock("Giả định", data.assumptions));
   if (data.citations?.length) {
     const block = element("details", "answer-sources");
@@ -135,6 +213,7 @@ function assistantBubble(message) {
     data.source_limitations.forEach((code) => notes.append(element("span", "", limitText(code))));
     bubble.append(notes);
   }
+  if (data.status === "answered" && data.question) bubble.append(visualSearch(data));
   return bubble;
 }
 
@@ -245,7 +324,7 @@ $("#question-form").addEventListener("submit", async (event) => {
       role: "assistant",
       text: data.answer,
       data: {
-        ...slimResponse(data),
+        ...slimResponse(data, question),
         activity: [...pending.logs],
         duration: Math.round((Date.now() - pending.startedAt) / 1000),
       },
@@ -293,7 +372,7 @@ function scrollToLatest() {
 }
 
 // Chỉ lưu dữ liệu cần để mở lại hội thoại
-function slimResponse(data) {
+function slimResponse(data, question) {
   return {
     status: data.status,
     answer: data.answer,
@@ -305,8 +384,33 @@ function slimResponse(data) {
     scope_errors: data.scope_errors,
     provider: data.provider,
     credential_source: data.credential_source,
+    question,
   };
 }
+
+$("#messages").addEventListener("submit", (event) => {
+  const form = event.target.closest(".clarification-form");
+  if (!form) return;
+  event.preventDefault();
+  const assistantMessage = activeChat()?.messages
+    .slice()
+    .reverse()
+    .find((message) => message.role === "assistant" && message.data?.status === "needs_clarification");
+  const originalQuestion = assistantMessage?.data?.question;
+  if (!originalQuestion) {
+    notify("Không tìm thấy câu hỏi gốc để tiếp tục.");
+    return;
+  }
+  const answers = [...form.querySelectorAll("textarea")]
+    .map((input) => input.value.trim())
+    .filter(Boolean);
+  if (!answers.length) return;
+  $("#question").value =
+    `${originalQuestion}\n\nThông tin bổ sung:\n${answers.map((answer, index) => `${index + 1}. ${answer}`).join("\n")}`;
+  fitQuestion();
+  form.querySelector("button[type=submit]").disabled = true;
+  $("#question-form").requestSubmit();
+});
 
 // Grow the composer with its text, up to the CSS max-height.
 function fitQuestion() {
