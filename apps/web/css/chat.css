@@ -21,6 +21,38 @@
   max-height: 180px;
   overflow-y: auto;
 }
+.clarification-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f7f8f4;
+}
+.clarification-form > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.clarification-form .form-field {
+  margin: 0;
+}
+.clarification-form .form-field span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.clarification-form textarea {
+  min-height: 54px;
+  resize: vertical;
+  font-size: 13px;
+}
+.clarification-form .primary-button {
+  justify-self: start;
+}
 .question-workspace {
   height: 100%;
   min-height: 0;
