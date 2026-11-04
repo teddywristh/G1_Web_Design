@@ -1,13 +1,23 @@
-import os
 import subprocess
 import tempfile
 import time
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 from pathlib import Path
 
+import httpx
 import pdfplumber
 
+from app.core.errors import APIError
 from app.ingestion.validation import NeedsOCR, PermanentError
+
+VIETNAMESE_MARKS = frozenset("àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ")
+
+
+def accent_ratio(text):
+    letters = [c for c in text.lower() if c.isalpha()]
+    return sum(c in VIETNAMESE_MARKS for c in letters) / len(letters) if letters else 0.0
 
 
 def _run(command, heartbeat=None, env=None):
@@ -54,29 +64,71 @@ def ocr_page(path, number, settings, heartbeat=None):
             ],
             heartbeat,
         )
-        env = os.environ.copy()
-        if settings.ocr_tessdata_dir:
-            env["TESSDATA_PREFIX"] = settings.ocr_tessdata_dir
-        output = _run(
-            [settings.ocr_binary, target + ".png", "stdout", "-l", settings.ocr_languages],
-            heartbeat,
-            env,
-        )
-        return output.decode("utf-8", errors="replace")
+
+        def request_ocr():
+            try:
+                with open(target + ".png", "rb") as image:
+                    response = httpx.post(
+                        settings.ocr_service_url.rstrip("/") + "/v1/ocr",
+                        content=image.read(),
+                        headers={"Content-Type": "image/png"},
+                        timeout=settings.ocr_timeout_seconds,
+                        trust_env=False,
+                    )
+                if response.status_code == 429:
+                    raise APIError(503, "ocr_unavailable", "OCR service busy")
+                response.raise_for_status()
+                text = response.json()["text"]
+                if not isinstance(text, str):
+                    raise ValueError("invalid OCR response")
+                return text
+            except APIError:
+                raise
+            except (httpx.HTTPError, ValueError, KeyError, TypeError):
+                raise APIError(503, "ocr_unavailable", "OCR service unavailable") from None
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(request_ocr)
+            while True:
+                try:
+                    paddle_text = future.result(timeout=10)
+                    break
+                except FutureTimeout:
+                    if heartbeat:
+                        heartbeat()
+        if len(paddle_text) >= 150 and accent_ratio(paddle_text) < 0.18:
+            try:
+                fallback = _run(
+                    [settings.ocr_fallback_binary, target + ".png", "stdout", "-l", "vie+eng"],
+                    heartbeat,
+                ).decode("utf-8", errors="replace")
+                if accent_ratio(fallback) > max(0.18, accent_ratio(paddle_text) * 1.3):
+                    return fallback
+            except NeedsOCR:
+                pass
+        return paddle_text
 
 
 def extract_pages(path, max_pages, settings=None, heartbeat=None):
     """Extract text and OCR image pages with absent or repeated watermark-only text."""
     try:
-        with pdfplumber.open(path) as pdf:
-            if len(pdf.pages) > max_pages:
-                raise PermanentError("too_many_pages")
-            pages = [page.extract_text() or "" for page in pdf.pages]
-            images = [bool(page.images) for page in pdf.pages]
-    except PermanentError:
-        raise
+        pdf = pdfplumber.open(path)
     except Exception:
         raise PermanentError("unsupported_pdf") from None
+    try:
+        if len(pdf.pages) > max_pages:
+            raise PermanentError("too_many_pages")
+        pages, images = [], []
+        for page in pdf.pages:
+            if heartbeat:
+                heartbeat()
+            try:
+                pages.append(page.extract_text() or "")
+                images.append(bool(page.images))
+            except Exception:
+                raise PermanentError("unsupported_pdf") from None
+    finally:
+        pdf.close()
     normalized = [" ".join(text.split()) for text in pages]
     counts = Counter(normalized)
     candidates = [
@@ -85,6 +137,11 @@ def extract_pages(path, max_pages, settings=None, heartbeat=None):
         if images[index]
         and (
             len(text) < 20
+            or (
+                len(text) < 120
+                and sum(len(word) <= 2 for word in text.split()) >= 6
+                and sum(len(word) <= 2 for word in text.split()) / len(text.split()) >= 0.7
+            )
             or (len(text) < 120 and counts[text] >= 3 and counts[text] > len(pages) * 0.5)
         )
     ]

@@ -13,7 +13,7 @@ from app.search.base import profile_from
 from app.services.documents import normalize
 from app.services.users import check_version
 
-PARSER_VERSION = "p2"
+PARSER_VERSION = "p3"
 JOB_PARSER_VERSION = "p1"
 CHUNKER_VERSION = "c1"
 SHARED_KB = "shared"

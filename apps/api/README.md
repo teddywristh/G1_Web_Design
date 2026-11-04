@@ -53,10 +53,9 @@ cùng tài khoản không nằm trong bộ đếm này, vì vậy OpenRouter v�
 Khi đó worker lùi lịch và không tính vào giới hạn số lần lỗi thông thường.
 
 Mỗi tài liệu được embedding toàn bộ các đoạn. Tiến độ xuất hiện trong thư viện; khi
-job gián đoạn, các đoạn đã lưu được dùng lại. Với PDF scan, worker OCR cục bộ bằng
-Tesseract (ngôn ngữ `vie+eng`) và `pdftoppm`; cài các gói `tesseract-ocr`,
-`tesseract-ocr-vie`, `tesseract-ocr-eng`, `poppler-utils`. Biến `OCR_BINARY`,
-`OCR_TESSDATA_DIR`, `OCR_LANGUAGES` cho phép cấu hình đường dẫn và ngôn ngữ.
+job gián đoạn, các đoạn đã lưu được dùng lại. Với PDF scan, worker chuyển từng trang sang dịch vụ PaddleOCR cục bộ (port 8011),
+còn trang có lớp chữ đáng tin cậy được đọc trực tiếp. Dịch vụ cần `poppler-utils`,
+GPU CUDA và model PaddleOCR tiếng Việt; Tesseract `vie+eng` là dự phòng chất lượng khi Paddle nhận mất dấu. Xem `apps/ocr/README.md`.
 Chọn Xử lý lại trên tài liệu đã tải để tạo lại chỉ mục sau khi bật OCR.
 
 Health: `/health`; dependency readiness: `/ready`; Swagger: `/docs`. File `.env` luôn đọc theo `apps/api/.env`, không phụ thuộc cwd. Env process có ưu tiên cao hơn file. Demo project bắt buộc đủ ba emulator. Không dùng cấu hình production cho phát triển local.

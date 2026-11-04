@@ -106,28 +106,54 @@ def make_embedder(repo, settings, job):
 
 
 def run_stage(repo, bucket, settings, job, worker_id):
+    last_heartbeat = time.monotonic()
+
+    def keep_lease():
+        nonlocal last_heartbeat
+        now = time.monotonic()
+        if now - last_heartbeat >= min(60, settings.job_lease_seconds / 3):
+            heartbeat(repo, settings, job, worker_id)
+            last_heartbeat = now
+
     if job["stage"] == "parse":
-        return pipeline.parse_stage(
-            repo,
-            bucket,
-            settings,
-            job,
-            heartbeat=lambda: heartbeat(repo, settings, job, worker_id),
-        )
+        return pipeline.parse_stage(repo, bucket, settings, job, heartbeat=keep_lease)
     if job["stage"] == "embed":
+        last_progress = 0.0
+        last_completed = -25
+
+        def record_progress(completed, total):
+            nonlocal last_progress, last_completed, last_heartbeat
+            now = time.monotonic()
+            if (
+                completed != total
+                and completed != 0
+                and completed - last_completed < 25
+                and now - last_progress < 15
+            ):
+                return
+            until = utcnow() + timedelta(seconds=settings.job_lease_seconds)
+            commit(
+                repo,
+                settings,
+                job,
+                worker_id,
+                {
+                    "embeddingProgress": {"completed": completed, "total": total},
+                    "leaseUntil": until,
+                    "nextRunAt": until,
+                },
+            )
+            last_progress = now
+            last_heartbeat = now
+            last_completed = completed
+
         return pipeline.embed_stage(
             repo,
             settings,
             job,
             make_embedder(repo, settings, job),
-            heartbeat=lambda: heartbeat(repo, settings, job, worker_id),
-            progress=lambda completed, total: commit(
-                repo,
-                settings,
-                job,
-                worker_id,
-                {"embeddingProgress": {"completed": completed, "total": total}},
-            ),
+            heartbeat=keep_lease,
+            progress=record_progress,
         )
     return pipeline.publish_stage(repo, bucket, settings, job)
 
@@ -184,6 +210,13 @@ def fail(repo, settings, job, worker_id, exc):
         patch = {"status": "needs_ocr", "errorCode": "needs_ocr", **end}
     elif isinstance(exc, PermanentError):
         patch = {"status": "failed", "errorCode": exc.code, **end}
+    elif isinstance(exc, APIError) and exc.code == "ocr_unavailable":
+        patch = {
+            "status": "retry_wait",
+            "errorCode": exc.code,
+            "nextRunAt": utcnow() + timedelta(seconds=60),
+            "leaseOwner": None,
+        }
     elif isinstance(exc, APIError) and exc.code == "embedding_public_input_required":
         patch = {"status": "needs_configuration", "errorCode": exc.code, **end}
     elif pipeline.is_auth_error(exc) or getattr(exc, "status_code", None) in (401, 403):
@@ -247,7 +280,7 @@ def run_once(repo, bucket, settings, worker_id):
 
 
 def main(poll_seconds=5):
-    from google.api_core.exceptions import GoogleAPICallError
+    from google.api_core.exceptions import GoogleAPIError
 
     if not logger.handlers:
         handler = logging.StreamHandler()
@@ -268,7 +301,7 @@ def main(poll_seconds=5):
     while True:
         try:
             job = run_once(repo, clients["storage"], settings, worker_id)
-        except GoogleAPICallError as exc:
+        except GoogleAPIError as exc:
             logger.warning(
                 json.dumps({"event": "worker_database_unavailable", "type": type(exc).__name__})
             )

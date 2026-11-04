@@ -798,3 +798,14 @@ def test_ready_document_can_be_reprocessed_with_new_parser(env, tmp_path):
     again = worker.run_once(repo, bucket, SETTINGS, "w2")
     assert again["status"] == "succeeded"
     assert again["embeddingProgress"]["completed"] == again["embeddingProgress"]["total"]
+
+
+def test_ocr_service_unavailable_waits_without_exhausting_retries(env, tmp_path):
+    repo, bucket = env
+    upload(repo, bucket, tmp_path)
+    job = worker.claim(repo, SETTINGS, "w1")
+    result = worker.fail(repo, SETTINGS, job, "w1", APIError(503, "ocr_unavailable", "offline"))
+    assert result["status"] == "retry_wait"
+    assert result["failures"] == 0
+    assert result["errorCode"] == "ocr_unavailable"
+    assert result["nextRunAt"] is not None
