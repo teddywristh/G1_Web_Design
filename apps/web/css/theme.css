@@ -1,4 +1,4 @@
-/* Màu sắc và chi tiết giao diện */
+/* Thành phần dùng chung và thư viện */
 :root {
   --card: #ffffff;
   --olive-dark: #46583a;
@@ -11,14 +11,9 @@
 body {
   -webkit-font-smoothing: antialiased;
 }
-main {
-  padding: 28px 40px 0;
-}
 h1 {
   letter-spacing: -0.01em;
 }
-
-/* One look for every field */
 input:not([type="checkbox"]):not([type="file"]),
 select,
 textarea {
@@ -26,7 +21,7 @@ textarea {
   border-radius: 8px;
   background: var(--card);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 15px;
 }
 input:not([type="checkbox"]):not([type="file"]),
 select {
@@ -57,7 +52,7 @@ textarea:focus-visible {
 .secondary-button {
   height: var(--control-h);
   padding: 0 16px;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   border-radius: 8px;
 }
@@ -70,7 +65,7 @@ textarea:focus-visible {
   box-shadow: 0 1px 2px rgba(40, 50, 41, 0.2);
 }
 .text-button {
-  font-size: 12px;
+  font-size: 15px;
   color: var(--olive-dark);
   padding: 4px 6px;
   border-radius: 6px;
@@ -82,347 +77,6 @@ textarea:focus-visible {
 .text-button.danger {
   color: #9b3d33;
 }
-
-/* Sidebar */
-.sidebar {
-  background: #f2f4ed;
-}
-.sidebar .new-chat {
-  height: 40px;
-  margin: 26px 0 22px;
-  font-weight: 600;
-  color: var(--olive-dark);
-}
-.sidebar nav button {
-  padding: 10px 12px;
-  color: #3d4a3a;
-}
-.sidebar nav button:hover:not(.active),
-.sidebar-bottom > button:hover {
-  background: rgba(88, 108, 67, 0.08);
-  filter: none;
-}
-.sidebar-bottom > button {
-  padding: 11px 12px;
-  border-radius: 8px;
-  margin-bottom: 4px;
-}
-.sidebar-bottom > button.active {
-  background: #dfe7d5;
-  color: var(--olive-dark);
-  font-weight: 600;
-}
-.sidebar-bottom p {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 4px;
-}
-.sidebar-bottom #user-name {
-  font-weight: 600;
-  font-size: 13px;
-}
-
-/* Top bar */
-.topbar {
-  background: rgba(250, 251, 248, 0.92);
-  backdrop-filter: blur(6px);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.topbar-actions .secondary-button {
-  height: 34px;
-  padding: 0 14px;
-  font-size: 12px;
-}
-.preview-label {
-  background: var(--olive-soft);
-  color: var(--olive-dark);
-  border-radius: 20px;
-  padding: 3px 10px;
-  font-size: 11px;
-}
-
-/* Chat: options card, then the conversation */
-.question-workspace {
-  max-width: 860px;
-  margin: 0 auto;
-}
-.question-workspace > .section-heading {
-  margin-bottom: 14px;
-}
-.question-workspace > .section-heading h2 {
-  font-size: 18px;
-}
-.scope-bar {
-  display: grid;
-  grid-template-columns: 1fr 160px minmax(220px, 300px);
-  gap: 12px;
-  align-items: end;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-  box-shadow: var(--shadow);
-  margin-bottom: 14px;
-}
-.scope-bar .form-field {
-  margin: 0;
-  min-width: 0;
-  width: auto;
-  font-size: 11px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-.scope-bar .form-field input,
-.scope-bar .form-field select {
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--ink);
-}
-#kb-scope {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 8px;
-  align-items: center;
-  border: 0;
-  padding: 0;
-  margin: 0;
-  min-width: 0;
-}
-#kb-scope legend {
-  float: left;
-  width: 100%;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--muted);
-  font-weight: 600;
-  padding: 0 0 6px;
-}
-.scope-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin: 0;
-  padding: 0 12px;
-  height: var(--control-h);
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: var(--card);
-  font-size: 13px;
-  cursor: pointer;
-}
-.scope-option:has(input:checked) {
-  background: var(--olive-soft);
-  border-color: var(--olive);
-  color: var(--olive-dark);
-  font-weight: 600;
-}
-.scope-option:has(input:disabled) {
-  opacity: 0.55;
-  cursor: default;
-}
-.scope-option input {
-  accent-color: var(--olive);
-}
-.model-field label {
-  display: block;
-  margin-bottom: 4px;
-}
-.combobox {
-  position: relative;
-}
-.combobox input {
-  width: 100%;
-  padding-right: 30px;
-  text-overflow: ellipsis;
-  background: var(--card)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23657060' stroke-width='1.5'/%3E%3C/svg%3E")
-    no-repeat right 12px center;
-}
-.combobox-list {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 4px);
-  right: 0;
-  width: max(100%, 320px);
-  max-width: calc(100vw - 32px);
-  max-height: 340px;
-  overflow-y: auto;
-  margin: 0;
-  padding: 4px 0;
-  list-style: none;
-  background: var(--card);
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  box-shadow: var(--shadow);
-  text-transform: none;
-  letter-spacing: 0;
-}
-.combobox-group {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px 4px;
-  font-size: 11px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-.combobox-group:not(:first-child) {
-  border-top: 1px solid var(--line);
-  margin-top: 4px;
-}
-.combobox-group small {
-  text-transform: none;
-  letter-spacing: 0;
-}
-.combobox-option {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 10px;
-  padding: 7px 12px;
-  font-size: 13px;
-  color: var(--ink);
-  cursor: pointer;
-}
-.combobox-option small {
-  color: var(--muted);
-  font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.combobox-option.is-active {
-  background: var(--olive-soft);
-}
-.combobox-option[aria-selected="true"] {
-  color: var(--olive-dark);
-  font-weight: 600;
-}
-.combobox-note {
-  padding: 6px 12px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.history-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 6px;
-}
-.history-bar label {
-  color: var(--muted);
-  font-size: 12px;
-}
-.history-bar select {
-  max-width: 360px;
-  height: 34px;
-}
-.question-content {
-  padding-top: 6px;
-}
-.welcome {
-  padding: 26px 0 8px;
-}
-.welcome h1 {
-  font-size: 30px;
-}
-.chat-title {
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  font-size: 18px;
-  font-weight: 600;
-  padding: 0 !important;
-  height: auto !important;
-  width: 100%;
-  margin: 12px 0 0;
-}
-.messages {
-  max-height: none;
-  overflow: visible;
-  padding: 4px 0;
-}
-.question-message {
-  margin: 14px 0 14px auto;
-  max-width: 82%;
-  width: fit-content;
-  border-radius: 14px 14px 4px 14px;
-  padding: 10px 16px;
-}
-.question-message p {
-  line-height: 1.7;
-  margin-top: 2px;
-}
-.answer-message {
-  margin: 14px 0;
-  max-width: 100%;
-  border-radius: 14px 14px 14px 4px;
-  padding: 16px 20px;
-  box-shadow: var(--shadow);
-}
-.answer-head {
-  margin: 8px 0 4px;
-}
-.answer-text p {
-  line-height: 1.75;
-}
-.answer-block > strong {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--muted);
-}
-.citation-row {
-  align-items: center;
-  background: #fbfcf9;
-  transition: border-color 0.15s;
-}
-.citation-row:hover {
-  border-color: var(--olive);
-  filter: none !important;
-}
-.citation-row small {
-  background: var(--olive-soft);
-  color: var(--olive-dark);
-  border-radius: 20px;
-  padding: 2px 8px;
-}
-.cite {
-  background: var(--olive-soft);
-  border-radius: 6px;
-  text-decoration: none;
-  padding: 0 6px;
-  font-size: 12px;
-}
-.assistant-status {
-  padding: 10px 0 14px;
-  text-align: center;
-}
-.question-composer {
-  border-radius: 14px;
-  box-shadow: var(--shadow);
-}
-.suggestions button {
-  border-radius: 10px;
-  transition: border-color 0.15s;
-}
-.suggestions button:hover {
-  border-color: var(--olive);
-  filter: none;
-}
-
-/* Library */
 .page-heading h1 {
   font-size: 26px;
   margin: 0;
@@ -432,7 +86,7 @@ textarea:focus-visible {
 }
 .kb-bar select {
   height: var(--control-h);
-  font-size: 13px;
+  font-size: 15px;
   min-width: 240px;
   padding: 0 10px;
   border-radius: 8px;
@@ -453,7 +107,7 @@ textarea:focus-visible {
   overflow-x: auto;
 }
 th {
-  font-size: 10px;
+  font-size: 15px;
   letter-spacing: 0.6px;
   color: var(--muted);
   background: #f4f6ef;
@@ -465,15 +119,13 @@ td .text-button {
   margin-left: 2px;
 }
 .status-badge {
-  font-size: 11px;
+  font-size: 15px;
   padding: 3px 10px;
   white-space: nowrap;
 }
 .empty-state {
   padding: 40px 20px;
 }
-
-/* Dialogs */
 dialog {
   border-radius: 14px;
   box-shadow: 0 20px 60px rgba(30, 40, 30, 0.25);
@@ -495,45 +147,6 @@ dialog {
 .upload-zone:hover {
   background: #f4f7ee;
 }
-.evidence-text {
-  border-radius: 0 8px 8px 0;
-}
-
-/* Settings */
-.settings-card {
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 24px 26px;
-}
-.settings-card h2 {
-  font-size: 17px;
-  margin-bottom: 4px;
-}
-.settings-grid {
-  align-items: start;
-}
-.connection-list li {
-  justify-content: space-between;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 13px;
-}
-.connection-list li > span {
-  flex: 1;
-}
-.connection-list li > strong {
-  font-weight: 500;
-  font-size: 11px;
-  border-radius: 20px;
-  padding: 2px 10px;
-  background: #f0f1ec;
-  color: var(--muted);
-}
-.connection-list li > strong:where(:not(:empty)) {
-  white-space: nowrap;
-}
-
-/* Sign in */
 .auth-view {
   background: radial-gradient(
     1000px 500px at 50% -10%,
@@ -554,49 +167,13 @@ dialog {
 }
 .auth-card .primary-button {
   height: 42px;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 @media (max-width: 760px) {
-  main {
-    padding: 20px 16px 0;
-  }
-  .scope-bar {
-    grid-template-columns: 1fr;
-  }
-  .question-message {
-    max-width: 94%;
-  }
   .search-sort input {
     width: 100%;
   }
-  .topbar-actions .secondary-button[data-settings-target="ai-card"] {
-    display: none;
-  }
-}
-
-/* Căn chỉnh hỏi đáp và thư viện */
-.question-workspace {
-  max-width: 780px;
-}
-.question-content {
-  max-width: none;
-}
-.question-composer textarea {
-  border: 0;
-  box-shadow: none;
-  height: auto;
-  padding: 4px 2px;
-  border-radius: 0;
-}
-.chat-title {
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  color: var(--muted);
-  margin: 8px 0 0;
-}
-.chat-title:focus {
-  color: var(--ink);
 }
 #library-view .kb-bar,
 #library-view .filters {
@@ -606,29 +183,4 @@ dialog {
 }
 #library-view .filters {
   margin-bottom: 14px;
-}
-.suggestions {
-  max-width: none;
-}
-
-/* Căn chỉnh nút và form */
-.inline-form {
-  align-items: center;
-}
-.inline-form .primary-button {
-  height: var(--control-h);
-  margin: 0;
-}
-.settings-card button + button {
-  margin-left: 6px;
-}
-
-@media (max-width: 760px) {
-  .welcome h1 {
-    font-size: 24px;
-  }
-  .question-workspace > .section-heading .secondary-button {
-    padding: 0 10px;
-    font-size: 12px;
-  }
 }

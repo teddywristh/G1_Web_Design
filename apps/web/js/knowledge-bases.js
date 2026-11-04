@@ -1,5 +1,5 @@
 import { api } from "./api.js";
-import { $, MAX_KBS, element, isAdmin, notify, persist, state } from "./core.js";
+import { $, isAdmin, notify, state } from "./core.js";
 import { loadDocs } from "./documents.js";
 
 // Kho riêng, kho chung và xuất bản
@@ -10,8 +10,6 @@ async function loadKbs() {
     notify(error.message);
     state.kbs = [];
   }
-  const ids = state.kbs.map((kb) => kb.id);
-  state.selected = new Set([...state.selected].filter((id) => ids.includes(id)));
   if (!state.kbs.some((kb) => kb.id === state.kbId)) state.kbId = state.kbs[0]?.id || null;
   renderScope();
   renderKbSelect();
@@ -22,28 +20,9 @@ function kbTitle(kb) {
 }
 
 function renderScope() {
-  const box = $("#kb-scope");
-  box.replaceChildren(element("legend", "", `Nguồn tra cứu (tối đa ${MAX_KBS} kho)`));
-  state.kbs.forEach((kb) => {
-    const label = element("label", "scope-option");
-    const input = element("input");
-    input.type = "checkbox";
-    input.value = kb.id;
-    input.checked = state.selected.has(kb.id);
-    input.addEventListener("change", () => {
-      if (input.checked && state.selected.size >= MAX_KBS) {
-        input.checked = false;
-        notify(`Chỉ chọn tối đa ${MAX_KBS} kho cho mỗi câu hỏi.`);
-        return;
-      }
-      if (input.checked) state.selected.add(kb.id);
-      else state.selected.delete(kb.id);
-      persist();
-    });
-    label.append(input, element("span", "", kbTitle(kb) + (kb.ready ? "" : " (chưa sẵn sàng)")));
-    box.append(label);
-  });
-  if (!state.kbs.length) box.append(element("p", "small-print", "Chưa có kho nào."));
+  $("#kb-scope").textContent = state.user
+    ? `Tự động tra cứu trên tất cả ${state.kbs.length} kho được phép truy cập.`
+    : "Đăng nhập để tra cứu tài liệu trong kho của bạn.";
 }
 
 function renderKbSelect() {
@@ -74,7 +53,7 @@ function renderKbControls() {
     ? "Đăng nhập để xem và quản lý tài liệu."
     : shared
       ? "Văn bản do quản trị viên quản lý, dùng chung cho mọi người."
-      : "Tài liệu riêng chỉ mình bạn thấy; dùng khi chọn kho này trong hỏi đáp.";
+      : "Tài liệu riêng chỉ mình bạn thấy và tự động được dùng khi hỏi đáp.";
 }
 
 $("#kb-select").addEventListener("change", (event) => {

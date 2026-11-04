@@ -1,68 +1,103 @@
 import { api } from "./api.js";
 import { $, limitText } from "./core.js";
 
-let evidencePdfUrl = null;
-$("#evidence-dialog").addEventListener("close", () => {
-  $("#evidence-pdf").removeAttribute("src");
-  if (evidencePdfUrl) URL.revokeObjectURL(evidencePdfUrl);
-  evidencePdfUrl = null;
-});
+let pdfUrl = null;
+let revision = 0;
+let returnFocus = null;
 
-// Mở đoạn nguồn sau khi backend kiểm tra quyền truy cập
+function releasePdf() {
+  $("#evidence-pdf").removeAttribute("src");
+  $("#evidence-pdf").hidden = true;
+  if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+  pdfUrl = null;
+}
+
+function closeEvidence(restoreFocus = true) {
+  revision++;
+  releasePdf();
+  $("#evidence-panel").hidden = true;
+  $("#app-shell").classList.remove("evidence-open");
+  if (restoreFocus && returnFocus?.isConnected) returnFocus.focus();
+}
+
+// Panel nguồn cạnh hội thoại và PDF đúng trang trích dẫn
 async function openEvidence(citation) {
-  $("#evidence-error").textContent = "";
-  $("#evidence-limits").textContent = "";
+  const current = ++revision;
+  returnFocus = document.activeElement;
+  releasePdf();
+  $("#evidence-panel").hidden = false;
+  $("#app-shell").classList.add("evidence-open");
+  $("#evidence-title").textContent = citation.document_title;
+  $("#evidence-title").focus({ preventScroll: true });
+  $("#evidence-text").textContent = citation.quote || "";
+  $("#evidence-meta").textContent = "Đang tải nguồn…";
+  for (const id of ["evidence-error", "evidence-limits", "evidence-pdf-status"])
+    $(`#${id}`).textContent = "";
   $("#evidence-link").hidden = true;
   $("#evidence-pdf-open").hidden = true;
-  $("#evidence-pdf").hidden = true;
-  $("#evidence-pdf").removeAttribute("src");
-  if (evidencePdfUrl) URL.revokeObjectURL(evidencePdfUrl);
-  evidencePdfUrl = null;
-  $("#evidence-title").textContent = citation.document_title;
-  $("#evidence-meta").textContent = "";
-  $("#evidence-text").textContent = "";
-  $("#evidence-dialog").showModal();
   if (!citation.provision_version_id) {
-    $("#evidence-text").textContent = citation.quote || "";
-    $("#evidence-meta").textContent = "Nguồn web, chưa xác minh hiệu lực";
-    if (/^https:\/\//.test(citation.source_url || "")) {
-      $("#evidence-link").href = citation.source_url;
-      $("#evidence-link").hidden = false;
+    $("#evidence-meta").textContent = "Nguồn web · hiệu lực chưa được xác minh";
+    try {
+      const url = new URL(citation.source_url);
+      if (url.protocol === "https:" && !url.username && !url.password) {
+        $("#evidence-link").href = url.href;
+        $("#evidence-link").hidden = false;
+      }
+    } catch {
+      /* Nguồn không có URL hợp lệ */
     }
     return;
   }
   try {
-    const item = await api.get(`/evidence/${citation.provision_version_id}`);
-    const place = [item.chapter && `Chương ${item.chapter}`, item.article, item.clause].filter(
-      Boolean,
-    );
-    const pages =
-      item.pageStart === item.pageEnd
-        ? `trang ${item.pageStart}`
-        : `trang ${item.pageStart}–${item.pageEnd}`;
-    $("#evidence-title").textContent =
-      `${item.documentTitle}${item.documentNumber ? " · " + item.documentNumber : ""}`;
-    $("#evidence-meta").textContent = `${place.join(" · ")} · ${pages} của PDF`;
+    const path = `/evidence/${encodeURIComponent(citation.provision_version_id)}`;
+    const item = await api.get(path);
+    if (revision !== current) return;
+    $("#evidence-title").textContent = [item.documentTitle, item.documentNumber]
+      .filter(Boolean)
+      .join(" · ");
+    $("#evidence-meta").textContent = [
+      item.article,
+      item.clause,
+      `Trang ${item.pageStart}–${item.pageEnd}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
     $("#evidence-text").textContent = item.text;
-    $("#evidence-limits").textContent = item.limitations.map(limitText).join(" · ");
-    $("#evidence-pdf-open").hidden = false;
-    $("#evidence-pdf-open").onclick = async () => {
+    $("#evidence-limits").textContent = (item.limitations || []).map(limitText).join(" · ");
+    const loadPdf = async () => {
+      $("#evidence-pdf-status").textContent = "Đang tải PDF…";
+      $("#evidence-pdf-open").disabled = true;
       try {
-        const blob = await api.blob(`/evidence/${citation.provision_version_id}/pdf`);
-        if (evidencePdfUrl) URL.revokeObjectURL(evidencePdfUrl);
-        evidencePdfUrl = URL.createObjectURL(blob);
-        $("#evidence-pdf").src = `${evidencePdfUrl}#page=${Math.max(1, Number(item.pageStart) || 1)}`;
+        const blob = await api.blob(`${path}/pdf`);
+        if (revision !== current) return;
+        releasePdf();
+        pdfUrl = URL.createObjectURL(blob);
+        $("#evidence-pdf").src = `${pdfUrl}#page=${Math.max(1, Number(item.pageStart) || 1)}`;
         $("#evidence-pdf").hidden = false;
+        $("#evidence-pdf-status").textContent = "";
       } catch (error) {
-        $("#evidence-error").textContent = error.message;
+        if (revision === current) $("#evidence-pdf-status").textContent = error.message;
+      } finally {
+        if (revision === current) $("#evidence-pdf-open").disabled = false;
       }
     };
+    $("#evidence-pdf-open").hidden = false;
+    $("#evidence-pdf-open").onclick = loadPdf;
+    await loadPdf();
   } catch (error) {
+    if (revision !== current) return;
+    $("#evidence-meta").textContent = "Không tải được nguồn";
     $("#evidence-error").textContent =
       error.status === 404
-        ? "Nguồn này không còn truy cập được (đã xóa hoặc thu hồi)."
+        ? "Nguồn đã bị xóa, thu hồi hoặc không còn quyền truy cập."
         : error.message;
   }
 }
 
-export { openEvidence };
+$("#close-evidence").addEventListener("click", () => closeEvidence());
+document.addEventListener("close-evidence", () => closeEvidence(false));
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("#evidence-panel").hidden) closeEvidence();
+});
+
+export { openEvidence, closeEvidence };

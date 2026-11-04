@@ -1,166 +1,251 @@
-/* Hỏi đáp và lịch sử câu hỏi */
-.question-workspace {
-  max-width: 920px;
-  margin: auto;
-  min-height: calc(100dvh - 205px);
+/* Hội thoại và thanh nhập cố định */
+.conversation-heading #chat-title {
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+  padding: 8px 0;
+  box-shadow: none;
 }
-.history-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 22px;
+.answer-activity {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
+  margin-top: 18px;
 }
-.history-bar select {
+.answer-activity summary {
+  cursor: pointer;
+}
+.answer-activity ol {
+  margin: 12px 0;
+  padding-left: 20px;
+  line-height: 1.8;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.question-workspace {
+  height: 100%;
+  min-height: 0;
+  max-width: 880px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+.chat-scroll {
   flex: 1;
-  max-width: 380px;
-  min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: white;
-  padding: 8px;
-  color: var(--ink);
-  font-size: 12px;
-}
-.question-content {
-  max-width: 710px;
-  margin: 60px auto 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 32px 12px 24px;
+  min-height: 0;
 }
 .welcome {
-  text-align: center;
-  margin-bottom: 30px;
-}
-.welcome-mark {
-  display: inline-grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  margin-bottom: 16px;
-  border-radius: 16px;
-  background: #eaf0df;
-  color: var(--olive);
-  font-size: 26px;
+  text-align: left;
+  padding: clamp(30px, 9vh, 100px) 0 30px;
+  max-width: 650px;
+  margin: auto;
 }
 .eyebrow {
-  font-size: 10px;
-  letter-spacing: 1.5px;
+  font-size: 13px;
+  letter-spacing: 1.4px;
   color: var(--olive);
-  margin-bottom: 13px;
 }
 .welcome h1 {
-  font-size: 32px;
-  margin-bottom: 11px;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.3;
+  letter-spacing: -0.7px;
+  margin: 16px 0;
 }
 .welcome > p:last-child {
   color: var(--muted);
+  font-size: 17px;
+  line-height: 1.7;
+}
+.messages {
+  max-height: none;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 12px 0;
+}
+.question-message {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: 14px 20px;
+  background: #edf0e7;
+  border-radius: 20px 20px 4px 20px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.question-message > span {
+  display: none;
+}
+.question-message p {
+  white-space: pre-wrap;
+  font-size: 17px;
+  line-height: 1.7;
+}
+.conversation-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.chat-title {
+  width: 100%;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--muted);
+  border: 0;
+  background: transparent;
+  padding: 8px 0;
+}
+.conversation-heading .text-button {
+  flex-shrink: 0;
+}
+.assistant-status {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 18px;
+}
+.composer-dock {
+  flex-shrink: 0;
+  padding: 12px 12px 14px;
+  background: var(--paper);
+  border-top: 1px solid var(--line);
 }
 .question-composer {
-  padding: 17px 17px 12px;
-  border: 1px solid #cdd8c1;
   background: white;
-  border-radius: 14px;
-  box-shadow: 0 4px 16px #38482e06;
+  border: 1px solid #ccd4c1;
+  border-radius: 20px;
+  box-shadow: 0 3px 16px #28322909;
+  padding: 14px 18px 10px;
 }
-.question-composer:focus-within {
-  border-color: #8b9f77;
-  box-shadow: 0 0 0 3px #eaf0e2;
-}
-.question-composer textarea {
+.question-composer:focus-within { border-color: var(--olive); box-shadow: 0 0 0 2px #586c4314; }
+.question-composer #question {
   display: block;
-  resize: vertical;
   width: 100%;
-  min-height: 80px;
-  max-height: 230px;
-  border: 0;
-  background: none;
+  min-height: 64px;
+  max-height: 160px;
+  resize: vertical;
   padding: 0;
-  font-size: 15px;
-  line-height: 1.8;
-  color: var(--ink);
-  outline: none;
+  border: 0;
+  border-radius: 0;
+  font-size: 17px;
+  line-height: 1.6;
+  box-shadow: none;
+  background: transparent;
 }
-.question-composer textarea::placeholder {
-  color: #8c9684;
+.question-composer #question:focus {
+  outline: none;
+  box-shadow: none;
 }
 .composer-bottom {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 10px;
-  margin-top: 13px;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
 }
 .composer-bottom > span {
-  font-size: 11px;
-  color: #7d8873;
+  font-size: 13px;
+  color: var(--muted);
 }
 .send-button {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   background: var(--olive);
   color: white;
-  border-radius: 10px;
   font-size: 24px;
+}
+.composer-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+.composer-filters .model-field {
+  flex: 1;
+  min-width: 0;
+}
+.query-options {
+  position: relative;
+}
+.query-options > summary {
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 10px;
+  white-space: nowrap;
+  color: var(--olive);
+}
+.query-options-content {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  right: 0;
+  width: min(340px, 85vw);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px #2832291a;
+  padding: 20px;
+  z-index: 12;
+  font-size: 15px;
+}
+.query-options-content > p {
+  line-height: 1.6;
+  color: var(--muted);
+}
+.check-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 20px;
+}
+.composer-note {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 8px;
+}
+.composer-dock > .small-print {
+  margin: 10px 0;
+  font-size: 14px;
 }
 .suggestions {
   display: grid;
-  gap: 8px;
-  margin-top: 25px;
-}
-.suggestions p {
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 3px;
+  gap: 10px;
+  max-width: 650px;
+  margin: 0 auto 16px;
 }
 .suggestions button {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 11px 14px;
-  background: #f5f7f0;
-  color: #59654e;
   text-align: left;
-  font-size: 12px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: transparent;
+  font-size: 15px;
+  line-height: 1.6;
 }
 .suggestions button:hover {
-  background: #eaf0df;
+  background: #f0f3eb;
 }
-.chat-title {
-  font-size: 18px;
-  font-weight: 500;
-  background: none;
-  border: 0;
-  width: 100%;
-  padding: 6px 0;
-  color: var(--ink);
+/* Trạng thái chờ và nhật ký yêu cầu */
+.chat-progress {
+  padding: 18px 20px;
+  margin-top: 20px;
+  border-left: 3px solid var(--olive);
+  background: #f0f3eb;
+  border-radius: 0 12px 12px 0;
 }
-.messages {
-  max-height: 42dvh;
-  overflow-y: auto;
-  padding: 10px 2px;
-  scrollbar-width: thin;
+.chat-progress strong {
+  font-size: 16px;
 }
-.question-message {
-  margin: 16px 0 16px 50px;
-  background: #eaf0e1;
-  padding: 14px 17px;
-  border-radius: 12px 12px 3px 12px;
-  overflow-wrap: anywhere;
-}
-.question-message span {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--olive);
-}
-.question-message p {
+.chat-progress p,
+.chat-progress ol {
   font-size: 14px;
-  line-height: 1.9;
-  white-space: pre-wrap;
-  margin-top: 5px;
-}
-.assistant-status {
+  line-height: 1.7;
+  margin-top: 8px;
   color: var(--muted);
-  font-size: 12px;
-  padding: 14px 0 25px;
+}
+.chat-progress ol {
+  padding-left: 20px;
 }

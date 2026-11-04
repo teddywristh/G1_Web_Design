@@ -20,16 +20,29 @@ $("#menu-toggle").addEventListener("click", () => {
   $("#menu-toggle").setAttribute("aria-expanded", String(isOpen));
 });
 $("#menu-overlay").addEventListener("click", closeMenu);
+$("#profile-button").addEventListener("click", () => navigate("settings", "account"));
+$("#settings-back").addEventListener("click", () => navigate("chat"));
+document.querySelectorAll("[data-settings-page]").forEach((button) => {
+  button.addEventListener("click", () => navigate("settings", button.dataset.settingsPage));
+});
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") closeMenu();
+  if (event.key === "Escape") {
+    closeMenu();
+    $(".query-options").open = false;
+  }
+});
+document.addEventListener("click", (event) => {
+  const options = $(".query-options");
+  if (!options.contains(event.target)) options.open = false;
 });
 $("#reset-data").addEventListener("click", () => {
+  if (!confirm("Xóa lịch sử hội thoại trên trình duyệt này?")) return;
   state.chats = [];
   state.chatId = null;
-  state.saved = new Set();
+  state.pendingChat = null;
   persist();
   renderChat();
-  notify("Đã xóa lịch sử hội thoại và đánh dấu trên thiết bị.");
+  notify("Đã xóa lịch sử hội thoại trên thiết bị.");
 });
 
 boot();

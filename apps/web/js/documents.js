@@ -14,6 +14,7 @@ import {
 import { currentKb } from "./knowledge-bases.js";
 
 let blobUrl = null;
+let documentRevision = 0;
 
 // Danh sách tài liệu trong kho chung và kho riêng
 function normalizeDoc(raw, kb) {
@@ -35,7 +36,9 @@ function normalizeDoc(raw, kb) {
 
 async function loadDocs(reset) {
   const kb = currentKb();
-  if (!kb) return;
+  if (!kb || !state.user) return;
+  const revision = ++documentRevision;
+  const userId = state.user.id;
   if (reset) {
     state.docs = [];
     state.nextCursor = null;
@@ -50,9 +53,11 @@ async function loadDocs(reset) {
   }
   try {
     const page = await api.get(path);
+    if (revision !== documentRevision || state.user?.id !== userId || state.kbId !== kb.id) return;
     state.docs.push(...page.items.map((item) => normalizeDoc(item, kb)));
     state.nextCursor = page.nextCursor;
   } catch (error) {
+    if (revision !== documentRevision || state.user?.id !== userId) return;
     notify(error.message);
   }
   renderDocuments();
@@ -61,24 +66,35 @@ async function loadDocs(reset) {
 
 async function refreshProcessing() {
   clearTimeout(state.pollTimer);
+  if (!state.user || state.view !== "library" || document.hidden) return;
+  const userId = state.user.id;
+  const revision = documentRevision;
   const pending = state.docs.filter((doc) => !doc.shared);
   await Promise.all(
     pending.map(async (doc) => {
       try {
-        doc.processing = await api.get(
+        const processing = await api.get(
           `/knowledge-bases/${doc.kbId}/documents/${doc.id}/processing`,
         );
+        if (revision === documentRevision && state.user?.id === userId) doc.processing = processing;
       } catch {
-        doc.processing = { status: "status_unavailable" };
+        if (revision === documentRevision && state.user?.id === userId)
+          doc.processing = { status: "status_unavailable" };
       }
     }),
   );
-  if (state.view === "library" || state.view === "saved") renderDocuments();
+  if (revision !== documentRevision || state.user?.id !== userId) return;
+  if (state.view === "library") {
+    document.querySelectorAll("[data-processing-doc]").forEach((cell) => {
+      const doc = state.docs.find((item) => item.id === cell.dataset.processingDoc);
+      if (doc) cell.replaceChildren(processingContent(doc));
+    });
+  }
   const busy = pending.some((doc) =>
     ["queued", "processing", "status_unavailable"].includes(doc.processing?.status),
   );
-  if (busy && state.view !== "chat" && state.view !== "settings") {
-    state.pollTimer = setTimeout(refreshProcessing, 4000);
+  if (busy && state.view === "library" && !document.hidden) {
+    state.pollTimer = setTimeout(refreshProcessing, 2000);
   }
 }
 
@@ -115,11 +131,44 @@ function statusBadge(doc) {
   );
 }
 
+// Cập nhật tiến độ mà không dựng lại các nút trong bảng
+function processingContent(doc) {
+  const content = document.createDocumentFragment();
+  content.append(statusBadge(doc));
+  const progress = doc.processing?.embeddingProgress;
+  const busy = ["queued", "processing"].includes(doc.processing?.status);
+  if (busy || progress || doc.processing?.status === "ready") {
+    const bar = element("progress", "embedding-progress");
+    bar.max = 100;
+    const completed = Number(progress?.completed);
+    const total = Number(progress?.total);
+    const measured =
+      Number.isFinite(completed) && completed >= 0 && Number.isFinite(total) && total > 0;
+    const ready = doc.processing?.status === "ready";
+    const percent = ready
+      ? 100
+      : measured
+        ? Math.min(100, Math.round((completed / total) * 100))
+        : null;
+    if (percent !== null) bar.value = percent;
+    bar.setAttribute("aria-label", `Tiến độ xử lý ${doc.title}`);
+    const label = ready
+      ? "Đã lập chỉ mục · 100%"
+      : measured
+        ? `Embedding ${percent}% · ${completed}/${total} đoạn`
+        : "Đang xử lý · chờ số liệu tiến độ từ máy chủ";
+    content.append(bar, element("small", "embedding-progress-label", label));
+  }
+  if (processingNote(doc)) {
+    content.append(element("small", "processing-detail", processingNote(doc)));
+  }
+  return content;
+}
+
 function renderDocuments() {
-  $("#library-title").textContent =
-    state.view === "saved" ? "Tài liệu đã lưu" : "Thư viện tài liệu";
+  $("#library-title").textContent = "Thư viện tài liệu";
   const query = $("#search").value.trim().toLocaleLowerCase("vi");
-  const pool = state.docs.filter((doc) => state.view !== "saved" || state.saved.has(doc.id));
+  const pool = state.docs;
   const filtered = pool.filter((doc) =>
     `${doc.title} ${doc.number} ${doc.authority}`.toLocaleLowerCase("vi").includes(query),
   );
@@ -140,18 +189,8 @@ function renderDocuments() {
     title.addEventListener("click", () => openDocument(doc.id));
     titleCell.append(title);
     const statusCell = element("td");
-    statusCell.append(statusBadge(doc));
-    const progress = doc.processing?.embeddingProgress;
-    if (progress && progress.total > 0) {
-      const bar = element("progress", "embedding-progress");
-      bar.max = progress.total;
-      bar.value = progress.completed;
-      bar.setAttribute("aria-label", `Embedding ${doc.title}: ${progress.completed} trên ${progress.total} đoạn`);
-      statusCell.append(bar, element("small", "embedding-progress-label", `Đã embedding ${progress.completed} / ${progress.total} đoạn (${Math.round(progress.completed / progress.total * 100)}%)`));
-    }
-    if (processingNote(doc)) {
-      statusCell.append(element("small", "processing-detail", processingNote(doc)));
-    }
+    statusCell.dataset.processingDoc = doc.id;
+    statusCell.append(processingContent(doc));
     const actions = element("td");
     const saved = state.saved.has(doc.id);
     const bookmark = element("button", "text-button", saved ? "Bỏ lưu" : "Lưu");
@@ -218,7 +257,10 @@ async function openDocument(id) {
   $("#detail-bookmark").textContent = state.saved.has(id) ? "Bỏ đánh dấu" : "Đánh dấu";
   $("#delete-document").hidden = doc.shared && !isAdmin();
   const status = doc.processing;
-  $("#retry-document").hidden = !(status && (status.retryable || status.status === "needs_ocr" || status.status === "ready"));
+  $("#retry-document").hidden = !(
+    status &&
+    (status.retryable || status.status === "needs_ocr" || status.status === "ready")
+  );
   $("#pdf-viewer").hidden = true;
   $("#pdf-empty").hidden = false;
   $("#pdf-empty-title").textContent = "Đang tải PDF…";
@@ -287,6 +329,11 @@ $("#document-dialog").addEventListener("close", () => {
   URL.revokeObjectURL(blobUrl);
   blobUrl = null;
   state.documentId = null;
+});
+
+// Cập nhật trạng thái khi người dùng quay lại tab
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && state.view === "library") refreshProcessing();
 });
 
 export { loadDocs, renderDocuments };

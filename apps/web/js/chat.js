@@ -1,4 +1,6 @@
-import { api } from "./api.js";
+import { askSources } from "./requests.js";
+import { renderHistory, removeChat } from "./history.js";
+import { closeEvidence } from "./evidence.js";
 import { setAuthMode, showAuth } from "./auth.js";
 import {
   $,
@@ -22,6 +24,7 @@ function activeChat() {
 }
 
 function newChat() {
+  closeEvidence(false);
   state.chatId = null;
   $("#query-public-confirm").checked = false;
   $("#question-form").reset();
@@ -90,11 +93,20 @@ function assistantBubble(message) {
     head.append(element("small", "", `${data.provider} · ${source}`));
   }
   bubble.append(head, answerNode(data));
+  if (data.activity?.length) {
+    const activity = element("details", "answer-activity");
+    activity.append(element("summary", "", `Hoạt động tra cứu · ${data.duration || 0} giây`));
+    const list = element("ol");
+    data.activity.forEach((text) => list.append(element("li", "", text)));
+    activity.append(list);
+    bubble.append(activity);
+  }
   if (data.missing_facts?.length) bubble.append(listBlock("Cần bổ sung", data.missing_facts));
   if (data.assumptions?.length) bubble.append(listBlock("Giả định", data.assumptions));
   if (data.citations?.length) {
-    const block = element("div", "answer-block");
-    block.append(element("strong", "", "Nguồn"));
+    const block = element("details", "answer-sources");
+    block.append(element("summary", "", `Nguồn tham khảo · ${data.citations.length}`));
+    const sources = element("div", "source-list");
     data.citations.forEach((citation, index) => {
       const button = element("button", "citation-row");
       const place = [citation.article, citation.clause].filter(Boolean).join(" · ");
@@ -104,13 +116,20 @@ function assistantBubble(message) {
           "",
           `[${index + 1}] ${citation.document_title}${place ? " · " + place : ""}`,
         ),
-        element("small", "", `${citation.provision_version_id ? "PDF trong kho" : "Nguồn web"}${SOURCE_TEXT[citation.source_type] ? " · " + SOURCE_TEXT[citation.source_type] : ""}${citation.page_number ? " · trang " + citation.page_number : ""}`),
+        element(
+          "small",
+          "",
+          `${citation.provision_version_id ? "PDF trong kho" : "Nguồn web"}${SOURCE_TEXT[citation.source_type] ? " · " + SOURCE_TEXT[citation.source_type] : ""}${citation.page_number ? " · trang " + citation.page_number : ""}`,
+        ),
       );
       button.addEventListener("click", () => openEvidence(citation));
-      block.append(button);
+      sources.append(button);
     });
+    block.append(sources);
     bubble.append(block);
   }
+  if (data.scope_errors?.length)
+    bubble.append(listBlock("Một số kho chưa tra cứu được", data.scope_errors));
   if (data.source_limitations?.length) {
     const notes = element("div", "limit-chips");
     data.source_limitations.forEach((code) => notes.append(element("span", "", limitText(code))));
@@ -122,12 +141,7 @@ function assistantBubble(message) {
 function renderChat() {
   const active = activeChat();
   const hasMessages = Boolean(active?.messages.length);
-  $("#history-bar").hidden = state.chats.length === 0;
-  $("#history-select").replaceChildren(new Option("Chọn cuộc trò chuyện", ""));
-  state.chats.forEach((chat) =>
-    $("#history-select").add(new Option(chat.title || "Chưa đặt tên", chat.id)),
-  );
-  $("#history-select").value = active?.id || "";
+  renderHistory();
   $("#delete-chat").hidden = !active;
   $("#welcome").hidden = hasMessages;
   $("#suggestions").hidden = hasMessages;
@@ -143,8 +157,8 @@ function renderChat() {
     bubble.append(element("span", "", "Bạn"), element("p", "", message.text));
     $("#messages").append(bubble);
   });
-  $("#messages").scrollTop = $("#messages").scrollHeight;
-  $("#send-question").disabled = !$("#question").value.trim();
+  renderProgress();
+  $("#send-question").disabled = Boolean(state.pendingChat) || !$("#question").value.trim();
   renderCounts();
 }
 
@@ -152,7 +166,6 @@ function requestBody(question, selection) {
   const body = {
     question,
     ...selection,
-    knowledge_base_ids: [...state.selected],
     web_mode: $("#web-search").checked ? "official" : "off",
     public_embedding_input_confirmed: $("#query-public-confirm").checked,
   };
@@ -163,7 +176,7 @@ function requestBody(question, selection) {
 $("#question-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const question = $("#question").value.trim();
-  if (!question) return;
+  if (!question || state.pendingChat) return;
   if (!state.user) {
     setAuthMode("login");
     showAuth("Đăng nhập để đặt câu hỏi và kết nối AI.");
@@ -175,7 +188,7 @@ $("#question-form").addEventListener("submit", async (event) => {
     focusPicker();
     return;
   }
-  const hasReadyKb = state.kbs.some((kb) => kb.ready && state.selected.has(kb.id));
+  const hasReadyKb = state.kbs.some((kb) => kb.ready);
   if (
     hasReadyKb &&
     state.aiOptions?.embedding?.requiresPublicInput &&
@@ -195,37 +208,90 @@ $("#question-form").addEventListener("submit", async (event) => {
     state.chats.unshift(active);
     state.chatId = active.id;
   }
+  const body = requestBody(question, selection);
+  const knowledgeBases = [...state.kbs];
+  const userId = state.user.id;
+  const chatId = active.id;
+  const pending = {
+    chatId,
+    userId,
+    startedAt: Date.now(),
+    logs: ["Đã tiếp nhận câu hỏi."],
+  };
+  state.pendingChat = pending;
   active.messages.push({ role: "user", text: question });
-  $("#question-form").reset();
-  $("#send-question").disabled = true;
+  $("#question").value = "";
+  $("#query-public-confirm").checked = false;
   persist();
   renderChat();
-  const chatId = active.id;
-  $("#assistant-status").textContent = "Đang tra cứu nguồn và soạn câu trả lời…";
+  scrollToLatest();
+  const timer = setInterval(renderProgress, 1000);
+  const isCurrent = () => state.user?.id === userId && state.pendingChat === pending && state.chats.some(chat => chat.id === chatId);
   let reply;
   try {
-    const body = requestBody(question, selection);
-    $("#query-public-confirm").checked = false;
-    const data = await api.post("/rag/ask", body);
-    reply = { role: "assistant", text: data.answer, data: slimResponse(data) };
+    const data = await askSources(
+      body,
+      knowledgeBases,
+      (text) => {
+        if (!isCurrent()) return;
+        pending.logs.push(text);
+        renderProgress();
+      },
+      isCurrent,
+    );
+    if (!data || !isCurrent()) return;
+    reply = {
+      role: "assistant",
+      text: data.answer,
+      data: {
+        ...slimResponse(data),
+        activity: [...pending.logs],
+        duration: Math.round((Date.now() - pending.startedAt) / 1000),
+      },
+    };
   } catch (error) {
+    if (!isCurrent()) return;
     if (error.code === "chatgpt_disconnected") {
       state.chatgpt = { ...state.chatgpt, connected: false, pending: false };
       renderChatgpt();
       loadModels();
     }
     reply = { role: "assistant", text: error.message };
+  } finally {
+    clearInterval(timer);
+    if (state.pendingChat === pending) state.pendingChat = null;
+    renderProgress();
   }
-  $("#assistant-status").textContent =
-    "Lịch sử hội thoại chỉ lưu trên thiết bị này và bị xóa khi đăng xuất. Câu trả lời không thay thế tư vấn pháp lý.";
+  if (state.user?.id !== userId) return;
   const chat = state.chats.find((item) => item.id === chatId);
   if (!chat) return;
   chat.messages.push(reply);
   persist();
-  if (state.chatId === chatId) renderChat();
+  renderHistory();
+  if (state.chatId === chatId) {
+    renderChat();
+    scrollToLatest();
+  }
 });
 
-// Keep only what the view needs; retrieved_chunks stay out of the history.
+// Tiến trình chỉ hiển thị các bước mà trình duyệt thực sự biết
+function renderProgress() {
+  const pending = state.pendingChat;
+  $("#chat-progress").hidden = !pending || state.chatId !== pending.chatId;
+  $("#send-question").disabled = Boolean(pending) || !$("#question").value.trim();
+  if (!pending || state.chatId !== pending.chatId) return;
+  $("#progress-title").textContent = "Đang xử lý câu hỏi";
+  $("#progress-detail").textContent =
+    `${Math.floor((Date.now() - pending.startedAt) / 1000)} giây · Máy chủ sẽ gửi câu trả lời khi xử lý xong.`;
+  $("#progress-log").replaceChildren(...pending.logs.map((text) => element("li", "", text)));
+}
+
+function scrollToLatest() {
+  const container = $("#chat-scroll");
+  container.scrollTop = container.scrollHeight;
+}
+
+// Chỉ lưu dữ liệu cần để mở lại hội thoại
 function slimResponse(data) {
   return {
     status: data.status,
@@ -235,6 +301,7 @@ function slimResponse(data) {
     assumptions: data.assumptions,
     missing_facts: data.missing_facts,
     source_limitations: data.source_limitations,
+    scope_errors: data.scope_errors,
     provider: data.provider,
     credential_source: data.credential_source,
   };
@@ -242,7 +309,7 @@ function slimResponse(data) {
 
 $("#question").addEventListener("input", () => {
   $("#query-public-confirm").checked = false;
-  $("#send-question").disabled = !$("#question").value.trim();
+  $("#send-question").disabled = Boolean(state.pendingChat) || !$("#question").value.trim();
 });
 $("#question").addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
@@ -258,21 +325,19 @@ $("#suggestions").addEventListener("click", (event) => {
   $("#send-question").disabled = false;
   $("#question").focus();
 });
-$("#history-select").addEventListener("change", (event) => {
-  state.chatId = event.target.value || null;
-  $("#question-form").reset();
+document.addEventListener("chat-selected", () => {
+  $("#question").value = "";
   renderChat();
+  scrollToLatest();
 });
 $("#chat-title").addEventListener("input", (event) => {
   const active = activeChat();
   if (!active) return;
   active.title = event.target.value;
   persist();
-  $("#history-select").selectedOptions[0].textContent = active.title || "Chưa đặt tên";
+  renderHistory();
 });
 $("#delete-chat").addEventListener("click", () => {
-  state.chats = state.chats.filter((chat) => chat.id !== state.chatId);
-  persist();
-  newChat();
+  removeChat(state.chatId);
 });
 export { newChat, renderChat };
