@@ -1,4 +1,4 @@
-/* Cửa sổ PDF, form và thiết lập */
+/* Cửa sổ PDF và form tải tài liệu */
 dialog {
   width: min(540px, calc(100% - 28px));
   border: 1px solid var(--line);
@@ -47,17 +47,17 @@ dialog h2 {
   outline-offset: 3px;
 }
 .upload-zone strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 .upload-zone span {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--muted);
 }
 .form-field {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 12px;
+  font-size: 14px;
   margin-top: 16px;
 }
 .form-field input,
@@ -67,7 +67,7 @@ dialog h2 {
   border-radius: 6px;
   background: white;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   min-width: 0;
   width: 100%;
 }
@@ -80,14 +80,14 @@ dialog h2 {
   background: #eef2e7;
   padding: 12px;
   border-radius: 5px;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.8;
   color: var(--muted);
   margin-top: 20px;
 }
 .error {
   color: #9c4738;
-  font-size: 12px;
+  font-size: 14px;
   margin-top: 12px;
 }
 .dialog-actions {
@@ -116,29 +116,6 @@ dialog h2 {
 .file-picker {
   cursor: pointer;
 }
-.settings-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 22px;
-  margin-top: 25px;
-}
-.settings-card {
-  padding: 28px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: white;
-}
-.settings-card h2 {
-  margin-bottom: 18px;
-}
-.settings-card p {
-  font-size: 13px;
-  line-height: 1.9;
-  color: var(--muted);
-}
-.settings-card button {
-  margin-top: 20px;
-}
 .toast {
   position: fixed;
   bottom: 22px;
@@ -150,7 +127,6 @@ dialog h2 {
   background: #38482e;
   color: white;
   z-index: 100;
-  font-size: 12px;
+  font-size: 14px;
   box-shadow: 0 8px 30px #28322930;
 }
-#evidence-pdf { width: 100%; height: 60vh; border: 0; margin-top: 1rem; }

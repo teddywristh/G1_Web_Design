@@ -1,134 +1,131 @@
-/* Giao diện trên màn hình nhỏ */
-@media (max-width: 1050px) {
-  .filters {
-    flex-direction: column;
-    align-items: stretch;
+/* Giao diện màn hình nhỏ */
+@media (max-width: 1000px) {
+  :root {
+    --sidebar-width: 220px;
   }
-  .search-sort input {
-    flex: 1;
-    width: auto;
+  .main-shell.evidence-open {
+    grid-template-columns: minmax(0, 1fr);
   }
-  .settings-grid {
-    grid-template-columns: 1fr;
+  .evidence-open > main {
+    visibility: hidden;
   }
-  .welcome h1 {
-    font-size: 28px;
-  }
-  .question-content {
-    margin-top: 45px;
+  .evidence-open .evidence-panel {
+    position: absolute;
+    grid-column: auto;
+    grid-row: auto;
+    inset: var(--header-height) 0 0 0;
+    z-index: 22;
   }
 }
-@media (max-width: 700px) {
+@media (max-width: 760px) {
+  :root {
+    --sidebar-width: 260px;
+    --header-height: 58px;
+  }
   .sidebar {
     transform: translateX(-100%);
-    transition: transform 0.2s;
+    transition: transform 0.18s ease;
   }
   .sidebar.is-open {
     transform: translateX(0);
   }
   .main-shell {
-    margin-left: 0;
+    inset: 0;
   }
   .menu-toggle {
-    display: block;
+    display: inline-block;
   }
   .topbar {
-    height: 60px;
-    padding: 0 17px;
-    font-size: 10px;
+    padding: 0 12px;
   }
-  .preview-label {
-    font-size: 9px;
+  .topbar > div {
+    gap: 8px;
   }
-  main {
-    padding: 23px 18px 0;
+  .main-shell > main {
+    padding: 0 12px;
   }
-  .section-heading {
-    gap: 12px;
+  .chat-scroll {
+    padding: 18px 4px;
   }
-  .section-heading h2 {
-    font-size: 12px;
-  }
-  .section-heading .secondary-button {
-    font-size: 10px;
-    padding: 9px;
-  }
-  .page-heading {
-    flex-wrap: wrap;
-    margin-top: 0;
-  }
-  h1,
-  .welcome h1 {
-    font-size: 26px;
-  }
-  .subtitle {
-    font-size: 12px;
-  }
-  .page-footer {
-    font-size: 9px;
-    margin-top: 30px;
-  }
-  .question-workspace {
-    min-height: calc(100dvh - 177px);
-  }
-  .welcome > p:last-child {
-    font-size: 12px;
-  }
-  .question-composer {
-    padding: 14px;
-  }
-  .question-composer textarea {
-    font-size: 16px;
+  .composer-dock {
+    padding: 10px 0 max(12px, env(safe-area-inset-bottom));
   }
   .composer-bottom > span {
-    font-size: 9px;
-  }
-  .history-bar {
-    gap: 8px;
     font-size: 11px;
   }
-  .history-bar select {
-    font-size: 11px;
+  .composer-filters {
+    gap: 4px;
+  }
+  .query-options > summary {
+    font-size: 13px;
+    padding: 8px 4px;
+  }
+  .welcome {
+    padding-top: 38px;
+  }
+  .welcome h1 {
+    font-size: 29px;
+  }
+  .welcome > p:last-child {
+    font-size: 16px;
+  }
+  .suggestions button {
+    font-size: 15px;
   }
   .question-message {
-    margin-left: 20px;
+    max-width: 92%;
   }
-  .chat-title {
-    font-size: 17px;
+  .conversation-heading {
+    flex-wrap: wrap;
+    gap: 4px;
   }
-  .tabs {
-    gap: 3px;
+  .history-delete {
+    opacity: 1;
   }
-  .tabs button {
-    font-size: 11px;
-    padding: 7px 10px;
+  .evidence-open .evidence-panel {
+    left: 0;
   }
-  .search-sort input,
-  .search-sort select {
-    font-size: 11px;
+  .settings-mode .main-shell > main {
+    padding: 0 20px;
   }
-  .table-footer {
-    font-size: 9px;
+  #connection-form {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 18px;
+    gap: 8px;
   }
-  .table-footer > span:last-child {
-    max-width: 185px;
+  #connection-form > button {
+    grid-column: 1;
+    margin-top: 10px;
+  }
+  #connection-form label:not(:first-child) {
+    margin-top: 12px;
+  }
+  .section-heading {
+    flex-wrap: wrap;
+  }
+  .search-sort {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .search-sort input {
+    width: 100%;
+  }
+  .table-wrap {
+    overflow-x: auto;
+  }
+  table {
+    min-width: 720px;
   }
   dialog {
-    padding: 28px 20px;
+    width: calc(100% - 24px);
+    padding: 24px;
   }
-  dialog h2 {
-    font-size: 22px;
-  }
-  .toast {
-    width: calc(100% - 28px);
-    font-size: 11px;
-  }
-  .settings-card {
-    padding: 22px;
+  #document-dialog {
+    width: calc(100% - 20px);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
+  .sidebar {
+    transition: none;
   }
 }

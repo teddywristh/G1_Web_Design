@@ -2,7 +2,7 @@ import { api, setCsrf } from "./api.js";
 import { renderChat } from "./chat.js";
 import { $, element, isAdmin, notify, readStore, state, storeKey } from "./core.js";
 import { loadKbs, renderKbSelect, renderScope } from "./knowledge-bases.js";
-import { navigate } from "./navigation.js";
+import { closeMenu, navigate } from "./navigation.js";
 import { loadModels, resetModels } from "./models.js";
 import { loadConnections } from "./settings.js";
 
@@ -10,7 +10,9 @@ let googleTimer;
 
 // Đăng nhập, đăng ký và khôi phục phiên
 function showAuth(message = "") {
+  closeMenu();
   state.user = null;
+  document.dispatchEvent(new Event("close-evidence"));
   $("#auth-view").hidden = false;
   $("#sidebar").hidden = true;
   $("#app-shell").hidden = true;
@@ -18,11 +20,12 @@ function showAuth(message = "") {
 }
 
 function showGuest(message = "") {
+  document.dispatchEvent(new Event("close-evidence"));
+  state.pendingChat = null;
   state.user = null;
   state.kbs = [];
   state.kbId = null;
   state.docs = [];
-  state.selected = new Set();
   state.chats = readStore("chats", []);
   state.chatId = null;
   state.saved = new Set(readStore("saved", []));
@@ -31,9 +34,6 @@ function showGuest(message = "") {
   $("#app-shell").hidden = false;
   $("#user-name").textContent = "Khách trải nghiệm";
   $("#user-role").textContent = "Đăng nhập để sử dụng AI";
-  $("#account-action").textContent = "Đăng nhập";
-  $("#register-action").hidden = false;
-  $("#backend-label").textContent = "Chế độ trải nghiệm";
   renderScope();
   renderKbSelect();
   renderChat();
@@ -63,7 +63,6 @@ async function enterSession(session) {
   state.chats = readStore("chats", []);
   state.saved = new Set(readStore("saved", []));
   const prefs = readStore("prefs", {});
-  state.selected = new Set(prefs.kbs || []);
   state.ai = prefs.ai || null;
   $("#as-of").value = "";
   $("#auth-view").hidden = true;
@@ -71,9 +70,6 @@ async function enterSession(session) {
   $("#app-shell").hidden = false;
   $("#user-name").textContent = state.user.displayName;
   $("#user-role").textContent = isAdmin() ? "Quản trị viên" : "Người dùng";
-  $("#account-action").textContent = "Tài khoản";
-  $("#register-action").hidden = true;
-  $("#backend-label").textContent = "Đã kết nối";
   $("#account-info").textContent = `${state.user.displayName} · ${state.user.email || ""}`;
   await loadKbs();
   // Listing can wait on a ChatGPT worker restore; the picker shows its own loading state.
@@ -174,10 +170,6 @@ $("#auth-switch").addEventListener("click", () =>
   setAuthMode(state.authMode === "login" ? "register" : "login"),
 );
 $("#guest-back").addEventListener("click", () => showGuest());
-$("#register-action").addEventListener("click", () => {
-  setAuthMode("register");
-  showAuth();
-});
 
 async function logout(all) {
   try {
@@ -191,7 +183,6 @@ async function logout(all) {
   ["chats", "saved"].forEach((name) => localStorage.removeItem(storeKey(name)));
   Object.assign(state, { kbs: [], docs: [], chats: [], chatId: null, saved: new Set() });
   Object.assign(state, {
-    selected: new Set(),
     connections: [],
     kbId: null,
     aiOptions: null,

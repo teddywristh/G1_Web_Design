@@ -1,19 +1,42 @@
-<dialog id="evidence-dialog" aria-labelledby="evidence-title">
-  <button class="close-dialog" data-close aria-label="Đóng">×</button>
-  <h2 id="evidence-title"></h2>
-  <p id="evidence-meta" class="subtitle"></p>
-  <blockquote id="evidence-text" class="evidence-text"></blockquote>
-  <p id="evidence-limits" class="small-print"></p>
-  <p id="evidence-error" class="error" role="alert"></p>
-  <a
-    id="evidence-link"
-    class="secondary-button"
-    target="_blank"
-    rel="noopener"
-    hidden
-  >
-    Mở nguồn web
-  </a>
-  <button id="evidence-pdf-open" class="secondary-button" type="button" hidden>Mở trang trong PDF</button>
-  <iframe id="evidence-pdf" title="Trang PDF được trích dẫn" hidden></iframe>
-</dialog>
+<aside
+  id="evidence-panel"
+  class="evidence-panel"
+  aria-labelledby="evidence-title"
+  hidden
+>
+  <header class="source-heading">
+    <span>Nguồn tham khảo</span
+    ><button
+      id="close-evidence"
+      class="secondary-button"
+      aria-label="Đóng nguồn tham khảo"
+    >
+      Đóng
+    </button>
+  </header>
+  <div class="source-content">
+    <h2 id="evidence-title" tabindex="-1"></h2>
+    <p id="evidence-meta" class="subtitle"></p>
+    <blockquote id="evidence-text" class="evidence-text"></blockquote>
+    <p id="evidence-limits" class="small-print"></p>
+    <p id="evidence-error" class="error" role="alert"></p>
+    <a
+      id="evidence-link"
+      class="secondary-button"
+      target="_blank"
+      rel="noopener noreferrer"
+      hidden
+      >Mở nguồn web</a
+    >
+    <button
+      id="evidence-pdf-open"
+      class="secondary-button"
+      type="button"
+      hidden
+    >
+      Tải lại PDF
+    </button>
+    <p id="evidence-pdf-status" role="status"></p>
+    <iframe id="evidence-pdf" title="Trang PDF được trích dẫn" hidden></iframe>
+  </div>
+</aside>

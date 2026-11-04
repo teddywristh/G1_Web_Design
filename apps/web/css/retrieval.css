@@ -1,129 +1,255 @@
-/* Chọn kho, mốc thời gian và nhà cung cấp AI */
-.scope-bar {
+/* Model và nguồn tham khảo */
+.combobox-group {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-  align-items: flex-end;
-  margin-bottom: 14px;
-}
-.scope-bar .form-field {
-  margin-top: 0;
-  min-width: 140px;
-  width: auto;
-}
-#kb-scope {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 6px 12px 8px;
-  margin: 0;
-  flex: 1 1 280px;
-  font-size: 12px;
-}
-#kb-scope legend {
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px 4px;
+  font-size: 15px;
   color: var(--muted);
-  font-size: 11px;
-  padding: 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
-.scope-option {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  margin-right: 16px;
+.combobox-group:not(:first-child) {
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
 }
-.kb-bar {
+.combobox-group small {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.combobox-option {
   display: flex;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
   gap: 10px;
-  margin-bottom: 14px;
+  padding: 7px 12px;
+  font-size: 15px;
+  color: var(--ink);
+  cursor: pointer;
 }
-.kb-bar select {
-  padding: 9px;
-  border: 1px solid #d6ddcd;
-  border-radius: 6px;
-  background: white;
-  min-width: 220px;
+.combobox-option small {
+  color: var(--muted);
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.combobox-option.is-active {
+  background: var(--olive-soft);
+}
+.combobox-option[aria-selected="true"] {
+  color: var(--olive-dark);
+  font-weight: 600;
+}
+.combobox-note {
+  padding: 6px 12px;
+  font-size: 15px;
+  color: var(--muted);
 }
 
-/* Câu trả lời, trích dẫn và nguồn */
+.combobox {
+  position: relative;
+}
+.combobox input {
+  width: 100%;
+  padding-right: 30px;
+  text-overflow: ellipsis;
+  background: var(--card)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23657060' stroke-width='1.5'/%3E%3C/svg%3E")
+    no-repeat right 12px center;
+  min-width: 0;
+  height: 40px;
+  font-size: 15px;
+}
+.combobox-list {
+  position: absolute;
+  z-index: 15;
+  top: auto;
+  right: 0;
+  width: max(100%, 320px);
+  max-width: calc(100vw - 32px);
+  max-height: min(340px, 45dvh);
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  text-transform: none;
+  letter-spacing: 0;
+  bottom: calc(100% + 12px);
+  font-size: 15px;
+}
 .answer-message {
-  margin: 16px 50px 16px 0;
-  background: white;
-  border: 1px solid var(--line);
-  padding: 14px 17px;
-  border-radius: 12px 12px 12px 3px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
   overflow-wrap: anywhere;
 }
 .answer-message > span {
-  font-size: 10px;
-  font-weight: 600;
+  display: block;
   color: var(--olive);
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 10px;
 }
 .answer-head {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   align-items: center;
-  margin: 6px 0;
+  margin-bottom: 14px;
 }
 .answer-head small {
+  font-size: 13px;
   color: var(--muted);
 }
-.answer-text p {
+.answer-text {
+  font-size: 17px;
+  line-height: 1.85;
+}
+.answer-text p + p {
+  margin-top: 14px;
+}
+.answer-block {
+  margin-top: 18px;
+  font-size: 16px;
+}
+.answer-block ul {
+  margin: 8px 0;
+  padding-left: 22px;
   line-height: 1.8;
-  margin-top: 6px;
 }
 .cite {
   color: var(--olive);
-  font-weight: 600;
-  padding: 0 2px;
-  text-decoration: underline;
+  background: #e8eedd;
+  font-size: 14px;
+  border-radius: 5px;
+  padding: 1px 5px;
+  margin: 0 2px;
 }
-.answer-block {
-  margin-top: 12px;
-  font-size: 13px;
+.answer-sources {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-top: 20px;
+  background: #fff;
 }
-.answer-block ul {
-  margin: 4px 0 0;
-  padding-left: 18px;
+.answer-sources summary {
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 15px;
+  padding: 14px 16px;
+}
+.source-list {
+  overflow-y: auto;
+  max-height: 250px;
+  border-top: 1px solid var(--line);
+  padding: 0 14px;
 }
 .citation-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+  display: block;
   width: 100%;
+  padding: 14px 2px;
+  border-bottom: 1px solid var(--line);
   text-align: left;
-  padding: 8px 10px;
-  margin-top: 6px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.citation-row:last-child {
+  border-bottom: 0;
+}
+.citation-row:hover {
+  color: var(--olive);
 }
 .citation-row small {
+  display: block;
+  font-size: 13px;
   color: var(--muted);
-  white-space: nowrap;
+  margin-top: 4px;
 }
 .limit-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 12px;
+  margin-top: 16px;
 }
 .limit-chips span {
-  background: #f6eddc;
-  color: #876c35;
-  font-size: 11px;
-  border-radius: 20px;
-  padding: 3px 9px;
+  border: 1px solid #e6d9b8;
+  background: #faf5e9;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+.evidence-panel {
+  min-height: 0;
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--line);
+  background: white;
+}
+.source-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.source-heading > span {
+  color: var(--muted);
+  font-size: 15px;
+}
+.source-content {
+  overflow-y: auto;
+  padding: 24px;
+  min-height: 0;
+}
+.source-content h2 {
+  font-size: 22px;
+  line-height: 1.5;
 }
 .evidence-text {
-  margin: 14px 0;
-  padding: 12px 16px;
-  border-left: 3px solid var(--olive);
-  background: #f1f4ec;
-  white-space: pre-wrap;
-  max-height: 45dvh;
-  overflow-y: auto;
+  font-size: 16px;
   line-height: 1.8;
+  white-space: pre-wrap;
+  padding: 18px;
+  margin: 20px 0;
+  background: #f5f7f1;
+  border-left: 3px solid var(--olive);
+  max-height: 280px;
+  overflow-y: auto;
+}
+#evidence-pdf {
+  display: block;
+  width: 100%;
+  height: 65dvh;
+  min-height: 340px;
+  border: 1px solid var(--line);
+  margin-top: 16px;
+  border-radius: 8px;
+}
+#evidence-pdf-status {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 14px;
 }
 .problem {
   background: #f6e1de;
   color: #8f3b32;
+}
+.kb-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.kb-bar select {
+  min-width: 200px;
+  padding: 8px 12px;
 }

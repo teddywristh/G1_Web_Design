@@ -3,92 +3,63 @@
   class="view question-workspace"
   aria-label="Hỏi đáp pháp luật"
 >
-  <div class="section-heading">
-    <h2>Hỏi đáp pháp luật</h2>
-    <button class="secondary-button" data-action="new-chat">
-      + Cuộc trò chuyện mới
-    </button>
-  </div>
-  <div class="scope-bar">
-    <fieldset id="kb-scope">
-      <legend>Nguồn tra cứu (tối đa 5 kho)</legend>
-    </fieldset>
-    <label class="form-field">
-      Mốc thời gian
-      <input id="as-of" type="date" />
-    </label>
-    <div class="form-field model-field">
-      <label for="model-picker">Model AI</label>
-      <div class="combobox">
-        <input
-          id="model-picker"
-          role="combobox"
-          aria-autocomplete="list"
-          aria-expanded="false"
-          aria-controls="model-options"
-          autocomplete="off"
-          spellcheck="false"
-          placeholder="Chọn nhà cung cấp và model"
-        />
-        <ul
-          id="model-options"
-          class="combobox-list"
-          role="listbox"
-          aria-label="Nhà cung cấp và model"
-          hidden
-        ></ul>
-      </div>
-    </div>
-    <label class="small-print">
-      <input id="web-search" type="checkbox" />
-      Tìm nguồn pháp luật trên web (câu hỏi được gửi tới trang tìm kiếm).
-    </label>
-    <label id="query-public-label" class="small-print" hidden>
-      <input id="query-public-confirm" type="checkbox" />
-      Câu hỏi không chứa dữ liệu cá nhân hoặc thông tin mật; tôi đồng ý với điều
-      kiện của NVIDIA free.
-    </label>
-  </div>
-  <div id="history-bar" class="history-bar" hidden>
-    <label for="history-select">Lịch sử</label>
-    <select id="history-select">
-      <option value="">Chọn cuộc trò chuyện</option>
-    </select>
-    <button id="delete-chat" class="text-button danger" hidden>Xóa</button>
-  </div>
-  <div class="question-content">
+  <div id="chat-scroll" class="chat-scroll">
     <div id="welcome" class="welcome">
-      <span class="welcome-mark" aria-hidden="true">?</span>
-      <p class="eyebrow">LEGAL AI</p>
+      <span class="eyebrow">LEGAL AI</span>
       <h1>Bạn muốn tìm hiểu điều gì?</h1>
-      <p>Đặt câu hỏi bằng cách mô tả tình huống của bạn.</p>
+      <p>
+        Mô tả tình huống của bạn. Cùng tìm hiểu từ những nguồn có thể kiểm
+        chứng.
+      </p>
     </div>
     <div id="conversation" hidden>
-      <label class="sr-only" for="chat-title"> Tên cuộc trò chuyện </label>
-      <input id="chat-title" class="chat-title" maxlength="100" />
+      <div class="conversation-heading">
+        <label class="sr-only" for="chat-title">Tên cuộc trò chuyện</label>
+        <input id="chat-title" class="chat-title" maxlength="100" />
+        <button id="delete-chat" class="text-button danger" hidden>
+          Xóa hội thoại
+        </button>
+      </div>
       <div
         id="messages"
         class="messages"
         role="log"
-        aria-label="Các câu hỏi đã lưu"
+        aria-label="Nội dung hội thoại"
       ></div>
+      <div
+        id="chat-progress"
+        class="chat-progress"
+        role="status"
+        aria-live="polite"
+        hidden
+      >
+        <strong id="progress-title">Đang xử lý yêu cầu</strong>
+        <p id="progress-detail"></p>
+        <ol id="progress-log"></ol>
+      </div>
       <p id="assistant-status" class="assistant-status">
-        Lịch sử hội thoại chỉ lưu trên thiết bị này. Câu trả lời không thay thế
-        tư vấn pháp lý.
+        Lịch sử được lưu trên thiết bị này.
       </p>
     </div>
+    <div id="suggestions" class="suggestions">
+      <button>Hợp đồng lao động cần có những nội dung gì?</button>
+      <button>Tôi cần chuẩn bị gì khi thành lập doanh nghiệp?</button>
+      <button>Làm thế nào để kiểm tra hiệu lực của một văn bản?</button>
+    </div>
+  </div>
+  <div class="composer-dock">
     <form id="question-form" class="question-composer">
-      <label class="sr-only" for="question"> Nhập câu hỏi pháp luật </label>
+      <label class="sr-only" for="question">Nhập câu hỏi pháp luật</label>
       <textarea
         id="question"
         placeholder="Nhập câu hỏi của bạn…"
-        rows="3"
+        rows="2"
         maxlength="4000"
         required
       ></textarea>
       <div class="composer-bottom">
-        <span>Enter để gửi · Shift + Enter để xuống dòng</span>
-        <button
+        <span>Enter để gửi · Shift + Enter để xuống dòng</span
+        ><button
           id="send-question"
           class="send-button"
           type="submit"
@@ -99,14 +70,50 @@
         </button>
       </div>
     </form>
-    <div id="suggestions" class="suggestions">
-      <p>Gợi ý để bắt đầu</p>
-      <button>Hợp đồng lao động cần có những nội dung gì?</button>
-      <button>Tôi cần chuẩn bị gì khi thành lập doanh nghiệp?</button>
-      <button>Làm thế nào để kiểm tra hiệu lực của một văn bản?</button>
+    <div class="composer-filters" aria-label="Tùy chọn hỏi đáp">
+      <div class="model-field">
+        <label class="sr-only" for="model-picker">Model AI</label>
+        <div class="combobox">
+          <input
+            id="model-picker"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded="false"
+            aria-controls="model-options"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Chọn model AI"
+          />
+          <ul
+            id="model-options"
+            class="combobox-list"
+            role="listbox"
+            aria-label="Nhà cung cấp và model"
+            hidden
+          ></ul>
+        </div>
+      </div>
+      <details class="query-options">
+        <summary>Tùy chọn tra cứu</summary>
+        <div class="query-options-content">
+          <p id="kb-scope">Tra cứu trên tất cả kho được phép truy cập.</p>
+          <label class="form-field"
+            >Mốc thời gian<input id="as-of" type="date"
+          /></label>
+          <label class="check-field"
+            ><input id="web-search" type="checkbox" />Tìm thêm nguồn pháp luật
+            trên web</label
+          >
+        </div>
+      </details>
     </div>
-    <p class="small-print centered">
-      Câu trả lời sử dụng nguồn khả dụng và kèm trích dẫn để kiểm tra.
+    <label id="query-public-label" class="small-print" hidden
+      ><input id="query-public-confirm" type="checkbox" />Câu hỏi không chứa dữ
+      liệu cá nhân hoặc thông tin mật; tôi đồng ý với điều kiện của NVIDIA
+      free.</label
+    >
+    <p class="composer-note">
+      Câu trả lời có thể có sai sót. Hãy kiểm tra nguồn trước khi sử dụng.
     </p>
   </div>
 </section>

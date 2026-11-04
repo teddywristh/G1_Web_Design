@@ -1,6 +1,5 @@
 import { api } from "./api.js";
 import { $, element, state } from "./core.js";
-import { navigate } from "./navigation.js";
 
 async function loadSessions(cursor) {
   if (!state.user) return;
@@ -44,13 +43,4 @@ async function loadSessions(cursor) {
   }
 }
 $("#sessions-more").addEventListener("click", () => loadSessions(state.sessionCursor));
-document.querySelectorAll("[data-settings-target]").forEach((button) =>
-  button.addEventListener("click", () => {
-    navigate("settings");
-    const target = document.getElementById(button.dataset.settingsTarget);
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
-    target.focus({ preventScroll: true });
-  }),
-);
-
 export { loadSessions };

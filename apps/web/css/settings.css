@@ -1,76 +1,153 @@
-/* Thiết lập */
+/* Thiết lập tài khoản và kết nối AI */
+.settings-mode .sidebar {
+  background: #e8ede2;
+}
+.settings-mode .brand {
+  padding-bottom: 40px;
+}
+.settings-mode .main-shell > main {
+  background: #fff;
+  padding: 0 48px;
+}
+.settings-workspace {
+  max-width: 840px !important;
+}
+.settings-heading {
+  padding: 8px 0 30px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.settings-heading h1 {
+  font-size: 32px;
+  margin: 10px 0;
+}
+.settings-heading > p:last-child {
+  color: var(--muted);
+  font-size: 16px;
+}
+.settings-section,
+.chatgpt-connection {
+  padding: 28px 0;
+  border-bottom: 1px solid var(--line);
+}
+.settings-page h2 {
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+.settings-page h3 {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.settings-page p {
+  line-height: 1.7;
+}
+.settings-page .small-print,
+.settings-page .subtitle {
+  font-size: 15px;
+  margin-top: 10px;
+}
+.settings-page .secondary-button,
+.settings-page .primary-button {
+  font-size: 15px;
+}
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 20px;
+}
+.account-actions > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
 .connection-list {
   list-style: none;
   padding: 0;
-  margin: 10px 0;
+  margin: 12px 0 20px;
+}
+.connection-list:empty::after {
+  content: "Chưa có thông tin để hiển thị.";
+  color: var(--muted);
+  font-size: 15px;
 }
 .connection-list li {
   display: flex;
-  gap: 6px;
   align-items: center;
-  padding: 4px 0;
-}
-.inline-form {
-  display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 16px;
+}
+.connection-list li > span {
+  flex: 1;
+  min-width: 180px;
+}
+.connection-list li > strong {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--olive);
+  background: #eef3e8;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+#connection-form {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 14px 22px;
+  align-items: center;
+  padding: 24px;
+  margin: 24px 0;
+  background: #f6f7f3;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+#connection-form label {
+  font-size: 15px;
+}
+#connection-form input,
+#connection-form select {
+  min-width: 0;
+  width: 100%;
+  font-size: 16px;
+  height: 44px;
+  padding: 0 12px;
+}
+#connection-form > button {
+  grid-column: 2;
+  justify-self: start;
+}
+.ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+.chatgpt-connection > a {
   margin-top: 12px;
 }
-.inline-form input,
-.inline-form select {
-  padding: 9px;
-  border: 1px solid #d6ddcd;
-  border-radius: 6px;
-  background: white;
-  min-width: 0;
+#reset-data {
+  margin-top: 16px;
 }
-.inline-form input {
-  flex: 1 1 160px;
+/* Tiến độ tài liệu lấy từ số liệu máy chủ */
+.embedding-progress {
+  display: block;
+  width: 210px;
+  max-width: 100%;
+  height: 10px;
+  margin-top: 10px;
+  accent-color: var(--olive);
 }
+.embedding-progress-label,
 .processing-detail {
   display: block;
-  max-width: 280px;
   margin-top: 6px;
-  color: #9c4738;
-  line-height: 1.5;
-}
-
-.topbar-actions,
-.ai-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.chatgpt-connection {
-  border-top: 1px solid var(--line);
-  margin-top: 20px;
-  padding-top: 18px;
-}
-.chatgpt-connection h3,
-#account-card h3 {
   font-size: 14px;
-  margin-top: 12px;
+  line-height: 1.5;
+  max-width: 300px;
 }
-.chatgpt-connection .small-print {
-  margin: 8px 0;
+.processing-detail {
+  color: var(--muted);
 }
-.chatgpt-connection a,
-.ai-actions {
-  margin-top: 8px;
-}
-@media (max-width: 700px) {
-  .topbar-actions .preview-label {
-    display: none;
-  }
-  .topbar-actions .secondary-button {
-    padding: 7px;
-    font-size: 11px;
-  }
-  .scope-bar .form-field {
-    flex: 1 1 140px;
-  }
-}
-
-.embedding-progress { display: block; width: 180px; max-width: 100%; margin-top: 8px; accent-color: #397356; }
-.embedding-progress-label { display: block; margin-top: 3px; color: #42544b; }

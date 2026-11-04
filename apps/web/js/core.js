@@ -18,12 +18,12 @@ const state = {
   chats: [],
   chatId: null,
   saved: new Set(),
-  selected: new Set(),
   documentId: null,
   authMode: "login",
   pollTimer: null,
+  pendingChat: null,
+  settingsPage: "account",
 };
-const MAX_KBS = 5;
 const PROCESSING_TEXT = {
   queued: "Đang chờ xử lý",
   processing: "Đang xử lý",
@@ -41,7 +41,8 @@ const ACTION_TEXT = {
   await_admin_review: "Quản trị viên cần xuất bản bản dựng mới.",
   upload_public_pdf:
     "Hãy tải lại tài liệu công khai và xác nhận tài liệu không có dữ liệu cá nhân hoặc thông tin mật.",
-  check_storage: "Lần tải trước không lưu được PDF. Hãy xóa mục này và tải lại tệp PDF gốc như một tài liệu mới.",
+  check_storage:
+    "Lần tải trước không lưu được PDF. Hãy xóa mục này và tải lại tệp PDF gốc như một tài liệu mới.",
   check_job:
     "Không tìm thấy job với cấu hình embedding hiện tại. Liên hệ quản trị viên để kiểm tra.",
   reindex: "Model embedding đã đổi. Mở tài liệu và chọn xử lý lại để lập chỉ mục local.",
@@ -142,7 +143,6 @@ function persist() {
   writeStore("chats", state.chats);
   writeStore("saved", [...state.saved]);
   writeStore("prefs", {
-    kbs: [...state.selected],
     ai: state.ai,
   });
   renderCounts();
@@ -150,14 +150,12 @@ function persist() {
 
 function renderCounts() {
   $("#document-count").textContent = state.docs.length;
-  $("#saved-count").textContent = state.docs.filter((doc) => state.saved.has(doc.id)).length;
   $("#chat-count").textContent = state.chats.length;
 }
 
 export {
   $,
   ACTION_TEXT,
-  MAX_KBS,
   PROCESSING_TEXT,
   SOURCE_TEXT,
   STAGE_TEXT,
