@@ -22,6 +22,7 @@ const state = {
   authMode: "login",
   pollTimer: null,
   pendingChat: null,
+  chatError: null,
   settingsPage: "account",
 };
 const PROCESSING_TEXT = {

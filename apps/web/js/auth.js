@@ -22,6 +22,7 @@ function showAuth(message = "") {
 function showGuest(message = "") {
   document.dispatchEvent(new Event("close-evidence"));
   state.pendingChat = null;
+  state.chatError = null;
   state.user = null;
   state.kbs = [];
   state.kbId = null;
