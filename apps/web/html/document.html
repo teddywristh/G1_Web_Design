@@ -8,10 +8,42 @@
     <button id="retry-document" class="secondary-button" hidden>
       Xử lý lại
     </button>
+    <button id="edit-document" class="secondary-button" hidden>
+      Sửa thông tin
+    </button>
     <button id="delete-document" class="text-button danger">
       Xóa tài liệu
     </button>
   </div>
+  <form id="shared-edit-form" class="shared-fields" hidden>
+    <h3>Sửa thông tin tài liệu dùng chung</h3>
+    <label class="form-field">Tên tài liệu<input name="title" maxlength="300" required /></label>
+    <div class="form-grid">
+      <label class="form-field">Loại văn bản<select name="documentType">
+        <option value="Bộ luật">Bộ luật</option>
+        <option value="Luật">Luật</option>
+        <option value="Nghị định">Nghị định</option>
+        <option value="Thông tư">Thông tư</option>
+      </select></label>
+      <label class="form-field">Số hiệu<input name="documentNumber" maxlength="100" required /></label>
+    </div>
+    <label class="form-field">Cơ quan ban hành<input name="issuingAuthority" maxlength="200" required /></label>
+    <div class="form-grid">
+      <label class="form-field">Ngày ban hành<input name="issueDate" type="date" required /></label>
+      <label class="form-field">Ngày hiệu lực<input name="effectiveDate" type="date" /></label>
+    </div>
+    <label class="form-field">Tình trạng hiệu lực<select name="status">
+      <option value="effective">Còn hiệu lực</option>
+      <option value="not_yet_effective">Chưa có hiệu lực</option>
+      <option value="partially_expired">Hết hiệu lực một phần</option>
+      <option value="expired">Hết hiệu lực</option>
+    </select></label>
+    <label class="form-field">Nguồn tham khảo<input name="sourceUrl" type="url" /></label>
+    <div class="dialog-actions">
+      <button type="button" id="cancel-edit-document" class="secondary-button">Hủy</button>
+      <button type="submit" class="primary-button">Lưu thay đổi</button>
+    </div>
+  </form>
   <iframe id="pdf-viewer" title="Nội dung tài liệu PDF" hidden></iframe>
   <div id="pdf-empty" class="empty-state">
     <h3 id="pdf-empty-title">Đang tải PDF…</h3>

@@ -25,6 +25,7 @@ $("#settings-back").addEventListener("click", () => navigate("chat"));
 document.querySelectorAll("[data-settings-page]").forEach((button) => {
   button.addEventListener("click", () => navigate("settings", button.dataset.settingsPage));
 });
+$("#admin-settings-tab").addEventListener("click", () => navigate("settings", "admin"));
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeMenu();

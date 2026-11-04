@@ -31,6 +31,11 @@ function normalizeDoc(raw, kb) {
     version: raw.version,
     fileState: raw.fileState,
     processing: null,
+    documentType: raw.documentType,
+    issueDate: raw.issueDate,
+    effectiveDate: raw.effectiveDate,
+    status: raw.status,
+    sourceUrl: raw.sourceUrl,
   };
 }
 
@@ -256,6 +261,23 @@ async function openDocument(id) {
     .join(" · ");
   $("#detail-bookmark").textContent = state.saved.has(id) ? "Bỏ đánh dấu" : "Đánh dấu";
   $("#delete-document").hidden = doc.shared && !isAdmin();
+  $("#edit-document").hidden = !doc.shared || !isAdmin();
+  $("#shared-edit-form").hidden = true;
+  if (doc.shared) {
+    const form = $("#shared-edit-form");
+    Object.entries({
+      title: doc.title,
+      documentType: doc.documentType,
+      documentNumber: doc.number,
+      issuingAuthority: doc.authority,
+      issueDate: doc.issueDate,
+      effectiveDate: doc.effectiveDate || "",
+      status: doc.status,
+      sourceUrl: doc.sourceUrl || "",
+    }).forEach(([name, value]) => {
+      form.elements[name].value = value || "";
+    });
+  }
   const status = doc.processing;
   $("#retry-document").hidden = !(
     status &&
@@ -304,6 +326,35 @@ $("#retry-document").addEventListener("click", async () => {
   }
 });
 $("#detail-bookmark").addEventListener("click", () => toggleSaved(state.documentId));
+$("#edit-document").addEventListener("click", () => {
+  $("#shared-edit-form").hidden = false;
+  $("#edit-document").hidden = true;
+});
+$("#cancel-edit-document").addEventListener("click", () => {
+  $("#shared-edit-form").hidden = true;
+  $("#edit-document").hidden = false;
+});
+$("#shared-edit-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const doc = state.docs.find((item) => item.id === state.documentId);
+  if (!doc) return;
+  const data = new FormData(event.currentTarget);
+  const body = Object.fromEntries(data.entries());
+  body.effectiveDate ||= null;
+  body.sourceUrl ||= null;
+  try {
+    const updated = await api.patch(`/admin/documents/${doc.id}`, body, { version: doc.version });
+    Object.assign(doc, normalizeDoc(updated, { id: doc.kbId, kind: "shared" }));
+    $("#shared-edit-form").hidden = true;
+    $("#edit-document").hidden = false;
+    $("#detail-title").textContent = doc.title;
+    $("#detail-meta").textContent = [doc.number, doc.authority].filter(Boolean).join(" · ");
+    renderDocuments();
+    notify("Đã cập nhật thông tin tài liệu.");
+  } catch (error) {
+    $("#pdf-error").textContent = error.message;
+  }
+});
 $("#delete-document").addEventListener("click", async () => {
   const doc = state.docs.find((item) => item.id === state.documentId);
   if (!doc || !confirm(`Xóa "${doc.title}"? Tài liệu sẽ ngừng được dùng để trả lời ngay.`)) return;

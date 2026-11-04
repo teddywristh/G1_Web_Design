@@ -11,6 +11,9 @@
       Thông tin cá nhân, bảo mật và thiết bị đăng nhập.
     </p>
   </header>
+  <button id="admin-settings-tab" class="secondary-button" hidden>
+    Quản trị hệ thống
+  </button>
   <article class="settings-page" id="account-card" tabindex="-1">
     <section class="settings-section">
       <h2>Thông tin tài khoản</h2>
@@ -134,5 +137,37 @@
         theo số hiệu/điều.</span
       >
     </p>
+  </article>
+  <article class="settings-page" id="admin-card" hidden tabindex="-1">
+    <section class="settings-section">
+      <h2>Quản lý người dùng</h2>
+      <p class="subtitle">Xem tài khoản và khóa hoặc mở khóa quyền truy cập.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>TÀI KHOẢN</th>
+              <th>VAI TRÒ</th>
+              <th>TRẠNG THÁI</th>
+              <th><span class="sr-only">Thao tác</span></th>
+            </tr>
+          </thead>
+          <tbody id="admin-user-rows"></tbody>
+        </table>
+      </div>
+      <button id="admin-users-more" type="button" class="text-button" hidden>
+        Tải thêm
+      </button>
+      <p id="admin-users-error" class="error" role="alert"></p>
+    </section>
+    <section class="settings-section">
+      <h2>Auth log</h2>
+      <p class="subtitle">Nhật ký các thay đổi tài khoản và tài liệu.</p>
+      <ul id="admin-audit-list" class="connection-list"></ul>
+      <button id="admin-audit-more" type="button" class="text-button" hidden>
+        Tải thêm
+      </button>
+      <p id="admin-audit-error" class="error" role="alert"></p>
+    </section>
   </article>
 </section>

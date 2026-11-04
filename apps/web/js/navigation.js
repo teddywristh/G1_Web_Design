@@ -1,10 +1,11 @@
 import { setAuthMode, showAuth } from "./auth.js";
-import { $, state } from "./core.js";
+import { $, isAdmin, state } from "./core.js";
 import { loadDocs, renderDocuments } from "./documents.js";
 import { closeEvidence } from "./evidence.js";
 import { loadKbs, renderKbControls } from "./knowledge-bases.js";
 import { loadSessions } from "./sessions.js";
 import { loadConnections } from "./settings.js";
+import { loadAdmin } from "./admin.js";
 
 // Điều hướng giữa không gian làm việc và thiết lập
 function closeMenu() {
@@ -41,13 +42,17 @@ function navigate(view, settingsPage = "account") {
     settings: "Thiết lập",
   }[view];
   if (settings) {
-    state.settingsPage = settingsPage === "ai" ? "ai" : "account";
+    state.settingsPage = ["ai", "admin"].includes(settingsPage) && isAdmin() ? settingsPage : "account";
     const account = state.settingsPage === "account";
+    const admin = state.settingsPage === "admin";
     $("#account-card").hidden = !account;
-    $("#ai-card").hidden = account;
-    $("#settings-title").textContent = account ? "Tài khoản" : "Kết nối AI";
+    $("#ai-card").hidden = account || admin;
+    $("#admin-card").hidden = !admin;
+    $("#settings-title").textContent = account ? "Tài khoản" : admin ? "Quản trị hệ thống" : "Kết nối AI";
     $("#settings-description").textContent = account
       ? "Thông tin cá nhân, bảo mật và thiết bị đăng nhập."
+      : admin
+        ? "Quản lý người dùng, tài liệu dùng chung và nhật ký hệ thống."
       : "Quản lý kết nối và khóa của những nhà cung cấp bạn sử dụng.";
     document.querySelectorAll("[data-settings-page]").forEach((button) => {
       const active = button.dataset.settingsPage === state.settingsPage;
@@ -56,6 +61,7 @@ function navigate(view, settingsPage = "account") {
       else button.removeAttribute("aria-current");
     });
     if (account) loadSessions();
+    else if (admin) loadAdmin();
     else loadConnections();
   } else if (view === "library") {
     if (state.user) loadDocs(true);
