@@ -1,0 +1,4678 @@
+{
+ "date": "2026-11-04",
+ "kb": "f433f4c9ce484aa89ecf23e61f06292c",
+ "generation": "49e3962d3eac4656ad30b4155189258f",
+ "profile": "local:nvidia/Nemotron-3.5-Embed-1B-BF16:1536:bf16-sdpa-512-l2-v1",
+ "candidate_k": 40,
+ "summary": {
+  "exact": {
+   "questions": 15,
+   "recall@1": 0.9333333333333333,
+   "recall@5": 1.0,
+   "recall@10": 1.0,
+   "mrr@10": 0.9666666666666667,
+   "avg_ms": {
+    "embed": 186.43074306552685,
+    "exact": 74.88649146592554,
+    "vector": 288.1372983349138,
+    "revalidate": 1411.9523717983004,
+    "total": 1961.4069046646666
+   },
+   "median_total_ms": 1927.4490699972375
+  },
+  "natural": {
+   "questions": 40,
+   "recall@1": 0.375,
+   "recall@5": 0.65,
+   "recall@10": 0.7,
+   "mrr@10": 0.4804166666666666,
+   "avg_ms": {
+    "embed": 161.33151517551596,
+    "exact": 0.06800817445764551,
+    "vector": 272.49856245052797,
+    "revalidate": 1406.6105807247368,
+    "total": 1840.5086665252384
+   },
+   "median_total_ms": 1841.7078829988895
+  },
+  "all": {
+   "questions": 55,
+   "recall@1": 0.5272727272727272,
+   "recall@5": 0.7454545454545455,
+   "recall@10": 0.7818181818181819,
+   "mrr@10": 0.613030303030303,
+   "avg_ms": {
+    "embed": 168.17675914551893,
+    "exact": 20.47304907213071,
+    "vector": 276.76367223717864,
+    "revalidate": 1408.0674328357088,
+    "total": 1873.480913290537
+   },
+   "median_total_ms": 1873.1993080000393
+  }
+ },
+ "rows": [
+  {
+   "id": "E01",
+   "type": "exact",
+   "q": "Điều 173 Bộ luật Hình sự quy định gì?",
+   "gold": [
+    "173"
+   ],
+   "reference": {
+    "number": null,
+    "article": "173",
+    "clause": null
+   },
+   "exactHits": 3,
+   "top": [
+    {
+     "article": "173",
+     "clause": null,
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "173",
+     "clause": null,
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "173",
+     "clause": "Khoản 5",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "273",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3636
+    },
+    {
+     "article": "373",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3375
+    },
+    {
+     "article": "133",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3361
+    },
+    {
+     "article": "373",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.335
+    },
+    {
+     "article": "273",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3342
+    },
+    {
+     "article": "213",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3286
+    },
+    {
+     "article": "193",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3253
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 214.1252279980108,
+    "exact": 108.24829299963312,
+    "vector": 442.491683003027,
+    "revalidate": 1535.8195249937125,
+    "total": 2300.6847289943835
+   }
+  },
+  {
+   "id": "E02",
+   "type": "exact",
+   "q": "Nội dung Điều 12 về tuổi chịu trách nhiệm hình sự là gì?",
+   "gold": [
+    "12"
+   ],
+   "reference": {
+    "number": null,
+    "article": "12",
+    "clause": null
+   },
+   "exactHits": 2,
+   "top": [
+    {
+     "article": "12",
+     "clause": null,
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "12",
+     "clause": "Khoản 1",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "14",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.5095
+    },
+    {
+     "article": "142",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3659
+    },
+    {
+     "article": "21",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3601
+    },
+    {
+     "article": null,
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3601
+    },
+    {
+     "article": "151",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3549
+    },
+    {
+     "article": "13",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3547
+    },
+    {
+     "article": "52",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3538
+    },
+    {
+     "article": "130",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3482
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 166.6481889988063,
+    "exact": 66.01917200168828,
+    "vector": 347.4390769988531,
+    "revalidate": 1419.6072009945055,
+    "total": 1999.7136389938532
+   }
+  },
+  {
+   "id": "E03",
+   "type": "exact",
+   "q": "Khoản 1 Điều 51 gồm những tình tiết nào?",
+   "gold": [
+    "51"
+   ],
+   "reference": {
+    "number": null,
+    "article": "51",
+    "clause": "1"
+   },
+   "exactHits": 2,
+   "top": [
+    {
+     "article": "51",
+     "clause": "Khoản 1",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "51",
+     "clause": "Khoản 1",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "51",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3765
+    },
+    {
+     "article": "51",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3735
+    },
+    {
+     "article": "51",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3594
+    },
+    {
+     "article": "51",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3589
+    },
+    {
+     "article": "51",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3403
+    },
+    {
+     "article": "52",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3002
+    },
+    {
+     "article": "151",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.2744
+    },
+    {
+     "article": "71",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.2692
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 381.2717460023123,
+    "exact": 76.1840939958347,
+    "vector": 297.2505080033443,
+    "revalidate": 1417.381095001474,
+    "total": 2172.0874430029653
+   }
+  },
+  {
+   "id": "E04",
+   "type": "exact",
+   "q": "Điều 65 quy định điều kiện hưởng án treo ra sao?",
+   "gold": [
+    "65"
+   ],
+   "reference": {
+    "number": null,
+    "article": "65",
+    "clause": null
+   },
+   "exactHits": 6,
+   "top": [
+    {
+     "article": "65",
+     "clause": null,
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "65",
+     "clause": "Khoản 1",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "65",
+     "clause": "Khoản 2",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "65",
+     "clause": "Khoản 3",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "65",
+     "clause": "Khoản 4",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "65",
+     "clause": "Khoản 5",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "64",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.352
+    },
+    {
+     "article": "67",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3324
+    },
+    {
+     "article": "66",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.33
+    },
+    {
+     "article": "365",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3152
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 116.14597700099694,
+    "exact": 69.94556399877183,
+    "vector": 265.13352199981455,
+    "revalidate": 1366.0379180000746,
+    "total": 1817.2629809996579
+   }
+  },
+  {
+   "id": "E05",
+   "type": "exact",
+   "q": "Khoản 2 Điều 260 phạt tù bao nhiêu năm?",
+   "gold": [
+    "260"
+   ],
+   "reference": {
+    "number": null,
+    "article": "260",
+    "clause": "2"
+   },
+   "exactHits": 1,
+   "top": [
+    {
+     "article": "260",
+     "clause": "Khoản 2",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "260",
+     "clause": "Khoản 5",
+     "via": "semantic",
+     "score": 0.5113
+    },
+    {
+     "article": "260",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4998
+    },
+    {
+     "article": "260",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.467
+    },
+    {
+     "article": "260",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4535
+    },
+    {
+     "article": "256",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4504
+    },
+    {
+     "article": "256",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4454
+    },
+    {
+     "article": "340",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4362
+    },
+    {
+     "article": "256",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4343
+    },
+    {
+     "article": "160",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4189
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 227.00925300159724,
+    "exact": 68.347710002854,
+    "vector": 282.50610800023424,
+    "revalidate": 1339.1207379972911,
+    "total": 1916.9838090019766
+   }
+  },
+  {
+   "id": "E06",
+   "type": "exact",
+   "q": "Điều 123 Bộ luật Hình sự",
+   "gold": [
+    "123"
+   ],
+   "reference": {
+    "number": null,
+    "article": "123",
+    "clause": null
+   },
+   "exactHits": 6,
+   "top": [
+    {
+     "article": "123",
+     "clause": null,
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "123",
+     "clause": null,
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "123",
+     "clause": "Khoản 1",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "123",
+     "clause": "Khoản 2",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "123",
+     "clause": "Khoản 3",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "123",
+     "clause": "Khoản 4",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "323",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4208
+    },
+    {
+     "article": "223",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.401
+    },
+    {
+     "article": "213",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3958
+    },
+    {
+     "article": "323",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3826
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 164.40063800109783,
+    "exact": 76.81558699550806,
+    "vector": 273.9615890022833,
+    "revalidate": 1438.7075849954272,
+    "total": 1953.8853989943163
+   }
+  },
+  {
+   "id": "E07",
+   "type": "exact",
+   "q": "Khoản 1 Điều 174 quy định thế nào?",
+   "gold": [
+    "174"
+   ],
+   "reference": {
+    "number": null,
+    "article": "174",
+    "clause": "1"
+   },
+   "exactHits": 1,
+   "top": [
+    {
+     "article": "174",
+     "clause": "Khoản 1",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "174",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.5048
+    },
+    {
+     "article": "174",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3872
+    },
+    {
+     "article": "174",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.3635
+    },
+    {
+     "article": "174",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3549
+    },
+    {
+     "article": "174",
+     "clause": "Khoản 5",
+     "via": "semantic",
+     "score": 0.3547
+    },
+    {
+     "article": "174",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3382
+    },
+    {
+     "article": "194",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3262
+    },
+    {
+     "article": "214",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.301
+    },
+    {
+     "article": "190",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.2854
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 184.61883499549003,
+    "exact": 70.9726770000998,
+    "vector": 269.8565509999753,
+    "revalidate": 1390.5182000016794,
+    "total": 1915.9662629972445
+   }
+  },
+  {
+   "id": "E08",
+   "type": "exact",
+   "q": "Điều 2 nói gì về cơ sở của trách nhiệm hình sự?",
+   "gold": [
+    "2"
+   ],
+   "reference": {
+    "number": null,
+    "article": "2",
+    "clause": null
+   },
+   "exactHits": 3,
+   "top": [
+    {
+     "article": "2",
+     "clause": null,
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "2",
+     "clause": "Khoản 1",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "2",
+     "clause": "Khoản 2",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "6",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4145
+    },
+    {
+     "article": "29",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4066
+    },
+    {
+     "article": "7",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3799
+    },
+    {
+     "article": "23",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3761
+    },
+    {
+     "article": "14",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3715
+    },
+    {
+     "article": "5",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.37
+    },
+    {
+     "article": "11",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3666
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 168.86624399921857,
+    "exact": 72.0145000013872,
+    "vector": 259.93895899591735,
+    "revalidate": 1376.1134470041725,
+    "total": 1876.9331500006956
+   }
+  },
+  {
+   "id": "E09",
+   "type": "exact",
+   "q": "Điều 27 quy định thời hiệu như thế nào?",
+   "gold": [
+    "27"
+   ],
+   "reference": {
+    "number": null,
+    "article": "27",
+    "clause": null
+   },
+   "exactHits": 4,
+   "top": [
+    {
+     "article": "27",
+     "clause": null,
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "27",
+     "clause": "Khoản 1",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "27",
+     "clause": "Khoản 2",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "27",
+     "clause": "Khoản 3",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "28",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3609
+    },
+    {
+     "article": "4",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.2453
+    },
+    {
+     "article": "4",
+     "clause": "Khoản 5",
+     "via": "semantic",
+     "score": 0.2409
+    },
+    {
+     "article": "66",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.2398
+    },
+    {
+     "article": "4",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.2381
+    },
+    {
+     "article": "4",
+     "clause": "Khoản 6",
+     "via": "semantic",
+     "score": 0.2123
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 98.16045699699316,
+    "exact": 68.75410499924328,
+    "vector": 253.37331800255924,
+    "revalidate": 1504.0981919955811,
+    "total": 1924.3860719943768
+   }
+  },
+  {
+   "id": "E10",
+   "type": "exact",
+   "q": "Điều 321 về tội đánh bạc",
+   "gold": [
+    "321"
+   ],
+   "reference": {
+    "number": null,
+    "article": "321",
+    "clause": null
+   },
+   "exactHits": 3,
+   "top": [
+    {
+     "article": "321",
+     "clause": null,
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "321",
+     "clause": "Khoản 2",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "321",
+     "clause": "Khoản 3",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "221",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.5105
+    },
+    {
+     "article": "323",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4664
+    },
+    {
+     "article": "324",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4572
+    },
+    {
+     "article": "324",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4526
+    },
+    {
+     "article": "221",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4505
+    },
+    {
+     "article": "323",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4402
+    },
+    {
+     "article": "323",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4401
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 210.0204809976276,
+    "exact": 69.45942199672572,
+    "vector": 287.4351190039306,
+    "revalidate": 1360.5340479989536,
+    "total": 1927.4490699972375
+   }
+  },
+  {
+   "id": "E11",
+   "type": "exact",
+   "q": "Điều 40 về hình phạt tử hình",
+   "gold": [
+    "40"
+   ],
+   "reference": {
+    "number": null,
+    "article": "40",
+    "clause": null
+   },
+   "exactHits": 4,
+   "top": [
+    {
+     "article": "40",
+     "clause": null,
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "40",
+     "clause": "Khoản 1",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "40",
+     "clause": "Khoản 2",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "40",
+     "clause": "Khoản 4",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "4",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4385
+    },
+    {
+     "article": "242",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.4022
+    },
+    {
+     "article": "400",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4002
+    },
+    {
+     "article": "39",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3971
+    },
+    {
+     "article": "241",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.3791
+    },
+    {
+     "article": "402",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3776
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 158.6013459964306,
+    "exact": 74.14377199893352,
+    "vector": 264.32996400399134,
+    "revalidate": 1466.5319669948076,
+    "total": 1963.607048994163
+   }
+  },
+  {
+   "id": "E12",
+   "type": "exact",
+   "q": "Điều 353 Bộ luật Hình sự 100/2015/QH13 quy định gì?",
+   "gold": [
+    "353"
+   ],
+   "reference": {
+    "number": "100/2015/qh13",
+    "article": "353",
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "311",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.4305
+    },
+    {
+     "article": "353",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4135
+    },
+    {
+     "article": "353",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4012
+    },
+    {
+     "article": "353",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3691
+    },
+    {
+     "article": "153",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3666
+    },
+    {
+     "article": "53",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3466
+    },
+    {
+     "article": null,
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3435
+    },
+    {
+     "article": null,
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3312
+    },
+    {
+     "article": "28",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3221
+    },
+    {
+     "article": "358",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.3201
+    }
+   ],
+   "firstGoldRank": 2,
+   "ms": {
+    "embed": 122.37371900118887,
+    "exact": 66.2042059993837,
+    "vector": 249.8898609992466,
+    "revalidate": 1395.0379980014986,
+    "total": 1833.5057840013178
+   }
+  },
+  {
+   "id": "E13",
+   "type": "exact",
+   "q": "Khoản 1 Điều 168 Bộ luật Hình sự 100/2015/QH13",
+   "gold": [
+    "168"
+   ],
+   "reference": {
+    "number": "100/2015/qh13",
+    "article": "168",
+    "clause": "1"
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "168",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4644
+    },
+    {
+     "article": "168",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.4334
+    },
+    {
+     "article": "168",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4329
+    },
+    {
+     "article": "168",
+     "clause": "Khoản 6",
+     "via": "semantic",
+     "score": 0.4207
+    },
+    {
+     "article": "168",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.395
+    },
+    {
+     "article": "168",
+     "clause": "Khoản 5",
+     "via": "semantic",
+     "score": 0.388
+    },
+    {
+     "article": "268",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3783
+    },
+    {
+     "article": "268",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3518
+    },
+    {
+     "article": null,
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3505
+    },
+    {
+     "article": "268",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3496
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 213.13745099905645,
+    "exact": 75.6437179952627,
+    "vector": 263.578245001554,
+    "revalidate": 1389.1618640045635,
+    "total": 1941.5212780004367
+   }
+  },
+  {
+   "id": "E14",
+   "type": "exact",
+   "q": "Điều 17 về đồng phạm",
+   "gold": [
+    "17"
+   ],
+   "reference": {
+    "number": null,
+    "article": "17",
+    "clause": null
+   },
+   "exactHits": 5,
+   "top": [
+    {
+     "article": "17",
+     "clause": null,
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "17",
+     "clause": "Khoản 1",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "17",
+     "clause": "Khoản 2",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "17",
+     "clause": "Khoản 3",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "17",
+     "clause": "Khoản 4",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "174",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.2526
+    },
+    {
+     "article": "18",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.2465
+    },
+    {
+     "article": "4",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.2336
+    },
+    {
+     "article": "14",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.2274
+    },
+    {
+     "article": "4",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.227
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 82.34649499354418,
+    "exact": 80.42302600370022,
+    "vector": 274.77343100326834,
+    "revalidate": 1380.9162299949094,
+    "total": 1818.459181995422
+   }
+  },
+  {
+   "id": "E15",
+   "type": "exact",
+   "q": "Điều 249 xử lý hành vi nào?",
+   "gold": [
+    "249"
+   ],
+   "reference": {
+    "number": null,
+    "article": "249",
+    "clause": null
+   },
+   "exactHits": 6,
+   "top": [
+    {
+     "article": "249",
+     "clause": null,
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "249",
+     "clause": "Khoản 1",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "249",
+     "clause": "Khoản 2",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "249",
+     "clause": "Khoản 3",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "249",
+     "clause": "Khoản 4",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "249",
+     "clause": "Khoản 5",
+     "via": "exact",
+     "score": 1.0
+    },
+    {
+     "article": "349",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3815
+    },
+    {
+     "article": "349",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3744
+    },
+    {
+     "article": "349",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3668
+    },
+    {
+     "article": "349",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.3583
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 288.7350870005321,
+    "exact": 80.12152599985711,
+    "vector": 290.10154000570765,
+    "revalidate": 1399.6995689958567,
+    "total": 2058.6577220019535
+   }
+  },
+  {
+   "id": "N01",
+   "type": "natural",
+   "q": "Con tôi 15 tuổi đánh người, mấy tuổi thì bị truy cứu hình sự?",
+   "gold": [
+    "12"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "12",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4504
+    },
+    {
+     "article": "14",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.432
+    },
+    {
+     "article": "147",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4057
+    },
+    {
+     "article": "15",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3899
+    },
+    {
+     "article": "143",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.3893
+    },
+    {
+     "article": "151",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3891
+    },
+    {
+     "article": "141",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.3794
+    },
+    {
+     "article": "145",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3774
+    },
+    {
+     "article": "153",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3673
+    },
+    {
+     "article": "329",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3567
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 121.92421100189677,
+    "exact": 0.08494999929098412,
+    "vector": 262.2054029998253,
+    "revalidate": 1389.3399470034637,
+    "total": 1773.5545110044768
+   }
+  },
+  {
+   "id": "N02",
+   "type": "natural",
+   "q": "Uống rượu say rồi gây án thì có được giảm tội không?",
+   "gold": [
+    "13"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "51",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4599
+    },
+    {
+     "article": "13",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.4277
+    },
+    {
+     "article": "84",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4276
+    },
+    {
+     "article": "63",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.4271
+    },
+    {
+     "article": "7",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4134
+    },
+    {
+     "article": "3",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4134
+    },
+    {
+     "article": "63",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.3944
+    },
+    {
+     "article": "7",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3849
+    },
+    {
+     "article": "63",
+     "clause": "Khoản 5",
+     "via": "semantic",
+     "score": 0.3758
+    },
+    {
+     "article": "54",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3717
+    }
+   ],
+   "firstGoldRank": 2,
+   "ms": {
+    "embed": 277.6700160029577,
+    "exact": 0.10520400246605277,
+    "vector": 283.08146899507847,
+    "revalidate": 1402.3111690039514,
+    "total": 1963.1678580044536
+   }
+  },
+  {
+   "id": "N03",
+   "type": "natural",
+   "q": "Người bị bệnh tâm thần gây chết người có bị xử lý hình sự không?",
+   "gold": [
+    "21"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "125",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.5214
+    },
+    {
+     "article": "49",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.5188
+    },
+    {
+     "article": "21",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.4815
+    },
+    {
+     "article": "147",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4392
+    },
+    {
+     "article": "155",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4351
+    },
+    {
+     "article": "146",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4339
+    },
+    {
+     "article": "49",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.431
+    },
+    {
+     "article": "368",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4262
+    },
+    {
+     "article": "49",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4254
+    },
+    {
+     "article": "147",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4187
+    }
+   ],
+   "firstGoldRank": 3,
+   "ms": {
+    "embed": 218.52661900629755,
+    "exact": 0.044870997953694314,
+    "vector": 339.7996689964202,
+    "revalidate": 1416.9512330045109,
+    "total": 1975.3223920051823
+   }
+  },
+  {
+   "id": "N04",
+   "type": "natural",
+   "q": "Bị người khác cầm dao tấn công, tôi chống trả làm họ bị thương thì có phạm tội không?",
+   "gold": [
+    "22"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "185",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4515
+    },
+    {
+     "article": "22",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4239
+    },
+    {
+     "article": "134",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4204
+    },
+    {
+     "article": "131",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.417
+    },
+    {
+     "article": "29",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4145
+    },
+    {
+     "article": "137",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4041
+    },
+    {
+     "article": "135",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.402
+    },
+    {
+     "article": "134",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4001
+    },
+    {
+     "article": "22",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3901
+    },
+    {
+     "article": "130",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3894
+    }
+   ],
+   "firstGoldRank": 2,
+   "ms": {
+    "embed": 83.55318500252906,
+    "exact": 0.05360999784898013,
+    "vector": 257.4598520004656,
+    "revalidate": 1403.2535980004468,
+    "total": 1744.3202450012905
+   }
+  },
+  {
+   "id": "N05",
+   "type": "natural",
+   "q": "Để tránh một nguy cơ lớn hơn mà buộc phải gây thiệt hại nhỏ thì có bị coi là phạm tội không?",
+   "gold": [
+    "23"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "23",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.5336
+    },
+    {
+     "article": "8",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4761
+    },
+    {
+     "article": "11",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.415
+    },
+    {
+     "article": "9",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4101
+    },
+    {
+     "article": "29",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4087
+    },
+    {
+     "article": "84",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3983
+    },
+    {
+     "article": "10",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3965
+    },
+    {
+     "article": "57",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3963
+    },
+    {
+     "article": "25",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3959
+    },
+    {
+     "article": "11",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3886
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 192.5628399985726,
+    "exact": 0.046131004637572914,
+    "vector": 269.33677100169007,
+    "revalidate": 1428.7932759980322,
+    "total": 1890.7390180029324
+   }
+  },
+  {
+   "id": "N06",
+   "type": "natural",
+   "q": "Sau bao nhiêu năm thì không còn bị truy cứu về một tội đã phạm?",
+   "gold": [
+    "27"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "27",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.5112
+    },
+    {
+     "article": "27",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4598
+    },
+    {
+     "article": "27",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4566
+    },
+    {
+     "article": "70",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4191
+    },
+    {
+     "article": "60",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4089
+    },
+    {
+     "article": "71",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4033
+    },
+    {
+     "article": "28",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3713
+    },
+    {
+     "article": "73",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3695
+    },
+    {
+     "article": "3",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3648
+    },
+    {
+     "article": "70",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3596
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 241.4003279991448,
+    "exact": 0.04920300125377253,
+    "vector": 272.5768270029221,
+    "revalidate": 1393.9181879977696,
+    "total": 1907.9445460010902
+   }
+  },
+  {
+   "id": "N07",
+   "type": "natural",
+   "q": "Hai người cùng bàn bạc rồi cùng thực hiện một vụ phạm tội thì mỗi người chịu trách nhiệm thế nào?",
+   "gold": [
+    "17"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "58",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.5167
+    },
+    {
+     "article": "19",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4303
+    },
+    {
+     "article": "3",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4293
+    },
+    {
+     "article": "18",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4216
+    },
+    {
+     "article": "17",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4206
+    },
+    {
+     "article": "2",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4192
+    },
+    {
+     "article": "11",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3962
+    },
+    {
+     "article": "12",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3947
+    },
+    {
+     "article": "3",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3939
+    },
+    {
+     "article": "17",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3925
+    }
+   ],
+   "firstGoldRank": 5,
+   "ms": {
+    "embed": 48.62768699968001,
+    "exact": 0.04759400326292962,
+    "vector": 280.396030000702,
+    "revalidate": 1388.8991939966218,
+    "total": 1717.9705050002667
+   }
+  },
+  {
+   "id": "N08",
+   "type": "natural",
+   "q": "Đang làm dở việc phạm tội nhưng tự mình dừng lại thì có bị xử lý không?",
+   "gold": [
+    "16"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "16",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.5989
+    },
+    {
+     "article": "11",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4442
+    },
+    {
+     "article": "403",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4431
+    },
+    {
+     "article": "18",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4386
+    },
+    {
+     "article": "3",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4253
+    },
+    {
+     "article": "247",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.4179
+    },
+    {
+     "article": "11",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4165
+    },
+    {
+     "article": "57",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4092
+    },
+    {
+     "article": "29",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4073
+    },
+    {
+     "article": "15",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3977
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 158.80734699749155,
+    "exact": 0.04700099816545844,
+    "vector": 255.46795700211078,
+    "revalidate": 1429.990787000861,
+    "total": 1844.3130919986288
+   }
+  },
+  {
+   "id": "N09",
+   "type": "natural",
+   "q": "Mới chuẩn bị công cụ để đi cướp nhưng chưa làm thì có bị phạt không?",
+   "gold": [
+    "14"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "57",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3859
+    },
+    {
+     "article": "14",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3801
+    },
+    {
+     "article": "14",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3674
+    },
+    {
+     "article": "113",
+     "clause": "Khoản 5",
+     "via": "semantic",
+     "score": 0.3496
+    },
+    {
+     "article": "207",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.348
+    },
+    {
+     "article": "390",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.341
+    },
+    {
+     "article": "57",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3404
+    },
+    {
+     "article": "134",
+     "clause": "Khoản 6",
+     "via": "semantic",
+     "score": 0.34
+    },
+    {
+     "article": "199",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.3374
+    },
+    {
+     "article": "110",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3359
+    }
+   ],
+   "firstGoldRank": 2,
+   "ms": {
+    "embed": 258.8058689943864,
+    "exact": 0.06795000081183389,
+    "vector": 330.95734500238905,
+    "revalidate": 1397.517899000377,
+    "total": 1987.3490629979642
+   }
+  },
+  {
+   "id": "N10",
+   "type": "natural",
+   "q": "Định lấy trộm xe nhưng bị phát hiện trước khi lấy được thì có bị xử lý không?",
+   "gold": [
+    "15",
+    "173"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "18",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3368
+    },
+    {
+     "article": "47",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3357
+    },
+    {
+     "article": "47",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3251
+    },
+    {
+     "article": "3",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3178
+    },
+    {
+     "article": "47",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3006
+    },
+    {
+     "article": "377",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.2993
+    },
+    {
+     "article": "385",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.2936
+    },
+    {
+     "article": "265",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.2927
+    },
+    {
+     "article": "386",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.2917
+    },
+    {
+     "article": "56",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.2891
+    }
+   ],
+   "firstGoldRank": null,
+   "ms": {
+    "embed": 128.8715089976904,
+    "exact": 0.6986299995332956,
+    "vector": 268.2759899980738,
+    "revalidate": 1393.889017002948,
+    "total": 1791.7351459982456
+   }
+  },
+  {
+   "id": "N11",
+   "type": "natural",
+   "q": "Những hình phạt nào có thể áp dụng cho người phạm tội?",
+   "gold": [
+    "32"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "3",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.5072
+    },
+    {
+     "article": "122",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.4799
+    },
+    {
+     "article": "199",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.466
+    },
+    {
+     "article": "46",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4648
+    },
+    {
+     "article": "123",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.4641
+    },
+    {
+     "article": "259",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4621
+    },
+    {
+     "article": "151",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.4572
+    },
+    {
+     "article": "30",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.456
+    },
+    {
+     "article": "156",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.4495
+    },
+    {
+     "article": "187",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.448
+    }
+   ],
+   "firstGoldRank": null,
+   "ms": {
+    "embed": 146.90954700199654,
+    "exact": 0.04156700015300885,
+    "vector": 309.9391520008794,
+    "revalidate": 1380.7087149980362,
+    "total": 1837.598981001065
+   }
+  },
+  {
+   "id": "N12",
+   "type": "natural",
+   "q": "Mức phạt tiền thấp nhất đối với người phạm tội là bao nhiêu?",
+   "gold": [
+    "35"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "199",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.543
+    },
+    {
+     "article": "259",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.5391
+    },
+    {
+     "article": "187",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.5343
+    },
+    {
+     "article": "156",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.5323
+    },
+    {
+     "article": "311",
+     "clause": "Khoản 5",
+     "via": "semantic",
+     "score": 0.5288
+    },
+    {
+     "article": "233",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.518
+    },
+    {
+     "article": "110",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.5145
+    },
+    {
+     "article": "177",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.5142
+    },
+    {
+     "article": "151",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.513
+    },
+    {
+     "article": "217",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.5128
+    }
+   ],
+   "firstGoldRank": null,
+   "ms": {
+    "embed": 244.25240499840584,
+    "exact": 0.04443599755177274,
+    "vector": 260.0374940011534,
+    "revalidate": 1390.242710003804,
+    "total": 1894.577045000915
+   }
+  },
+  {
+   "id": "N13",
+   "type": "natural",
+   "q": "Phụ nữ đang mang thai có bị thi hành án tử hình không?",
+   "gold": [
+    "40"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "40",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.5308
+    },
+    {
+     "article": "67",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4081
+    },
+    {
+     "article": "130",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4047
+    },
+    {
+     "article": "185",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3937
+    },
+    {
+     "article": "127",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3904
+    },
+    {
+     "article": "149",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3834
+    },
+    {
+     "article": "123",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3827
+    },
+    {
+     "article": "316",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3713
+    },
+    {
+     "article": "297",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3539
+    },
+    {
+     "article": "373",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3533
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 171.42665199935436,
+    "exact": 0.04464500671019778,
+    "vector": 294.51269499986665,
+    "revalidate": 1354.29489499802,
+    "total": 1820.2788870039512
+   }
+  },
+  {
+   "id": "N14",
+   "type": "natural",
+   "q": "Thành khẩn khai báo, ăn năn hối cải có được giảm nhẹ hình phạt không?",
+   "gold": [
+    "51"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "3",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4151
+    },
+    {
+     "article": "51",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4091
+    },
+    {
+     "article": "7",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3757
+    },
+    {
+     "article": "62",
+     "clause": "Khoản 5",
+     "via": "semantic",
+     "score": 0.363
+    },
+    {
+     "article": "63",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3556
+    },
+    {
+     "article": "54",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3542
+    },
+    {
+     "article": "7",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3502
+    },
+    {
+     "article": "415",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3453
+    },
+    {
+     "article": "64",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3421
+    },
+    {
+     "article": "9",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3375
+    }
+   ],
+   "firstGoldRank": 2,
+   "ms": {
+    "embed": 47.13916400214657,
+    "exact": 0.04247199831297621,
+    "vector": 265.62414100044407,
+    "revalidate": 1369.5615440010442,
+    "total": 1682.3673210019479
+   }
+  },
+  {
+   "id": "N15",
+   "type": "natural",
+   "q": "Phạm tội có tổ chức hoặc tái phạm thì có bị phạt nặng hơn không?",
+   "gold": [
+    "52"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "259",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.549
+    },
+    {
+     "article": "228",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.5352
+    },
+    {
+     "article": "356",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.5123
+    },
+    {
+     "article": "285",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.5103
+    },
+    {
+     "article": "52",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.5099
+    },
+    {
+     "article": "330",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.5061
+    },
+    {
+     "article": "357",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.5045
+    },
+    {
+     "article": "154",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4943
+    },
+    {
+     "article": "231",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.493
+    },
+    {
+     "article": "258",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4918
+    }
+   ],
+   "firstGoldRank": 5,
+   "ms": {
+    "embed": 159.56526300578844,
+    "exact": 0.06683299579890445,
+    "vector": 272.90861099754693,
+    "revalidate": 1412.1323810031754,
+    "total": 1844.6730880023097
+   }
+  },
+  {
+   "id": "N16",
+   "type": "natural",
+   "q": "Khi nào người bị phạt tù được cho hưởng án treo?",
+   "gold": [
+    "65"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "38",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4707
+    },
+    {
+     "article": "67",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4665
+    },
+    {
+     "article": "3",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4568
+    },
+    {
+     "article": "43",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.4483
+    },
+    {
+     "article": "386",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4459
+    },
+    {
+     "article": "67",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4459
+    },
+    {
+     "article": "68",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4435
+    },
+    {
+     "article": "62",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4251
+    },
+    {
+     "article": "62",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4216
+    },
+    {
+     "article": "66",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.4206
+    }
+   ],
+   "firstGoldRank": null,
+   "ms": {
+    "embed": 221.16228800587123,
+    "exact": 0.05409799632616341,
+    "vector": 281.508844003838,
+    "revalidate": 1395.4957539972384,
+    "total": 1898.2209840032738
+   }
+  },
+  {
+   "id": "N17",
+   "type": "natural",
+   "q": "Chấp hành xong án tù bao lâu thì được coi là chưa có tiền án?",
+   "gold": [
+    "69",
+    "70"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "38",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4345
+    },
+    {
+     "article": "62",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4255
+    },
+    {
+     "article": "60",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4217
+    },
+    {
+     "article": "70",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4176
+    },
+    {
+     "article": "57",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4171
+    },
+    {
+     "article": "71",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4162
+    },
+    {
+     "article": "386",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4028
+    },
+    {
+     "article": "376",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3879
+    },
+    {
+     "article": "3",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3826
+    },
+    {
+     "article": "62",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3816
+    }
+   ],
+   "firstGoldRank": 4,
+   "ms": {
+    "embed": 167.49082499882206,
+    "exact": 0.04055799945490435,
+    "vector": 259.42394000594504,
+    "revalidate": 1360.6629189962405,
+    "total": 1787.6182420004625
+   }
+  },
+  {
+   "id": "N18",
+   "type": "natural",
+   "q": "Lén lút lấy điện thoại của người khác trị giá 3 triệu đồng thì bị xử lý thế nào?",
+   "gold": [
+    "173"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "3",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3627
+    },
+    {
+     "article": "159",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.352
+    },
+    {
+     "article": "230",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3495
+    },
+    {
+     "article": "364",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3466
+    },
+    {
+     "article": "173",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.344
+    },
+    {
+     "article": "175",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3435
+    },
+    {
+     "article": "172",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3433
+    },
+    {
+     "article": "174",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3428
+    },
+    {
+     "article": "284",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3411
+    },
+    {
+     "article": "180",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3396
+    }
+   ],
+   "firstGoldRank": 5,
+   "ms": {
+    "embed": 55.6595610032673,
+    "exact": 0.04859399632550776,
+    "vector": 263.16542100539664,
+    "revalidate": 1443.844295994495,
+    "total": 1762.7178719994845
+   }
+  },
+  {
+   "id": "N19",
+   "type": "natural",
+   "q": "Đi xe máy giật túi xách của người đi đường thì bị phạt tù bao nhiêu năm?",
+   "gold": [
+    "171"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "265",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4852
+    },
+    {
+     "article": "266",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4769
+    },
+    {
+     "article": "260",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.4744
+    },
+    {
+     "article": "278",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.4569
+    },
+    {
+     "article": "264",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4486
+    },
+    {
+     "article": "260",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4434
+    },
+    {
+     "article": "261",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4417
+    },
+    {
+     "article": "131",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4416
+    },
+    {
+     "article": "350",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4414
+    },
+    {
+     "article": "260",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4383
+    }
+   ],
+   "firstGoldRank": null,
+   "ms": {
+    "embed": 180.71129400050268,
+    "exact": 0.05957899702480063,
+    "vector": 260.9222940009204,
+    "revalidate": 1402.8741119982442,
+    "total": 1844.567278996692
+   }
+  },
+  {
+   "id": "N20",
+   "type": "natural",
+   "q": "Dùng dao đe dọa để lấy tiền của người khác thì phạm tội gì?",
+   "gold": [
+    "168"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "47",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4496
+    },
+    {
+     "article": "173",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.4488
+    },
+    {
+     "article": "169",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4458
+    },
+    {
+     "article": "380",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4444
+    },
+    {
+     "article": "364",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4429
+    },
+    {
+     "article": "290",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4418
+    },
+    {
+     "article": "133",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4369
+    },
+    {
+     "article": "175",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4367
+    },
+    {
+     "article": "170",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4363
+    },
+    {
+     "article": "171",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4356
+    }
+   ],
+   "firstGoldRank": null,
+   "ms": {
+    "embed": 203.55391700286418,
+    "exact": 0.046977002057246864,
+    "vector": 269.8351069993805,
+    "revalidate": 1418.0527649950818,
+    "total": 1891.4887659993838
+   }
+  },
+  {
+   "id": "N21",
+   "type": "natural",
+   "q": "Giả danh cán bộ để lừa người khác chuyển tiền thì bị tội gì?",
+   "gold": [
+    "174"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "324",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4403
+    },
+    {
+     "article": "384",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.44
+    },
+    {
+     "article": "290",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4326
+    },
+    {
+     "article": "208",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4305
+    },
+    {
+     "article": "208",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4281
+    },
+    {
+     "article": "291",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4173
+    },
+    {
+     "article": "202",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4159
+    },
+    {
+     "article": "208",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4148
+    },
+    {
+     "article": "380",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.411
+    },
+    {
+     "article": "364",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4109
+    }
+   ],
+   "firstGoldRank": null,
+   "ms": {
+    "embed": 106.71915199782234,
+    "exact": 0.09478200081503019,
+    "vector": 304.32301700056996,
+    "revalidate": 1383.884090995707,
+    "total": 1795.0210419949144
+   }
+  },
+  {
+   "id": "N22",
+   "type": "natural",
+   "q": "Mượn xe của bạn rồi đem đi cầm đồ không trả lại thì phạm tội gì?",
+   "gold": [
+    "175"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "260",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.45
+    },
+    {
+     "article": "264",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4451
+    },
+    {
+     "article": "350",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.444
+    },
+    {
+     "article": "265",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4369
+    },
+    {
+     "article": "266",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4259
+    },
+    {
+     "article": "263",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4203
+    },
+    {
+     "article": "267",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4119
+    },
+    {
+     "article": "48",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4087
+    },
+    {
+     "article": "32",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4043
+    },
+    {
+     "article": "176",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4007
+    }
+   ],
+   "firstGoldRank": null,
+   "ms": {
+    "embed": 53.20271500386298,
+    "exact": 0.04257499676896259,
+    "vector": 258.761033997871,
+    "revalidate": 1370.2391539991368,
+    "total": 1682.2454779976397
+   }
+  },
+  {
+   "id": "N23",
+   "type": "natural",
+   "q": "Đập phá xe ô tô của hàng xóm thì bị xử lý hình sự như thế nào?",
+   "gold": [
+    "178"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "3",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.391
+    },
+    {
+     "article": "319",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3835
+    },
+    {
+     "article": "403",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3747
+    },
+    {
+     "article": "369",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3563
+    },
+    {
+     "article": "122",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3549
+    },
+    {
+     "article": "130",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3535
+    },
+    {
+     "article": "131",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3534
+    },
+    {
+     "article": "187",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3476
+    },
+    {
+     "article": "59",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3469
+    },
+    {
+     "article": "266",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3467
+    }
+   ],
+   "firstGoldRank": null,
+   "ms": {
+    "embed": 54.18294899573084,
+    "exact": 0.048399000661447644,
+    "vector": 289.8958810037584,
+    "revalidate": 1385.2495629980695,
+    "total": 1729.3767919982201
+   }
+  },
+  {
+   "id": "N24",
+   "type": "natural",
+   "q": "Đe dọa tung ảnh riêng tư để ép người khác đưa tiền thì bị tội gì?",
+   "gold": [
+    "170"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "159",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3805
+    },
+    {
+     "article": "384",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3774
+    },
+    {
+     "article": "47",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3606
+    },
+    {
+     "article": "364",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3558
+    },
+    {
+     "article": "358",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3507
+    },
+    {
+     "article": "156",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3483
+    },
+    {
+     "article": "324",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3473
+    },
+    {
+     "article": "365",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3449
+    },
+    {
+     "article": "159",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3435
+    },
+    {
+     "article": "291",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3351
+    }
+   ],
+   "firstGoldRank": null,
+   "ms": {
+    "embed": 151.35400800500065,
+    "exact": 0.04364799679024145,
+    "vector": 263.74570000189124,
+    "revalidate": 1423.9593179954682,
+    "total": 1839.1026739991503
+   }
+  },
+  {
+   "id": "N25",
+   "type": "natural",
+   "q": "Đánh người gây thương tích 15% thì có bị đi tù không?",
+   "gold": [
+    "134"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "157",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.4867
+    },
+    {
+     "article": "134",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4769
+    },
+    {
+     "article": "255",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.474
+    },
+    {
+     "article": "134",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4714
+    },
+    {
+     "article": "135",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4646
+    },
+    {
+     "article": "134",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4642
+    },
+    {
+     "article": "154",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4628
+    },
+    {
+     "article": "139",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.46
+    },
+    {
+     "article": "136",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4598
+    },
+    {
+     "article": "257",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4551
+    }
+   ],
+   "firstGoldRank": 2,
+   "ms": {
+    "embed": 242.0424020019709,
+    "exact": 0.043209998693782836,
+    "vector": 250.38885500543984,
+    "revalidate": 1380.7248409939348,
+    "total": 1873.1993080000393
+   }
+  },
+  {
+   "id": "N26",
+   "type": "natural",
+   "q": "Lăng mạ, xúc phạm nặng nề danh dự người khác thì có bị xử lý hình sự không?",
+   "gold": [
+    "155"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "155",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4938
+    },
+    {
+     "article": "156",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4557
+    },
+    {
+     "article": "131",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4429
+    },
+    {
+     "article": "29",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4371
+    },
+    {
+     "article": "8",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4027
+    },
+    {
+     "article": "159",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.402
+    },
+    {
+     "article": "22",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3764
+    },
+    {
+     "article": "130",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3742
+    },
+    {
+     "article": "409",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3735
+    },
+    {
+     "article": "85",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3721
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 48.99113300052704,
+    "exact": 0.049704001867212355,
+    "vector": 260.25775199377676,
+    "revalidate": 1391.5441120043397,
+    "total": 1700.8427010005107
+   }
+  },
+  {
+   "id": "N27",
+   "type": "natural",
+   "q": "Bịa đặt chuyện sai sự thật để bôi nhọ người khác thì phạm tội gì?",
+   "gold": [
+    "156"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "156",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4837
+    },
+    {
+     "article": "384",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4616
+    },
+    {
+     "article": "159",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4106
+    },
+    {
+     "article": "193",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4086
+    },
+    {
+     "article": "382",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.4072
+    },
+    {
+     "article": "382",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4047
+    },
+    {
+     "article": "374",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.392
+    },
+    {
+     "article": "258",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3868
+    },
+    {
+     "article": "221",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3859
+    },
+    {
+     "article": "133",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3853
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 295.7041669942555,
+    "exact": 0.08962800347944722,
+    "vector": 306.4555340024526,
+    "revalidate": 1356.2828039939632,
+    "total": 1958.5321329941507
+   }
+  },
+  {
+   "id": "N28",
+   "type": "natural",
+   "q": "Đánh bài ăn tiền bao nhiêu thì bị truy cứu trách nhiệm hình sự?",
+   "gold": [
+    "321"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "368",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3478
+    },
+    {
+     "article": "316",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.3399
+    },
+    {
+     "article": "27",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3393
+    },
+    {
+     "article": "2",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3356
+    },
+    {
+     "article": "14",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3355
+    },
+    {
+     "article": "321",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3342
+    },
+    {
+     "article": "27",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3333
+    },
+    {
+     "article": "369",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.333
+    },
+    {
+     "article": "199",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.3328
+    },
+    {
+     "article": "316",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.3325
+    }
+   ],
+   "firstGoldRank": 6,
+   "ms": {
+    "embed": 59.47813799866708,
+    "exact": 0.05374499596655369,
+    "vector": 250.21030300558778,
+    "revalidate": 1379.56438800029,
+    "total": 1689.3065740005113
+   }
+  },
+  {
+   "id": "N29",
+   "type": "natural",
+   "q": "Cất giữ ma túy trong người để sử dụng thì bị xử lý thế nào?",
+   "gold": [
+    "249"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "258",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3325
+    },
+    {
+     "article": "256",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.32
+    },
+    {
+     "article": "256",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3166
+    },
+    {
+     "article": "385",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.315
+    },
+    {
+     "article": "249",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3125
+    },
+    {
+     "article": "319",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.31
+    },
+    {
+     "article": "377",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3041
+    },
+    {
+     "article": "24",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.2915
+    },
+    {
+     "article": "255",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.2852
+    },
+    {
+     "article": "257",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.2843
+    }
+   ],
+   "firstGoldRank": 5,
+   "ms": {
+    "embed": 174.59390300064115,
+    "exact": 0.04279600398149341,
+    "vector": 256.88067399460124,
+    "revalidate": 1430.560200002219,
+    "total": 1862.077573001443
+   }
+  },
+  {
+   "id": "N30",
+   "type": "natural",
+   "q": "Bán ma túy cho người khác thì bị phạt bao nhiêu năm tù?",
+   "gold": [
+    "251"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "131",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.5275
+    },
+    {
+     "article": "258",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.5028
+    },
+    {
+     "article": "256",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.481
+    },
+    {
+     "article": "140",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4786
+    },
+    {
+     "article": "130",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4732
+    },
+    {
+     "article": "350",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4703
+    },
+    {
+     "article": "144",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4679
+    },
+    {
+     "article": "319",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4639
+    },
+    {
+     "article": "199",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.4638
+    },
+    {
+     "article": "256",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4635
+    }
+   ],
+   "firstGoldRank": null,
+   "ms": {
+    "embed": 338.0354550026823,
+    "exact": 0.03842699516098946,
+    "vector": 262.6885700010462,
+    "revalidate": 1405.5554440055857,
+    "total": 2006.3178960044752
+   }
+  },
+  {
+   "id": "N31",
+   "type": "natural",
+   "q": "Lái xe gây tai nạn làm chết người thì bị phạt tù bao lâu?",
+   "gold": [
+    "260"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "260",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.5973
+    },
+    {
+     "article": "278",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.5882
+    },
+    {
+     "article": "260",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.5605
+    },
+    {
+     "article": "261",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.557
+    },
+    {
+     "article": "263",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.5507
+    },
+    {
+     "article": "264",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.547
+    },
+    {
+     "article": "267",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.538
+    },
+    {
+     "article": "266",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.5355
+    },
+    {
+     "article": "266",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.5335
+    },
+    {
+     "article": "128",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.513
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 64.7517759934999,
+    "exact": 0.046768000174779445,
+    "vector": 258.83585200062953,
+    "revalidate": 1396.7825159998029,
+    "total": 1720.416911994107
+   }
+  },
+  {
+   "id": "N32",
+   "type": "natural",
+   "q": "Cán bộ lợi dụng chức vụ lấy tiền của cơ quan mình quản lý thì phạm tội gì?",
+   "gold": [
+    "353"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "353",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4832
+    },
+    {
+     "article": "196",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.475
+    },
+    {
+     "article": "354",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4705
+    },
+    {
+     "article": "222",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4485
+    },
+    {
+     "article": "165",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4438
+    },
+    {
+     "article": "358",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4382
+    },
+    {
+     "article": "189",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4378
+    },
+    {
+     "article": "348",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4286
+    },
+    {
+     "article": "231",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4239
+    },
+    {
+     "article": "188",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4218
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 174.55117600184167,
+    "exact": 0.042357998609077185,
+    "vector": 254.8575990003883,
+    "revalidate": 1370.696844001941,
+    "total": 1800.14797700278
+   }
+  },
+  {
+   "id": "N33",
+   "type": "natural",
+   "q": "Công chức nhận tiền để làm trái công vụ thì bị xử lý thế nào?",
+   "gold": [
+    "354"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "354",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4053
+    },
+    {
+     "article": "358",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4001
+    },
+    {
+     "article": "364",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4
+    },
+    {
+     "article": "354",
+     "clause": "Khoản 6",
+     "via": "semantic",
+     "score": 0.3929
+    },
+    {
+     "article": "364",
+     "clause": "Khoản 6",
+     "via": "semantic",
+     "score": 0.3886
+    },
+    {
+     "article": "165",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3849
+    },
+    {
+     "article": "231",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3741
+    },
+    {
+     "article": "205",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3669
+    },
+    {
+     "article": "359",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3626
+    },
+    {
+     "article": "381",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3608
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 243.57486799999606,
+    "exact": 0.041995001083705574,
+    "vector": 251.27378999604844,
+    "revalidate": 1387.4901890012552,
+    "total": 1882.3808419983834
+   }
+  },
+  {
+   "id": "N34",
+   "type": "natural",
+   "q": "Đưa tiền cho cảnh sát giao thông để không bị phạt thì có phạm tội không?",
+   "gold": [
+    "364"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "260",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.4411
+    },
+    {
+     "article": "278",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.4318
+    },
+    {
+     "article": "261",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.4148
+    },
+    {
+     "article": "32",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3852
+    },
+    {
+     "article": "265",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3802
+    },
+    {
+     "article": "3",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3743
+    },
+    {
+     "article": "199",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.373
+    },
+    {
+     "article": "259",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3691
+    },
+    {
+     "article": "156",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.3607
+    },
+    {
+     "article": "187",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.3597
+    }
+   ],
+   "firstGoldRank": null,
+   "ms": {
+    "embed": 148.31183099886402,
+    "exact": 0.043104999349452555,
+    "vector": 254.52252499962924,
+    "revalidate": 1393.7937410009908,
+    "total": 1796.6712019988336
+   }
+  },
+  {
+   "id": "N35",
+   "type": "natural",
+   "q": "Người mẹ giết đứa con vừa mới sinh ra thì bị xử lý thế nào?",
+   "gold": [
+    "124"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "124",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4913
+    },
+    {
+     "article": "124",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4843
+    },
+    {
+     "article": "123",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3919
+    },
+    {
+     "article": "133",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3683
+    },
+    {
+     "article": "185",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3588
+    },
+    {
+     "article": "127",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3581
+    },
+    {
+     "article": "316",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.341
+    },
+    {
+     "article": "126",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3332
+    },
+    {
+     "article": "185",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3323
+    },
+    {
+     "article": "374",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.3307
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 57.64074200124014,
+    "exact": 0.04141099634580314,
+    "vector": 257.6891520002391,
+    "revalidate": 1396.6040590021294,
+    "total": 1711.9753639999544
+   }
+  },
+  {
+   "id": "N36",
+   "type": "natural",
+   "q": "Quá tức giận vì bị xúc phạm nặng nề mà giết người thì có được xử nhẹ hơn không?",
+   "gold": [
+    "125"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "133",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.5143
+    },
+    {
+     "article": "123",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.5074
+    },
+    {
+     "article": "374",
+     "clause": "Khoản 4",
+     "via": "semantic",
+     "score": 0.5002
+    },
+    {
+     "article": "126",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4964
+    },
+    {
+     "article": "3",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4684
+    },
+    {
+     "article": "125",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4659
+    },
+    {
+     "article": "127",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4522
+    },
+    {
+     "article": "154",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4409
+    },
+    {
+     "article": "134",
+     "clause": "Khoản 5",
+     "via": "semantic",
+     "score": 0.4406
+    },
+    {
+     "article": "128",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4365
+    }
+   ],
+   "firstGoldRank": 6,
+   "ms": {
+    "embed": 332.47521099838195,
+    "exact": 0.04474799789022654,
+    "vector": 269.9724430058268,
+    "revalidate": 1370.474272996944,
+    "total": 1972.9666749990429
+   }
+  },
+  {
+   "id": "N37",
+   "type": "natural",
+   "q": "Khi bắt người đang phạm tội mà làm họ bị thương thì có phải chịu trách nhiệm không?",
+   "gold": [
+    "24"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "24",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4976
+    },
+    {
+     "article": "136",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.4608
+    },
+    {
+     "article": "157",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.4567
+    },
+    {
+     "article": "19",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.443
+    },
+    {
+     "article": "18",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4406
+    },
+    {
+     "article": "134",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.437
+    },
+    {
+     "article": "136",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4343
+    },
+    {
+     "article": "20",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.4277
+    },
+    {
+     "article": "387",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4159
+    },
+    {
+     "article": "135",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.414
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 48.123874999873806,
+    "exact": 0.04531099693849683,
+    "vector": 253.4660410019569,
+    "revalidate": 1366.3185100012925,
+    "total": 1667.9537370000617
+   }
+  },
+  {
+   "id": "N38",
+   "type": "natural",
+   "q": "Thế nào thì một hành vi bị coi là tội phạm?",
+   "gold": [
+    "8"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "8",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4279
+    },
+    {
+     "article": "8",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3724
+    },
+    {
+     "article": "3",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.36
+    },
+    {
+     "article": "18",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3517
+    },
+    {
+     "article": "23",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3506
+    },
+    {
+     "article": "11",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.333
+    },
+    {
+     "article": "11",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.325
+    },
+    {
+     "article": "57",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.324
+    },
+    {
+     "article": "131",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3239
+    },
+    {
+     "article": "20",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.3239
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 161.51973900559824,
+    "exact": 0.043088999518658966,
+    "vector": 278.93189499445725,
+    "revalidate": 1498.4036430032575,
+    "total": 1938.8983660028316
+   }
+  },
+  {
+   "id": "N39",
+   "type": "natural",
+   "q": "Tội phạm được chia thành những loại nào theo mức độ nguy hiểm?",
+   "gold": [
+    "9"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "9",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.5535
+    },
+    {
+     "article": "9",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4491
+    },
+    {
+     "article": "53",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.3631
+    },
+    {
+     "article": "8",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3625
+    },
+    {
+     "article": "8",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.319
+    },
+    {
+     "article": "32",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3114
+    },
+    {
+     "article": "134",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.2963
+    },
+    {
+     "article": "85",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.2924
+    },
+    {
+     "article": "256",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.2884
+    },
+    {
+     "article": "50",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.2867
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 298.53251799795544,
+    "exact": 0.04471700231079012,
+    "vector": 290.67829399718903,
+    "revalidate": 1365.4797190029058,
+    "total": 1954.735248000361
+   }
+  },
+  {
+   "id": "N40",
+   "type": "natural",
+   "q": "Tòa có thể tuyên mức án nhẹ hơn mức thấp nhất của khung hình phạt không?",
+   "gold": [
+    "54"
+   ],
+   "reference": {
+    "number": null,
+    "article": null,
+    "clause": null
+   },
+   "exactHits": 0,
+   "top": [
+    {
+     "article": "54",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.5818
+    },
+    {
+     "article": "51",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4981
+    },
+    {
+     "article": "54",
+     "clause": null,
+     "via": "semantic",
+     "score": 0.4314
+    },
+    {
+     "article": "84",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4233
+    },
+    {
+     "article": "9",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.4211
+    },
+    {
+     "article": "51",
+     "clause": "Khoản 3",
+     "via": "semantic",
+     "score": 0.4169
+    },
+    {
+     "article": "51",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4076
+    },
+    {
+     "article": "84",
+     "clause": "Khoản 2",
+     "via": "semantic",
+     "score": 0.4047
+    },
+    {
+     "article": "65",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3999
+    },
+    {
+     "article": "50",
+     "clause": "Khoản 1",
+     "via": "semantic",
+     "score": 0.3788
+    }
+   ],
+   "firstGoldRank": 1,
+   "ms": {
+    "embed": 70.85432200256037,
+    "exact": 0.045007996959611773,
+    "vector": 268.6725750027108,
+    "revalidate": 1838.0814209958771,
+    "total": 2177.653325998108
+   }
+  }
+ ]
+}
