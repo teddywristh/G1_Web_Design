@@ -13,7 +13,7 @@
 - [Quickstart & Local Development](#quickstart--local-development)
   - [1. Clone & Branch](#1-clone--branch)
   - [2. Environment Configuration](#2-environment-configuration)
-  - [3. Start Infrastructure (Docker)](#3-start-infrastructure-docker)
+  - [3. Start Firebase Emulator](#3-start-firebase-emulator)
   - [4. Start Backend API (FastAPI)](#4-start-backend-api-fastapi)
   - [5. Start the Ingestion Worker](#5-start-the-ingestion-worker)
   - [6. Start Frontend Web (static HTML)](#6-start-frontend-web-static-html)
@@ -32,7 +32,7 @@
 Vietnamese law is distributed across an extensive and continuously evolving collection of laws, codes, decrees, circulars, resolutions, decisions, and consolidated documents. For individuals and businesses, finding the right regulation, checking whether it remains in legal effect, interpreting technical language, and discovering amended provisions is challenging and time-consuming.
 
 **Legal AI Assistant** solves this problem by uniting:
-1. **Intelligent Legal Search**: Full-text keyword and semantic vector search across laws, articles, and clauses.
+1. **Legal Search**: Structured lookup by document number/article and semantic vector search when the embedding service and index are ready.
 2. **Structured Legal Knowledge Base**: Clear legal hierarchies with status indicators (Effective, Amended, Expired).
 3. **Conversational AI Assistance**: Natural language explanations and synthesis grounded in traceable legal provisions.
 4. **Source Verification**: Direct citations linking AI responses to original Articles and Clauses.
@@ -68,10 +68,11 @@ The project is structured as a modular monorepo:
 ```text
 G1_Web_Design/
 ├── apps/
-│   ├── web/                     # Plain HTML/CSS/JavaScript frontend (no build step; legacy Next.js in src/)
+│   ├── web/                     # index.html + html/, css/, js/; no frontend build
+│   ├── embedding/               # Optional local Nemotron embedding service
 │   └── api/                     # FastAPI backend service (Python 3.11+, Firebase Admin SDK)
 ├── packages/
-│   └── ui/                      # Shared reusable UI component library & design tokens
+│   └── ui/                      # React components retained for the legacy frontend
 ├── infra/
 │   ├── docker/                  # Docker API/gateway, Firebase rules and indexes
 │   ├── .env.example             # Infrastructure environment template
@@ -110,105 +111,155 @@ G1_Web_Design/
 
 ## Prerequisites
 
-Before starting local development, ensure your machine has:
-- **Git** (2.30+)
-- **Node.js** (v22+) & **npm** (only for `firebase-tools`; the web app needs no npm)
-- **Java** (21+, for Firebase Emulator)
-- **Python** (3.11+ recommended) & `venv` / `pip`
-- **Docker Desktop** or **Docker Engine** with Docker Compose v2+
-
----
+- **Xem giao diện:** Python 3 và trình duyệt hiện đại. Frontend HTML/CSS/JS không cần cài npm hoặc build.
+- **Chạy đầy đủ local:** Python 3.11+, Node.js 22+, Firebase CLI và Java 21+ cho emulator.
+- **Embedding local:** môi trường Python riêng, model weights và GPU/CUDA theo [hướng dẫn embedding](apps/embedding/README.md). Không cần phần này nếu chỉ xem giao diện hoặc dùng provider embedding khác.
+- **Docker:** dùng khi chạy API/gateway bằng container hoặc OpenCode local; không bắt buộc để mở frontend bằng HTTP server.
 
 ## Quickstart & Local Development
 
-### 1. Clone & Branch
-```bash
-git clone https://github.com/teddywristh/G1_Web_Design.git
-cd G1_Web_Design
-git checkout -b feat/your-feature-name
-```
+Các lệnh dưới đây dành cho **PowerShell trên Windows**. Mỗi terminal bắt đầu tại **gốc repo `G1_Web_Design`**. Dùng một venv backend tại `.venv/`; không tạo thêm `apps/api/.venv/`.
 
-### 2. Environment Configuration
-Copy `.env.example` templates to your local configuration files. **Never commit `.env` files to git.**
-```bash
-# Root environment (optional central reference)
-test -e .env || cp .env.example .env
+### Chỉ xem giao diện
 
-# API backend
-test -e apps/api/.env || cp apps/api/.env.example apps/api/.env
-
-# Infrastructure
-test -e infra/.env || cp infra/.env.example infra/.env
-```
-
-### 3. Start Firebase Emulator
-Run this from the repository root in its own terminal:
-```bash
-npm install -g firebase-tools@15.12.0
-firebase emulators:start --project demo-legal-api --only auth,firestore,storage --export-on-exit .emulator-data
-```
-Stop it with Ctrl+C and wait for export to finish. On subsequent runs, restore the saved
-local accounts, Firestore and files using:
-```bash
-firebase emulators:start --project demo-legal-api --only auth,firestore,storage --import .emulator-data --export-on-exit .emulator-data
-```
-Use the first command if `.emulator-data/firebase-export-metadata.json` does not exist.
-The emulator data is separate from cloud data; a new local account is required. A forced
-shutdown can lose changes since the last export.
-
-Use `apps/api/.env.example` for matching demo configuration (the commands above preserve an existing `apps/api/.env`; check that it points to the emulator and that `BACKEND_CORS_ORIGINS` includes `http://127.0.0.1:8085`). Against a real Firebase project, deploy the indexes first: `firebase deploy --only firestore:indexes --project <id>` (the worker and vector search need them). For Docker API/gateway,
-follow [the operations runbook](docs/backend-operations.md), including the separate
-Docker emulator binding configuration.
-
-Run Firebase CLI commands from the repository root, where `firebase.json` lives. On a shared
-project, review the index changes and any deletion prompts before deploying. Wait for indexes to
-reach **Ready**; the emulator does not enforce the same composite and vector indexes as Firestore.
-For an existing cloud configuration, do not overwrite `apps/api/.env` with the emulator template.
-
-### 4. Start Backend API (FastAPI)
-```bash
-cd apps/api
-python -m venv .venv
-
-# On Windows:
-.venv\Scripts\activate
-# On macOS/Linux:
-source .venv/bin/activate
-
-pip install -r requirements-dev.txt
-python -m uvicorn app.main:app --reload --reload-dir app --port 8000
-```
-Run these from `apps/api` with the emulators from step 3 already running.
-- API Health Check: `http://localhost:8000/health`
-- Interactive Swagger Docs: `http://localhost:8000/docs`
-
-### 5. Start the Ingestion Worker
-Uploaded PDFs are parsed, embedded and indexed by a separate process. In a third terminal, with the same virtualenv:
-```bash
-cd apps/api
-source .venv/bin/activate
-python -m app.workers.ingestion
-```
-Without it, documents stay `queued`. Embedding needs an OpenAI key or a configured OpenRouter embedding key. See [docs/knowledge-rag.md](docs/knowledge-rag.md).
-
-### 6. Start Frontend Web (static HTML)
-The web app is plain HTML, CSS and JavaScript. There is nothing to install or build. From the repository root:
-```bash
+```powershell
 python -m http.server 8085 --bind 127.0.0.1 --directory apps/web
 ```
-Open `http://127.0.0.1:8085` (use `127.0.0.1`, not `localhost`, so the session cookie reaches the API). The backend allows ports 3000 and 8085 by default (`BACKEND_CORS_ORIGINS`). Change the API address in `<meta name="api-base">` of `apps/web/index.html`. See [apps/web/README.md](apps/web/README.md).
 
-If the terminal is already in `apps/web`, run this instead:
+Mở **http://127.0.0.1:8085**. Khi chưa có backend, trang vẫn cho xem chế độ khách; đăng nhập, quản lý PDF và hỏi đáp cần các dịch vụ bên dưới. Không mở `index.html` bằng `file://`: frontend tải các phần `html/*.html` bằng Fetch và dùng ES modules.
 
-```bash
-python -m http.server 8085 --bind 127.0.0.1
+### 1. Clone & Branch
+
+```powershell
+git clone https://github.com/teddywristh/G1_Web_Design.git
+Set-Location G1_Web_Design
+git switch -c feat/your-feature-name
 ```
 
-The `--directory apps/web` argument is relative to the current directory; using it from inside
-`apps/web` points to a nonexistent nested directory and returns 404. Stop the old server with
-`Ctrl+C` before restarting on the same port. A `favicon.ico` 404 does not prevent the page loading.
+Nếu đã có repo, dùng thư mục hiện tại và bỏ bước clone.
 
-The earlier Next.js app is still in `apps/web/src/` for reference and is not used by this setup.
+### 2. Environment Configuration
+
+Chỉ tạo venv và sao chép cấu hình khi chưa tồn tại:
+
+```powershell
+if (!(Test-Path .venv/Scripts/python.exe)) { python -m venv .venv }
+.\.venv\Scripts\python.exe -m pip install -r apps/api/requirements-dev.txt
+if (!(Test-Path apps/api/.env)) { Copy-Item apps/api/.env.example apps/api/.env }
+npm.cmd install --global firebase-tools@15.12.0
+```
+
+Backend tự đọc `apps/api/.env`, không đọc file `.env` ở gốc để thay thế. Giữ cấu hình có sẵn và kiểm tra các giá trị local sau:
+
+```dotenv
+FIREBASE_PROJECT_ID=demo-legal-api
+FIREBASE_STORAGE_BUCKET=demo-legal-api.appspot.com
+FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8081
+STORAGE_EMULATOR_HOST=http://127.0.0.1:9198
+BACKEND_CORS_ORIGINS=["http://127.0.0.1:8085"]
+AUTH_COOKIE_SECURE=false
+```
+
+Không ghi đè cấu hình cloud hiện có bằng mẫu emulator. Không commit `.env` hoặc key thật.
+
+### 3. Start Firebase Emulator
+
+**Terminal 1**, từ gốc repo:
+
+```powershell
+firebase.cmd emulators:start --project demo-legal-api --only auth,firestore,storage --export-on-exit .emulator-data
+```
+
+Nếu đã có `.emulator-data/firebase-export-metadata.json`, dùng lệnh khôi phục:
+
+```powershell
+firebase.cmd emulators:start --project demo-legal-api --only auth,firestore,storage --import .emulator-data --export-on-exit .emulator-data
+```
+
+Đợi cả ba emulator sẵn sàng. Dừng bằng `Ctrl+C` và đợi export xong để giữ tài khoản/tài liệu cho lần sau. Tài khoản emulator tách biệt tài khoản cloud.
+
+### 4. Start Backend API (FastAPI)
+
+**Terminal 2**, từ gốc repo:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir apps/api --host 127.0.0.1 --reload --reload-dir apps/api/app --port 8000
+```
+
+- Health: http://127.0.0.1:8000/health
+- Kiểm tra Firestore/Storage: http://127.0.0.1:8000/ready
+- Swagger: http://127.0.0.1:8000/docs
+
+`--app-dir apps/api` cho phép chạy từ gốc repo. Nếu đã đứng trong `apps/api`, đường dẫn tương ứng là `app.main:app --reload --reload-dir app`; không trộn hai cách chạy.
+
+### 5. Start the Ingestion Worker
+
+**Terminal 3**, từ gốc repo, dùng cùng venv và cấu hình với API:
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path apps/api).Path
+.\.venv\Scripts\python.exe -m app.workers.ingestion
+```
+
+Không chạy worker thì PDF dừng ở hàng đợi. Mẫu `apps/api/.env.example` hiện chọn `EMBEDDING_PROVIDER=local`, URL `http://127.0.0.1:8010`; cần khởi động embedding host và đợi `/ready` trả 200. Xem [cài/chạy Nemotron](apps/embedding/README.md). Host dùng môi trường riêng; không cài PyTorch/model vào venv backend chỉ để mở web.
+
+Có thể chọn `openai` hoặc `openrouter` thay cho `local` trong `apps/api/.env` nếu đã cấu hình model, dimensions và key tương ứng. API và worker phải dùng cùng profile. Model trả lời hỏi đáp được cấu hình riêng với embedding; có embedding chưa có nghĩa là đã có kết nối LLM. Xem [knowledge/RAG](docs/knowledge-rag.md) và [kết nối AI](docs/ai-connections.md).
+
+Để lưu API key qua màn hình Thiết lập, cấu hình `AI_CREDENTIAL_ENCRYPTION_KEY` trong `apps/api/.env`. Nếu chưa có, tạo một lần bằng lệnh dưới và giữ giá trị ổn định cho API/worker; không tạo lại mỗi lần khởi động:
+
+```powershell
+.\.venv\Scripts\python.exe -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+### 6. Start Frontend Web (static HTML)
+
+**Terminal 4**, từ gốc repo:
+
+```powershell
+python -m http.server 8085 --bind 127.0.0.1 --directory apps/web
+```
+
+Mở **http://127.0.0.1:8085**. Dùng `127.0.0.1` cho cả web và API để cookie phiên nhất quán. API URL nằm trong `<meta name="api-base">` của `apps/web/index.html`; nếu đổi cổng web, cập nhật cả `BACKEND_CORS_ORIGINS` và Google OAuth origin khi sử dụng.
+
+Nếu terminal đang ở `apps/web`, chạy `python -m http.server 8085 --bind 127.0.0.1` hoặc `npm.cmd run dev`. Không thêm `--directory apps/web` khi đã đứng trong thư mục đó. `npm.cmd run dev` và `npm.cmd start` chỉ là lệnh tắt cho cùng static server; không cần `npm install` để chạy chúng. Hậu tố `.cmd` tránh lỗi PowerShell chặn `npm.ps1`/`firebase.ps1`, không cần đổi ExecutionPolicy.
+
+Frontend hiện tại:
+
+```text
+apps/web/
+├── index.html     Cấu hình và khung trang
+├── html/          Màn hình, form và hộp thoại
+├── css/main.css   Thứ tự tải các phần CSS
+└── js/main.js     Ghép HTML rồi khởi tạo các module
+```
+
+Chi tiết file và luồng chức năng: [README frontend](apps/web/README.md). Bản Next.js trong `apps/web/src/` chỉ để tham khảo, dùng các npm script có hậu tố `:legacy` và không phục vụ giao diện HTML hiện tại.
+
+### Kiểm tra sau khi chạy
+
+| Thành phần | Địa chỉ/cách kiểm tra |
+| --- | --- |
+| Frontend | `http://127.0.0.1:8085` |
+| Backend | `http://127.0.0.1:8000/health`, `/ready`, `/docs` |
+| Firebase | Auth `9099`, Firestore `8081`, Storage `9198` |
+| Embedding local | `http://127.0.0.1:8010/ready`, chỉ cần khi chọn provider local |
+| Worker | Terminal có log nhận và xử lý job PDF |
+
+Đăng ký tài khoản local, tạo kho riêng, tải PDF có lớp chữ, theo dõi xử lý rồi hỏi và mở trích dẫn. Chế độ khách chỉ xác nhận giao diện tải được, không xác nhận kết nối AI.
+
+### Lỗi thường gặp
+
+| Hiện tượng | Kiểm tra |
+| --- | --- |
+| Không tải được giao diện/404 HTML con | Dùng HTTP server và phục vụ đúng `apps/web`, không mở `html/chat.html` riêng. |
+| Failed to fetch/không kết nối API | API cổng 8000 đang chạy, meta API đúng URL, CORS chứa đúng origin 8085; dùng cùng hostname. |
+| Cổng đã được sử dụng | Dừng server cũ bằng `Ctrl+C`; không mở đồng thời Python server và `npm run dev` trên 8085. |
+| PDF chờ xử lý/lỗi embedding | Kiểm tra terminal worker và provider; với local kiểm tra cổng 8010 `/ready`. |
+| Tài khoản local biến mất | Khởi động emulator với bản export cũ bằng `--import .emulator-data`. |
+| Cloud báo thiếu index | Theo [runbook](docs/backend-operations.md); emulator không xác nhận các index cloud đã sẵn sàng. |
+
+macOS/Linux: dùng `npm`/`firebase` thay cho `npm.cmd`/`firebase.cmd`, dùng `.venv/bin/python` thay cho `.\.venv\Scripts\python.exe`; worker từ gốc repo chạy `PYTHONPATH=apps/api .venv/bin/python -m app.workers.ingestion`. Các script `.sh` dành cho Bash/WSL, không dán trực tiếp vào PowerShell. Docker/gateway và triển khai cloud có hướng dẫn riêng trong [runbook](docs/backend-operations.md).
 
 ---
 
@@ -230,7 +281,7 @@ All commit messages must follow the Conventional Commits specification:
 Examples:
 feat(api): implement GET /api/v1/health endpoint
 fix(web): resolve mobile viewport search bar alignment
-chore(infra): add docker-compose for postgres and redis
+chore(infra): update Firebase emulator configuration
 docs(root): update architecture and setup documentation
 ```
 **Allowed types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`.  
@@ -247,7 +298,7 @@ docs(root): update architecture and setup documentation
 ## Code Quality & Linting
 - **Editor Configuration**: Consistently enforced by [`.editorconfig`](.editorconfig).
 - **Backend Linting**: `ruff check .` and `ruff format .`
-- **Frontend**: static HTML/CSS/ES modules; see [the frontend structure and code map](apps/web/README.md). Run `for f in apps/web/js/*.js; do node --input-type=module --check < "$f"; done` to check JavaScript syntax.
+- **Frontend**: static HTML/CSS/ES modules; see [the frontend structure and code map](apps/web/README.md). PowerShell: `Get-ChildItem apps/web/js/*.js | ForEach-Object { Get-Content -Raw $_.FullName | node --input-type=module --check }`. Bash: `for f in apps/web/js/*.js; do node --input-type=module --check < "$f"; done`.
 - **Automated CI**: GitHub Actions validates linting, type-checking, and test suites on all PRs.
 
 ---

@@ -4,53 +4,36 @@ FastAPI + Firebase Authentication + Firestore + Firebase Storage. Backend MVP qu
 
 ## Chạy local
 
-Chạy từ thư mục gốc repo, dùng Python 3.11+, Node 22+ và Java 21+. Tạo môi trường
-Python, cài dependencies và cấu hình local (giữ nguyên `.env` nếu đã có):
+Hướng dẫn đầy đủ về venv, Firebase Emulator, API, worker và frontend nằm ở [README gốc](../../README.md#quickstart--local-development). Các lệnh dưới đây dùng **PowerShell**, bắt đầu từ **gốc repo**, sau khi đã tạo `.venv/`, cài `apps/api/requirements-dev.txt` và cấu hình `apps/api/.env`.
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r apps/api/requirements-dev.txt
-test -e apps/api/.env || cp apps/api/.env.example apps/api/.env
-npm install -g firebase-tools@15.12.0
+Đợi Auth/Firestore/Storage Emulator sẵn sàng, rồi mở hai terminal riêng:
+
+API:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir apps/api --host 127.0.0.1 --reload --reload-dir apps/api/app --port 8000
 ```
 
-Trong terminal riêng từ gốc repo, chạy emulator:
+Worker:
 
-```bash
-firebase emulators:start --project demo-legal-api --only auth,firestore,storage --export-on-exit .emulator-data
+```powershell
+$env:PYTHONPATH = (Resolve-Path apps/api).Path
+.\.venv\Scripts\python.exe -m app.workers.ingestion
 ```
 
-Nếu đã có `.emulator-data/firebase-export-metadata.json`, thêm `--import .emulator-data`
-vào lệnh để khôi phục dữ liệu. Dừng emulator bằng Ctrl+C và đợi export xong.
-Trong hai terminal khác từ gốc repo, chạy API và worker:
+Mỗi terminal dùng cùng venv ở gốc, không cần kích hoạt thêm venv trong `apps/api`. Trên macOS/Linux, thay executable bằng `.venv/bin/python`; worker dùng `PYTHONPATH=apps/api .venv/bin/python -m app.workers.ingestion`.
 
-```bash
-source .venv/bin/activate
-python -m uvicorn app.main:app --app-dir apps/api --reload --reload-dir apps/api/app --port 8000
-```
+Backend tự đọc `apps/api/.env` theo đường dẫn file; biến môi trường process có ưu tiên cao hơn. Mẫu hiện dùng `EMBEDDING_PROVIDER=local` và host `http://127.0.0.1:8010`. Cần chạy [embedding host](../embedding/README.md) để xử lý PDF/tìm kiếm ngữ nghĩa bằng profile đó. Embedding chạy riêng với model trả lời; có thể đổi sang OpenAI/OpenRouter nếu cấu hình đủ key/model/profile. Không cần key LLM để thử đăng ký, đăng nhập hoặc API quản lý metadata.
 
-```bash
-source .venv/bin/activate
-cd apps/api
-python -m app.workers.ingestion
-```
-
-Đợi emulator báo sẵn sàng trước khi chạy API và worker. Dừng API/worker cloud cũ
-trước để tránh trùng cổng hoặc hai worker chạy hai môi trường. Truy cập web tại
-`http://127.0.0.1:8085`, đăng xuất nếu cần và đăng ký tài khoản local mới: Auth,
-Firestore và Storage emulator có dữ liệu riêng, không sao chép tài khoản hay tài liệu cloud.
-Dữ liệu được lưu trong `.emulator-data/` khi export; dùng `--import` để khôi phục.
-Nếu bị tắt đột ngột, dữ liệu từ lần chạy đó có thể bị mất.
-Các cấu hình khác, gồm embedding provider và key, vẫn lấy từ `apps/api/.env`; xử lý
-embedding có thể gọi dịch vụ bên ngoài theo cấu hình đó. Firestore emulator không hỗ trợ
-kiểm thử tìm kiếm vector thực tế như cloud.
+Web chạy tại `http://127.0.0.1:8085`, API tại `http://127.0.0.1:8000`. Dùng cùng hostname và giữ origin frontend trong `BACKEND_CORS_ORIGINS`. Tài khoản emulator tách biệt cloud; khôi phục dữ liệu bằng `--import .emulator-data` theo README gốc. Kiểm tra `/health`, `/ready`, `/docs` trước khi thử upload và hỏi đáp.
 
 Với OpenRouter model `:free`, worker và API dùng cùng bộ đếm trên Firestore: tối đa
 40 request mỗi 24 giờ trượt, cách nhau ít nhất 5 giây cho cùng một key. Mỗi chunk
 đã xử lý được lưu để job tiếp tục sau khi chờ. Số lượt dùng từ ứng dụng khác dùng
 cùng tài khoản không nằm trong bộ đếm này, vì vậy OpenRouter vẫn có thể trả 429.
 Khi đó worker lùi lịch và không tính vào giới hạn số lần lỗi thông thường.
+
+Mẫu local dùng batch size 1 cho embedding host. Khởi động lại API/worker khi đổi cấu hình. Dữ liệu vector cloud cần index tương ứng; không suy ra khả năng vector search cloud từ test emulator.
 
 Mỗi tài liệu được embedding toàn bộ các đoạn. Tiến độ xuất hiện trong thư viện; khi
 job gián đoạn, các đoạn đã lưu được dùng lại. Với PDF scan, worker chuyển từng trang sang dịch vụ PaddleOCR cục bộ (port 8011),
@@ -62,12 +45,20 @@ Health: `/health`; dependency readiness: `/ready`; Swagger: `/docs`. File `.env`
 
 ## Kiểm tra
 
-```bash
-ruff check apps/api scripts/backend_admin.py scripts/migrate_knowledge.py scripts/evaluate_legal_qa.py
-ruff format --check apps/api scripts/backend_admin.py scripts/migrate_knowledge.py scripts/evaluate_legal_qa.py
-python -m compileall apps/api/app scripts
-python -m pytest -m 'not integration' -q
-firebase emulators:exec --project demo-legal-api --only auth,firestore,storage 'RUN_FIREBASE_INTEGRATION=1 python -m pytest -m integration -q'
+Từ gốc repo, PowerShell:
+
+```powershell
+.\.venv\Scripts\python.exe -m ruff check apps/api scripts/backend_admin.py scripts/migrate_knowledge.py scripts/evaluate_legal_qa.py
+.\.venv\Scripts\python.exe -m ruff format --check apps/api scripts/backend_admin.py scripts/migrate_knowledge.py scripts/evaluate_legal_qa.py
+.\.venv\Scripts\python.exe -m compileall apps/api/app scripts
+.\.venv\Scripts\python.exe -m pytest -m "not integration" -q
+```
+
+Khi cả ba emulator đã chạy, dùng terminal kiểm thử riêng:
+
+```powershell
+$env:RUN_FIREBASE_INTEGRATION = "1"
+.\.venv\Scripts\python.exe -m pytest -m integration -q
 ```
 
 Test tự cố định các host 127.0.0.1 và project demo-legal-api. Không có emulator thì test integration được skip; không fallback sang cloud. CI chạy cả hai bộ test.
@@ -99,11 +90,12 @@ tìm kiếm, không gửi PDF. OpenRouter key dùng cho embedding không liên q
 
 PDF tải lên được xử lý nền bởi worker riêng (cần chạy cùng emulator và API):
 
-```bash
-cd apps/api && python -m app.workers.ingestion
+```powershell
+$env:PYTHONPATH = (Resolve-Path apps/api).Path
+.\.venv\Scripts\python.exe -m app.workers.ingestion
 ```
 
-`POST /api/v1/rag/ask` chạy workflow trong `services/qa.py`: chọn kho (`knowledge_base_ids`, tối đa 5), tra theo số hiệu/điều và vector, kiểm tra lại nguồn rồi trả lời kèm trích dẫn. Embedding dùng OpenAI hoặc OpenRouter theo cấu hình backend, độc lập với model trả lời. Chi tiết, cờ tính năng, điều kiện dữ liệu và giới hạn: [docs/knowledge-rag.md](../../docs/knowledge-rag.md). Giữ key ngoài Git. Test dùng AI giả lập, không gọi API tính phí; emulator không chạy `find_nearest`, nên chỉ mục vector cần kiểm tra trên dự án Firebase thật.
+`POST /api/v1/rag/ask` chạy workflow trong `services/qa.py`: chọn kho (`knowledge_base_ids`, tối đa 5), tra theo số hiệu/điều và vector, kiểm tra lại nguồn rồi trả lời kèm trích dẫn. Embedding dùng local, OpenAI hoặc OpenRouter theo cấu hình backend, độc lập với model trả lời. Chi tiết, cờ tính năng, điều kiện dữ liệu và giới hạn: [docs/knowledge-rag.md](../../docs/knowledge-rag.md). Giữ key ngoài Git. Test dùng AI giả lập, không gọi API tính phí; emulator không chạy `find_nearest`, nên chỉ mục vector cần kiểm tra trên dự án Firebase thật.
 
 Nếu dùng Firebase cloud thay vì emulator, tạo các index trong `infra/firebase/firestore.indexes.json`
 trước khi chạy worker và chờ trạng thái **Ready**. Truy vấn nhận job cần composite index

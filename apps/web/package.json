@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1",
-    "build": "next build",
-    "start": "next start --hostname 127.0.0.1",
-    "typecheck": "tsc --noEmit"
+    "dev": "python -m http.server 8085 --bind 127.0.0.1",
+    "start": "python -m http.server 8085 --bind 127.0.0.1",
+    "dev:legacy": "next dev --hostname 127.0.0.1",
+    "build:legacy": "next build",
+    "start:legacy": "next start --hostname 127.0.0.1",
+    "typecheck:legacy": "tsc --noEmit"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
