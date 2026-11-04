@@ -4,7 +4,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 8px 12px 4px;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -23,13 +23,13 @@
   align-items: baseline;
   gap: 10px;
   padding: 7px 12px;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--ink);
   cursor: pointer;
 }
 .combobox-option small {
   color: var(--muted);
-  font-size: 15px;
+  font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -43,7 +43,7 @@
 }
 .combobox-note {
   padding: 6px 12px;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--muted);
 }
 
@@ -59,7 +59,7 @@
     no-repeat right 12px center;
   min-width: 0;
   height: 40px;
-  font-size: 15px;
+  font-size: 14px;
 }
 .combobox-list {
   position: absolute;
@@ -80,7 +80,7 @@
   text-transform: none;
   letter-spacing: 0;
   bottom: calc(100% + 12px);
-  font-size: 15px;
+  font-size: 14px;
 }
 .answer-message {
   width: 100%;
@@ -93,7 +93,7 @@
 .answer-message > span {
   display: block;
   color: var(--olive);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   margin-bottom: 10px;
 }
@@ -109,7 +109,7 @@
   color: var(--muted);
 }
 .answer-text {
-  font-size: 17px;
+  font-size: 15px;
   line-height: 1.85;
 }
 .answer-text p + p {
@@ -117,7 +117,7 @@
 }
 .answer-block {
   margin-top: 18px;
-  font-size: 16px;
+  font-size: 14px;
 }
 .answer-block ul {
   margin: 8px 0;
@@ -127,7 +127,7 @@
 .cite {
   color: var(--olive);
   background: #e8eedd;
-  font-size: 14px;
+  font-size: 13px;
   border-radius: 5px;
   padding: 1px 5px;
   margin: 0 2px;
@@ -141,7 +141,7 @@
 .answer-sources summary {
   cursor: pointer;
   font-weight: 500;
-  font-size: 15px;
+  font-size: 14px;
   padding: 14px 16px;
 }
 .source-list {
@@ -156,7 +156,7 @@
   padding: 14px 2px;
   border-bottom: 1px solid var(--line);
   text-align: left;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.6;
 }
 .citation-row:last-child {
@@ -203,7 +203,7 @@
 }
 .source-heading > span {
   color: var(--muted);
-  font-size: 15px;
+  font-size: 14px;
 }
 .source-content {
   overflow-y: auto;
@@ -211,11 +211,11 @@
   min-height: 0;
 }
 .source-content h2 {
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1.5;
 }
 .evidence-text {
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.8;
   white-space: pre-wrap;
   padding: 18px;
@@ -237,7 +237,7 @@
 #evidence-pdf-status {
   margin-top: 12px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 .problem {
   background: #f6e1de;

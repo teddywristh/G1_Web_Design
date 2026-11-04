@@ -48,29 +48,16 @@
     padding: 18px 4px;
   }
   .composer-dock {
-    padding: 10px 0 max(12px, env(safe-area-inset-bottom));
-  }
-  .composer-bottom > span {
-    font-size: 11px;
-  }
-  .composer-filters {
-    gap: 4px;
-  }
-  .query-options > summary {
-    font-size: 13px;
-    padding: 8px 4px;
-  }
-  .welcome {
-    padding-top: 38px;
+    padding: 4px 0 max(10px, env(safe-area-inset-bottom));
   }
   .welcome h1 {
-    font-size: 29px;
+    font-size: 24px;
   }
   .welcome > p:last-child {
-    font-size: 16px;
+    font-size: 14px;
   }
   .suggestions button {
-    font-size: 15px;
+    font-size: 14px;
   }
   .question-message {
     max-width: 92%;

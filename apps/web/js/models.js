@@ -42,16 +42,16 @@ function selectedGroup() {
   return groupOf(state.ai?.group);
 }
 
-function placeholder() {
-  if (state.models.loading) return "Đang tải model…";
-  if (!state.models.groups.length) return "Chưa có kết nối AI";
-  return "Chọn nhà cung cấp và model";
+function isOpen() {
+  return !$("#model-popover").hidden;
 }
 
 function renderPicker() {
-  const input = $("#model-picker");
-  input.placeholder = placeholder();
-  if (input.getAttribute("aria-expanded") !== "true") input.value = choiceLabel(state.ai);
+  const label = $("#model-label");
+  const group = selectedGroup();
+  const model = group?.models.find((item) => item.id === state.ai.model);
+  label.textContent = state.models.loading && !group ? "Đang tải…" : group ? model?.name || state.ai.model : "Model";
+  $("#model-button").title = group ? choiceLabel(state.ai) : "Chọn nhà cung cấp và model";
 }
 
 function matches(text, terms) {
@@ -72,61 +72,79 @@ function optionNode(entry, index) {
   return node;
 }
 
-function renderOptions(filter = "") {
-  const list = $("#model-options");
-  const terms = filter.toLowerCase().split(/\s+/).filter(Boolean);
+// Step 1: the configured connections the server listed.
+function renderProviders() {
+  const list = $("#model-providers");
   list.replaceChildren();
-  entries = [];
+  $("#model-panel").hidden = true;
+  list.hidden = false;
   if (!state.models.groups.length) {
     const note = state.models.apiKeysAvailable
       ? "Thêm API key hoặc kết nối ChatGPT trong Thiết lập → Kết nối AI."
       : "Máy chủ chưa bật OpenCode cho API key. Kết nối ChatGPT trong Thiết lập, hoặc liên hệ quản trị viên.";
-    list.append(element("li", "combobox-note", state.models.loading ? "Đang tải model…" : note));
+    list.append(element("p", "combobox-note", state.models.loading ? "Đang tải model…" : note));
     return;
   }
-  const heading = (title, detail) => {
-    const node = element("li", "combobox-group");
-    node.setAttribute("role", "presentation");
-    node.append(element("strong", "", title), element("small", "", detail));
-    list.append(node);
-  };
   state.models.groups.forEach((group) => {
-    const header = `${group.label} ${SOURCE_TEXT[group.source] || ""}`;
-    const headerMatches = terms.length > 0 && matches(header, terms);
-    const found = group.models.filter(
-      (model) => headerMatches || matches(`${header} ${model.id} ${model.name}`, terms),
+    const button = element("button", "model-provider");
+    button.type = "button";
+    button.setAttribute("role", "menuitem");
+    if (state.ai?.group === group.id) button.classList.add("is-current");
+    const text = element("span");
+    text.append(
+      element("strong", "", group.label),
+      element("small", "", group.error ? "Lỗi tải model" : SOURCE_TEXT[group.source] || group.source),
     );
-    if (terms.length && !found.length) return;
-    heading(group.label, SOURCE_TEXT[group.source] || group.source);
-    if (group.error) {
-      const note = element(
-        "li",
-        "combobox-note",
-        GROUP_ERROR_TEXT[group.error] || "Không tải được danh sách model; gõ ID model để dùng.",
-      );
-      note.setAttribute("role", "presentation");
-      list.append(note);
-    }
-    found.slice(0, PAGE).forEach((model) => {
-      const entry = { group, model: model.id, name: model.name };
-      list.append(optionNode(entry, entries.push(entry) - 1));
-    });
-    if (found.length > PAGE) {
-      const more = element("li", "combobox-note", `Còn ${found.length - PAGE} model; gõ để lọc.`);
-      more.setAttribute("role", "presentation");
-      list.append(more);
-    }
+    button.append(text, element("span", "model-provider-arrow", "›"));
+    button.addEventListener("click", () => showGroup(group));
+    list.append(button);
   });
-  // Typed IDs come last so Enter picks a listed match first; they cover models a list omits.
-  const exact = state.models.groups.some((group) =>
-    group.models.some((model) => model.id === filter),
-  );
-  if (filter && MODEL_ID.test(filter) && !exact) {
-    heading("Dùng ID tự nhập", filter);
-    state.models.groups.forEach((group) => {
-      const entry = { group, model: filter, name: group.label, custom: true };
-      list.append(optionNode(entry, entries.push(entry) - 1));
-    });
+}
+
+let currentGroup = null;
+
+// Step 2: the models of one connection, filterable, with a typed-ID fallback.
+function showGroup(group) {
+  currentGroup = group;
+  $("#model-providers").hidden = true;
+  $("#model-panel").hidden = false;
+  $("#model-provider-name").textContent = group.label;
+  $("#model-filter").value = "";
+  renderOptions();
+  setActive(entries.findIndex((entry) => entry.model === state.ai?.model && state.ai?.group === group.id));
+  $("#model-filter").focus();
+}
+
+function renderOptions(filter = "") {
+  const list = $("#model-options");
+  const group = currentGroup;
+  const terms = filter.toLowerCase().split(/\s+/).filter(Boolean);
+  list.replaceChildren();
+  entries = [];
+  if (!group) return;
+  if (group.error) {
+    const note = element(
+      "li",
+      "combobox-note",
+      GROUP_ERROR_TEXT[group.error] || "Không tải được danh sách model; gõ ID model để dùng.",
+    );
+    note.setAttribute("role", "presentation");
+    list.append(note);
+  }
+  const found = group.models.filter((model) => matches(`${model.id} ${model.name}`, terms));
+  found.slice(0, PAGE).forEach((model) => {
+    const entry = { group, model: model.id, name: model.name };
+    list.append(optionNode(entry, entries.push(entry) - 1));
+  });
+  if (found.length > PAGE) {
+    const more = element("li", "combobox-note", `Còn ${found.length - PAGE} model; gõ để lọc.`);
+    more.setAttribute("role", "presentation");
+    list.append(more);
+  }
+  // A typed ID comes last so Enter picks a listed match first; it covers models a list omits.
+  if (filter && MODEL_ID.test(filter) && !group.models.some((model) => model.id === filter)) {
+    const entry = { group, model: filter, name: filter, custom: true };
+    list.append(optionNode(entry, entries.push(entry) - 1));
   }
   if (!list.children.length) list.append(element("li", "combobox-note", "Không có model khớp."));
 }
@@ -137,38 +155,33 @@ function setActive(index) {
   options.forEach((node, i) => node.classList.toggle("is-active", i === active));
   const node = options[active];
   if (node) {
-    $("#model-picker").setAttribute("aria-activedescendant", node.id);
+    $("#model-filter").setAttribute("aria-activedescendant", node.id);
     node.scrollIntoView({ block: "nearest" });
-  } else $("#model-picker").removeAttribute("aria-activedescendant");
+  } else $("#model-filter").removeAttribute("aria-activedescendant");
 }
 
 function open() {
-  const input = $("#model-picker");
-  if (input.getAttribute("aria-expanded") === "true") return;
-  input.setAttribute("aria-expanded", "true");
-  input.value = "";
-  renderOptions();
-  $("#model-options").hidden = false;
-  setActive(
-    entries.findIndex(
-      (entry) => entry.group.id === state.ai?.group && entry.model === state.ai?.model,
-    ),
-  );
+  if (isOpen()) return;
+  $("#model-popover").hidden = false;
+  $("#model-button").setAttribute("aria-expanded", "true");
+  renderProviders();
 }
 
-function close() {
-  const input = $("#model-picker");
-  input.setAttribute("aria-expanded", "false");
-  input.removeAttribute("aria-activedescendant");
-  $("#model-options").hidden = true;
+function close({ focus = false } = {}) {
+  if (!isOpen()) return;
+  $("#model-popover").hidden = true;
+  $("#model-button").setAttribute("aria-expanded", "false");
+  currentGroup = null;
   active = -1;
   renderPicker();
+  if (focus) $("#model-button").focus();
 }
 
 function choose(entry) {
   state.ai = { group: entry.group.id, model: entry.model };
   persist();
   close();
+  $("#question").focus();
 }
 
 // Keep the saved choice when its connection still exists; otherwise pick the first usable model.
@@ -191,8 +204,13 @@ async function loadModels({ prefer } = {}) {
   else if (!selectedGroup()) state.ai = defaultChoice();
   persist();
   renderPicker();
-  if ($("#model-picker").getAttribute("aria-expanded") === "true")
-    renderOptions($("#model-picker").value.trim());
+  if (isOpen()) {
+    if (currentGroup) {
+      currentGroup = groupOf(currentGroup.id) || null;
+      if (currentGroup) renderOptions($("#model-filter").value.trim());
+      else renderProviders();
+    } else renderProviders();
+  }
 }
 
 function resetModels() {
@@ -208,33 +226,38 @@ function selectedModel() {
 }
 
 function focusPicker() {
-  $("#model-picker").focus();
+  $("#model-button").focus();
   open();
 }
 
-$("#model-picker").addEventListener("focus", open);
-$("#model-picker").addEventListener("click", open);
-$("#model-picker").addEventListener("blur", close);
-$("#model-picker").addEventListener("input", (event) => {
-  event.target.setAttribute("aria-expanded", "true");
-  $("#model-options").hidden = false;
+$("#model-button").addEventListener("click", () => (isOpen() ? close() : open()));
+$("#model-back").addEventListener("click", () => {
+  currentGroup = null;
+  renderProviders();
+  $("#model-providers").querySelector("button")?.focus();
+});
+$("#model-filter").addEventListener("input", (event) => {
   renderOptions(event.target.value.trim());
   setActive(0);
 });
-$("#model-picker").addEventListener("keydown", (event) => {
+$("#model-filter").addEventListener("keydown", (event) => {
   if (event.key === "ArrowDown" || event.key === "ArrowUp") {
     event.preventDefault();
-    if ($("#model-picker").getAttribute("aria-expanded") !== "true") open();
-    else setActive(active + (event.key === "ArrowDown" ? 1 : -1));
+    setActive(active + (event.key === "ArrowDown" ? 1 : -1));
   } else if (event.key === "Enter") {
     event.preventDefault();
     if (entries[active]) choose(entries[active]);
-  } else if (event.key === "Escape") {
-    event.preventDefault();
-    $("#model-picker").blur();
   }
 });
-// Keep focus in the input while clicking an option so blur does not close the list first.
-$("#model-options").addEventListener("mousedown", (event) => event.preventDefault());
+$(".model-menu").addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && isOpen()) {
+    event.preventDefault();
+    event.stopPropagation();
+    close({ focus: true });
+  }
+});
+document.addEventListener("click", (event) => {
+  if (isOpen() && !$(".model-menu").contains(event.target)) close();
+});
 
 export { focusPicker, loadModels, resetModels, selectedModel };

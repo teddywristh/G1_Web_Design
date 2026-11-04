@@ -21,7 +21,7 @@ dialog::backdrop {
   position: absolute;
   right: 12px;
   top: 8px;
-  font-size: 27px;
+  font-size: 23px;
   color: var(--muted);
 }
 dialog h2 {
@@ -47,17 +47,17 @@ dialog h2 {
   outline-offset: 3px;
 }
 .upload-zone strong {
-  font-size: 14px;
+  font-size: 13px;
 }
 .upload-zone span {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--muted);
 }
 .form-field {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 14px;
+  font-size: 13px;
   margin-top: 16px;
 }
 .form-field input,
@@ -67,7 +67,7 @@ dialog h2 {
   border-radius: 6px;
   background: white;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 13px;
   min-width: 0;
   width: 100%;
 }
@@ -80,14 +80,14 @@ dialog h2 {
   background: #eef2e7;
   padding: 12px;
   border-radius: 5px;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.8;
   color: var(--muted);
   margin-top: 20px;
 }
 .error {
   color: #9c4738;
-  font-size: 14px;
+  font-size: 13px;
   margin-top: 12px;
 }
 .dialog-actions {
@@ -127,6 +127,6 @@ dialog h2 {
   background: #38482e;
   color: white;
   z-index: 100;
-  font-size: 14px;
+  font-size: 13px;
   box-shadow: 0 8px 30px #28322930;
 }

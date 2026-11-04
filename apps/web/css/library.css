@@ -15,7 +15,7 @@
 .tabs button {
   padding: 7px 12px;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--muted);
 }
 .tabs .selected {
@@ -33,7 +33,7 @@
   background: white;
   padding: 10px;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 13px;
   min-width: 0;
 }
 .search-sort input {
@@ -52,7 +52,7 @@ table {
   white-space: nowrap;
 }
 th {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--muted);
   background: #f2f4ee;
@@ -61,7 +61,7 @@ th {
 td {
   padding: 18px;
   border-top: 1px solid var(--line);
-  font-size: 14px;
+  font-size: 13px;
 }
 .document-title {
   display: block;
@@ -70,22 +70,22 @@ td {
 }
 .document-title strong {
   display: block;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
 }
 .document-title small {
   display: block;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--muted);
   margin-top: 5px;
 }
 .date-cell {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 .status-badge {
   display: inline-block;
-  font-size: 14px;
+  font-size: 13px;
   border-radius: 20px;
   padding: 4px 8px;
 }
@@ -101,7 +101,7 @@ td {
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--muted);
   margin-top: 16px;
 }
@@ -117,5 +117,5 @@ td {
 .empty-state p {
   max-width: 450px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
 }

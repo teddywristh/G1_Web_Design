@@ -17,7 +17,7 @@ body {
   color: var(--ink);
   background: var(--paper);
   font:
-    16px/1.6 "Segoe UI",
+    14px/1.55 "Segoe UI",
     Arial,
     sans-serif;
 }
@@ -51,16 +51,16 @@ p {
   margin: 0;
 }
 h1 {
-  font-size: 29px;
+  font-size: 24px;
   line-height: 1.5;
   font-weight: 600;
 }
 h2 {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
 }
 h3 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 500;
 }
 button:focus-visible,
@@ -78,7 +78,7 @@ textarea:focus-visible {
   align-items: center;
   padding: 10px 15px;
   border-radius: 7px;
-  font-size: 15px;
+  font-size: 14px;
   white-space: nowrap;
 }
 .primary-button {
@@ -93,7 +93,7 @@ textarea:focus-visible {
 }
 .text-button {
   color: var(--olive);
-  font-size: 15px;
+  font-size: 14px;
   padding: 6px;
 }
 .danger {
@@ -101,14 +101,14 @@ textarea:focus-visible {
 }
 .subtitle {
   color: var(--muted);
-  font-size: 15px;
+  font-size: 14px;
   margin-top: 8px;
   line-height: 1.8;
 }
 .small-print {
   margin-top: 18px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.8;
 }
 .centered {

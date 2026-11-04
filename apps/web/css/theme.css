@@ -6,7 +6,7 @@
   --line-strong: #d3dac8;
   --radius: 10px;
   --shadow: 0 1px 2px rgba(40, 50, 41, 0.05), 0 6px 18px rgba(40, 50, 41, 0.05);
-  --control-h: 38px;
+  --control-h: 34px;
 }
 body {
   -webkit-font-smoothing: antialiased;
@@ -21,7 +21,7 @@ textarea {
   border-radius: 8px;
   background: var(--card);
   color: var(--ink);
-  font-size: 15px;
+  font-size: 14px;
 }
 input:not([type="checkbox"]):not([type="file"]),
 select {
@@ -52,7 +52,7 @@ textarea:focus-visible {
 .secondary-button {
   height: var(--control-h);
   padding: 0 16px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   border-radius: 8px;
 }
@@ -65,7 +65,7 @@ textarea:focus-visible {
   box-shadow: 0 1px 2px rgba(40, 50, 41, 0.2);
 }
 .text-button {
-  font-size: 15px;
+  font-size: 14px;
   color: var(--olive-dark);
   padding: 4px 6px;
   border-radius: 6px;
@@ -78,7 +78,7 @@ textarea:focus-visible {
   color: #9b3d33;
 }
 .page-heading h1 {
-  font-size: 26px;
+  font-size: 22px;
   margin: 0;
 }
 .kb-bar {
@@ -86,7 +86,7 @@ textarea:focus-visible {
 }
 .kb-bar select {
   height: var(--control-h);
-  font-size: 15px;
+  font-size: 14px;
   min-width: 240px;
   padding: 0 10px;
   border-radius: 8px;
@@ -107,7 +107,7 @@ textarea:focus-visible {
   overflow-x: auto;
 }
 th {
-  font-size: 15px;
+  font-size: 14px;
   letter-spacing: 0.6px;
   color: var(--muted);
   background: #f4f6ef;
@@ -119,7 +119,7 @@ td .text-button {
   margin-left: 2px;
 }
 .status-badge {
-  font-size: 15px;
+  font-size: 14px;
   padding: 3px 10px;
   white-space: nowrap;
 }
@@ -131,7 +131,7 @@ dialog {
   box-shadow: 0 20px 60px rgba(30, 40, 30, 0.25);
 }
 .close-dialog {
-  font-size: 22px;
+  font-size: 20px;
   border-radius: 8px;
   width: 32px;
   height: 32px;
@@ -162,12 +162,12 @@ dialog {
 .auth-card .brand-mark {
   width: 44px;
   height: 44px;
-  font-size: 26px;
+  font-size: 22px;
   border-radius: 12px;
 }
 .auth-card .primary-button {
   height: 42px;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 @media (max-width: 760px) {

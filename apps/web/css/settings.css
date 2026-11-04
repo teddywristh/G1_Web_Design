@@ -18,12 +18,12 @@
   margin-bottom: 12px;
 }
 .settings-heading h1 {
-  font-size: 32px;
+  font-size: 27px;
   margin: 10px 0;
 }
 .settings-heading > p:last-child {
   color: var(--muted);
-  font-size: 16px;
+  font-size: 14px;
 }
 .settings-section,
 .chatgpt-connection {
@@ -31,11 +31,11 @@
   border-bottom: 1px solid var(--line);
 }
 .settings-page h2 {
-  font-size: 20px;
+  font-size: 18px;
   margin-bottom: 12px;
 }
 .settings-page h3 {
-  font-size: 18px;
+  font-size: 16px;
   margin-bottom: 12px;
 }
 .settings-page p {
@@ -43,12 +43,12 @@
 }
 .settings-page .small-print,
 .settings-page .subtitle {
-  font-size: 15px;
+  font-size: 14px;
   margin-top: 10px;
 }
 .settings-page .secondary-button,
 .settings-page .primary-button {
-  font-size: 15px;
+  font-size: 14px;
 }
 .account-actions {
   display: flex;
@@ -70,7 +70,7 @@
 .connection-list:empty::after {
   content: "Chưa có thông tin để hiển thị.";
   color: var(--muted);
-  font-size: 15px;
+  font-size: 14px;
 }
 .connection-list li {
   display: flex;
@@ -79,14 +79,14 @@
   gap: 8px;
   padding: 16px 0;
   border-bottom: 1px solid var(--line);
-  font-size: 16px;
+  font-size: 14px;
 }
 .connection-list li > span {
   flex: 1;
   min-width: 180px;
 }
 .connection-list li > strong {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--olive);
   background: #eef3e8;
@@ -105,13 +105,13 @@
   border-radius: 14px;
 }
 #connection-form label {
-  font-size: 15px;
+  font-size: 14px;
 }
 #connection-form input,
 #connection-form select {
   min-width: 0;
   width: 100%;
-  font-size: 16px;
+  font-size: 14px;
   height: 44px;
   padding: 0 12px;
 }
@@ -144,7 +144,7 @@
 .processing-detail {
   display: block;
   margin-top: 6px;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
   max-width: 300px;
 }

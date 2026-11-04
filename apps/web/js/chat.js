@@ -221,6 +221,7 @@ $("#question-form").addEventListener("submit", async (event) => {
   state.pendingChat = pending;
   active.messages.push({ role: "user", text: question });
   $("#question").value = "";
+  fitQuestion();
   $("#query-public-confirm").checked = false;
   persist();
   renderChat();
@@ -307,7 +308,19 @@ function slimResponse(data) {
   };
 }
 
+// Grow the composer with its text, up to the CSS max-height.
+function fitQuestion() {
+  const box = $("#question");
+  box.style.height = "auto";
+  box.style.height = `${box.scrollHeight}px`;
+}
+
+// Enter in the date or model-filter fields must not submit the question.
+$("#question-form").addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && event.target.matches("input")) event.preventDefault();
+});
 $("#question").addEventListener("input", () => {
+  fitQuestion();
   $("#query-public-confirm").checked = false;
   $("#send-question").disabled = Boolean(state.pendingChat) || !$("#question").value.trim();
 });
@@ -322,11 +335,13 @@ $("#suggestions").addEventListener("click", (event) => {
   if (!button) return;
   $("#query-public-confirm").checked = false;
   $("#question").value = button.textContent;
+  fitQuestion();
   $("#send-question").disabled = false;
   $("#question").focus();
 });
 document.addEventListener("chat-selected", () => {
   $("#question").value = "";
+  fitQuestion();
   renderChat();
   scrollToLatest();
 });

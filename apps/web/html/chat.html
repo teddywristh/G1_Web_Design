@@ -53,60 +53,74 @@
       <textarea
         id="question"
         placeholder="Nhập câu hỏi của bạn…"
-        rows="2"
+        title="Enter để gửi · Shift + Enter để xuống dòng"
+        rows="1"
         maxlength="4000"
         required
       ></textarea>
       <div class="composer-bottom">
-        <span>Enter để gửi · Shift + Enter để xuống dòng</span
-        ><button
+        <details class="query-options">
+          <summary class="composer-icon" aria-label="Tùy chọn tra cứu" title="Tùy chọn tra cứu">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg>
+          </summary>
+          <div class="query-options-content">
+            <strong>Tùy chọn tra cứu</strong>
+            <p id="kb-scope">Tra cứu trên tất cả kho được phép truy cập.</p>
+            <label class="form-field"
+              >Mốc thời gian<input id="as-of" type="date"
+            /></label>
+            <label class="check-field"
+              ><input id="web-search" type="checkbox" />Tìm thêm nguồn pháp luật
+              trên web</label
+            >
+          </div>
+        </details>
+        <div class="model-menu">
+          <button
+            id="model-button"
+            class="model-chip"
+            type="button"
+            aria-haspopup="true"
+            aria-expanded="false"
+            aria-controls="model-popover"
+          >
+            <span id="model-label">Model</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+          </button>
+          <div id="model-popover" class="model-popover" hidden>
+            <div id="model-providers" class="model-providers" role="menu" aria-label="Nhà cung cấp"></div>
+            <div id="model-panel" hidden>
+              <div class="model-panel-head">
+                <button id="model-back" type="button" class="composer-icon" aria-label="Quay lại danh sách nhà cung cấp">‹</button>
+                <strong id="model-provider-name"></strong>
+              </div>
+              <label class="sr-only" for="model-filter">Tìm model</label>
+              <input
+                id="model-filter"
+                class="model-filter"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded="true"
+                aria-controls="model-options"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Tìm hoặc nhập ID model"
+              />
+              <ul id="model-options" class="model-options" role="listbox" aria-label="Model"></ul>
+            </div>
+          </div>
+        </div>
+        <button
           id="send-question"
           class="send-button"
           type="submit"
           aria-label="Gửi câu hỏi"
           disabled
         >
-          ↑
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
         </button>
       </div>
     </form>
-    <div class="composer-filters" aria-label="Tùy chọn hỏi đáp">
-      <div class="model-field">
-        <label class="sr-only" for="model-picker">Model AI</label>
-        <div class="combobox">
-          <input
-            id="model-picker"
-            role="combobox"
-            aria-autocomplete="list"
-            aria-expanded="false"
-            aria-controls="model-options"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="Chọn model AI"
-          />
-          <ul
-            id="model-options"
-            class="combobox-list"
-            role="listbox"
-            aria-label="Nhà cung cấp và model"
-            hidden
-          ></ul>
-        </div>
-      </div>
-      <details class="query-options">
-        <summary>Tùy chọn tra cứu</summary>
-        <div class="query-options-content">
-          <p id="kb-scope">Tra cứu trên tất cả kho được phép truy cập.</p>
-          <label class="form-field"
-            >Mốc thời gian<input id="as-of" type="date"
-          /></label>
-          <label class="check-field"
-            ><input id="web-search" type="checkbox" />Tìm thêm nguồn pháp luật
-            trên web</label
-          >
-        </div>
-      </details>
-    </div>
     <label id="query-public-label" class="small-print" hidden
       ><input id="query-public-confirm" type="checkbox" />Câu hỏi không chứa dữ
       liệu cá nhân hoặc thông tin mật; tôi đồng ý với điều kiện của NVIDIA
