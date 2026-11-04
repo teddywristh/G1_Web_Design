@@ -9,7 +9,7 @@ from typing import Literal
 from uuid import uuid4
 
 from google.api_core.exceptions import GoogleAPICallError
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from app.core.errors import APIError
 from app.repositories.backend import utcnow
@@ -59,6 +59,12 @@ class ModelOutput(BaseModel):
     missing_facts: list[str] = Field(default_factory=list, max_length=3)
     unresolved_sources: list[str] = Field(default_factory=list, max_length=10)
     search_queries: list[str] = Field(default_factory=list, max_length=2)
+
+    # The model sometimes lists more than asked; keep the first three instead of failing the request.
+    @field_validator("missing_facts", mode="before")
+    @classmethod
+    def cap_missing_facts(cls, value):
+        return value[:3] if isinstance(value, list) else value
 
 
 def squash(text):

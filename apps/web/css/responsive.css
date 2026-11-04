@@ -62,9 +62,6 @@
   .question-message {
     max-width: 92%;
   }
-  .visual-results {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .conversation-heading {
     flex-wrap: wrap;
     gap: 4px;
