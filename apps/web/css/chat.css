@@ -59,7 +59,7 @@
 .eyebrow {
   font-size: 13px;
   letter-spacing: 1.4px;
-  color: var(--olive);
+  color: var(--accent);
 }
 .welcome h1 {
   font-size: clamp(24px, 2.4vw, 30px);
@@ -84,7 +84,7 @@
   align-self: flex-end;
   max-width: 85%;
   padding: 14px 20px;
-  background: #edf0e7;
+  background: #f7eeec;
   border-radius: 20px 20px 4px 20px;
   margin: 0;
   overflow-wrap: anywhere;
@@ -130,14 +130,14 @@
 }
 .question-composer {
   background: white;
-  border: 1px solid #ccd4c1;
+  border: 1px solid #d9c9c6;
   border-radius: 22px;
-  box-shadow: 0 2px 12px #2832290d;
+  box-shadow: 0 2px 12px #302b2b0d;
   padding: 12px 12px 8px 16px;
 }
 .question-composer:focus-within {
-  border-color: var(--olive);
-  box-shadow: 0 0 0 2px #586c4314;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px #a5262d14;
 }
 .question-composer #question {
   display: block;
@@ -171,7 +171,7 @@
   height: 34px;
   margin-left: auto;
   border-radius: 50%;
-  background: var(--olive);
+  background: var(--accent);
   color: white;
 }
 .composer-icon {
@@ -190,8 +190,8 @@
 }
 .composer-icon:hover,
 .query-options[open] > .composer-icon {
-  background: var(--olive-soft);
-  color: var(--olive-dark);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
   filter: none;
 }
 .model-menu {
@@ -219,8 +219,8 @@
 }
 .model-chip:hover,
 .model-chip[aria-expanded="true"] {
-  background: var(--olive-soft);
-  color: var(--olive-dark);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
   filter: none;
 }
 .model-popover {
@@ -232,7 +232,7 @@
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 12px 40px #2832291f;
+  box-shadow: 0 12px 40px #302b2b1f;
   z-index: 15;
 }
 .model-popover-heading {
@@ -287,7 +287,7 @@
 }
 .model-provider:hover,
 .model-provider:focus-visible {
-  background: var(--olive-soft);
+  background: var(--accent-soft);
   filter: none;
   outline: none;
 }
@@ -302,7 +302,7 @@
   color: var(--muted);
 }
 .model-provider.is-current strong {
-  color: var(--olive-dark);
+  color: var(--accent-dark);
 }
 .model-provider-arrow {
   color: var(--muted);
@@ -356,7 +356,7 @@
   background: white;
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 12px 40px #2832291a;
+  box-shadow: 0 12px 40px #302b2b1a;
   padding: 16px;
   z-index: 15;
   font-size: 14px;
@@ -403,14 +403,14 @@
   line-height: 1.6;
 }
 .suggestions button:hover {
-  background: #f0f3eb;
+  background: #f8eeec;
 }
 /* Trạng thái chờ và nhật ký yêu cầu */
 .chat-progress {
   padding: 18px 20px;
   margin-top: 20px;
-  border-left: 3px solid var(--olive);
-  background: #f0f3eb;
+  border-left: 3px solid var(--accent);
+  background: #f8eeec;
   border-radius: 0 12px 12px 0;
 }
 .chat-progress strong {

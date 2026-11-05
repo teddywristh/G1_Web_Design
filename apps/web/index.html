@@ -10,7 +10,12 @@
     <meta name="api-base" content="http://127.0.0.1:8000" />
     <meta name="google-client-id" content="" />
     <script>
-      if (["legal-ai-dev-aeb51.web.app.", "legal-ai-dev-aeb51.firebaseapp.com."].includes(location.hostname)) {
+      if (
+        [
+          "legal-ai-dev-aeb51.web.app.",
+          "legal-ai-dev-aeb51.firebaseapp.com.",
+        ].includes(location.hostname)
+      ) {
         const canonical = new URL(location.href);
         canonical.hostname = canonical.hostname.slice(0, -1);
         location.replace(canonical.href);
@@ -47,5 +52,6 @@
     <template data-part="upload"></template>
     <template data-part="document"></template>
     <p id="toast" class="toast" role="status" hidden></p>
+    <p id="system-status" class="system-status" role="status" hidden></p>
   </body>
 </html>

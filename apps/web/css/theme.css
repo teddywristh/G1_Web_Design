@@ -1,9 +1,9 @@
 /* Thành phần dùng chung và thư viện */
 :root {
   --card: #ffffff;
-  --olive-dark: #46583a;
-  --olive-soft: #e8eedd;
-  --line-strong: #d3dac8;
+  --accent-dark: #801c23;
+  --accent-soft: #f8e9e7;
+  --line-strong: #d9c9c6;
   --radius: 10px;
   --shadow: 0 1px 2px rgba(40, 50, 41, 0.05), 0 6px 18px rgba(40, 50, 41, 0.05);
   --control-h: 34px;
@@ -35,8 +35,8 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
   outline: 0;
-  border-color: var(--olive);
-  box-shadow: 0 0 0 3px rgba(88, 108, 67, 0.16);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(165, 38, 45, 0.14);
 }
 .form-field {
   margin-top: 14px;
@@ -61,17 +61,17 @@ textarea:focus-visible {
   border: 1px solid var(--line-strong);
 }
 .primary-button {
-  background: var(--olive);
+  background: var(--accent);
   box-shadow: 0 1px 2px rgba(40, 50, 41, 0.2);
 }
 .text-button {
   font-size: 14px;
-  color: var(--olive-dark);
+  color: var(--accent-dark);
   padding: 4px 6px;
   border-radius: 6px;
 }
 .text-button:hover:not(:disabled) {
-  background: var(--olive-soft);
+  background: var(--accent-soft);
   filter: none;
 }
 .text-button.danger {
@@ -110,10 +110,10 @@ th {
   font-size: 14px;
   letter-spacing: 0.6px;
   color: var(--muted);
-  background: #f4f6ef;
+  background: #faf3f0;
 }
 tbody tr:hover {
-  background: #fafbf6;
+  background: #fcfaf8;
 }
 td .text-button {
   margin-left: 2px;
@@ -137,7 +137,7 @@ dialog {
   height: 32px;
 }
 .close-dialog:hover {
-  background: var(--olive-soft);
+  background: var(--accent-soft);
   filter: none !important;
 }
 .upload-zone {
@@ -145,29 +145,7 @@ dialog {
   transition: background 0.15s;
 }
 .upload-zone:hover {
-  background: #f4f7ee;
-}
-.auth-view {
-  background: radial-gradient(
-    1000px 500px at 50% -10%,
-    #e6edda 0%,
-    var(--paper) 70%
-  );
-}
-.auth-card {
-  box-shadow: 0 10px 40px rgba(40, 50, 41, 0.1);
-  border-radius: 16px;
-  padding: 36px 32px 28px;
-}
-.auth-card .brand-mark {
-  width: 44px;
-  height: 44px;
-  font-size: 22px;
-  border-radius: 12px;
-}
-.auth-card .primary-button {
-  height: 42px;
-  font-size: 14px;
+  background: #fcf6f2;
 }
 
 @media (max-width: 760px) {

@@ -19,8 +19,8 @@
   color: var(--muted);
 }
 .tabs .selected {
-  background: #e5ebdc;
-  color: #425831;
+  background: #f5e3df;
+  color: #801c23;
 }
 .search-sort {
   display: flex;
@@ -55,7 +55,7 @@ th {
   font-size: 13px;
   font-weight: 500;
   color: var(--muted);
-  background: #f2f4ee;
+  background: #faf5f3;
   padding: 14px 18px;
 }
 td {
@@ -112,7 +112,7 @@ td {
   text-align: center;
   gap: 16px;
   padding: 45px 20px;
-  color: var(--olive);
+  color: var(--accent);
 }
 .empty-state p {
   max-width: 450px;

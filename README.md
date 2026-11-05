@@ -193,6 +193,8 @@ firebase.cmd emulators:start --project demo-legal-api --only auth,firestore,stor
 
 `--app-dir apps/api` cho phép chạy từ gốc repo. Nếu đã đứng trong `apps/api`, đường dẫn tương ứng là `app.main:app --reload --reload-dir app`; không trộn hai cách chạy.
 
+Đăng nhập, đăng ký và quên mật khẩu qua OTP: xem [cấu hình email](docs/authentication.md). OTP cần SMTP riêng; cấu hình Google Sign-In không tự bật gửi email. Các trường bắt buộc trên giao diện có dấu `*`.
+
 ### 5. Start the Ingestion Worker
 
 **Terminal 3**, từ gốc repo, dùng cùng venv và cấu hình với API:

@@ -28,11 +28,14 @@ $("#open-upload").addEventListener("click", () => {
   $("#upload-progress").textContent = "";
   selectUploadFile(null);
   $("#shared-fields").hidden = !shared;
+  ["number", "authority", "issueDate"].forEach((name) => {
+    $(`#shared-fields [name="${name}"]`).required = shared;
+  });
   $("#upload-public-label").hidden = !state.aiOptions?.embedding?.requiresPublicInput;
   $("#upload-public-confirm").required = Boolean(state.aiOptions?.embedding?.requiresPublicInput);
   $("#upload-notice").textContent = shared
     ? "Văn bản dùng chung. Sau khi xử lý xong, hãy xuất bản bản dựng mới để mọi người tra cứu được."
-    : "Chỉ bạn xem được tài liệu này. Hệ thống đọc nền; khi trạng thái là Sẵn sàng tra cứu, hãy chọn kho này trong Hỏi đáp.";
+    : "Chỉ bạn xem được tài liệu này. Khi trạng thái là Sẵn sàng tra cứu, tài liệu sẽ tự động được dùng khi hỏi đáp.";
   $("#upload-dialog").showModal();
 });
 $("#pdf-file").addEventListener("change", (event) => selectUploadFile(event.target.files[0]));

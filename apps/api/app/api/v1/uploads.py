@@ -1,6 +1,6 @@
 import hashlib
 from pathlib import Path
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
@@ -27,24 +27,25 @@ async def receive_pdf(request, store, repo, bucket, doc_id, actor, version, **op
     # Bound RAM and disk even when Content-Length is absent or false.
     size, prefix = 0, b""
     digest = hashlib.sha256()
-    with NamedTemporaryFile(suffix=".pdf") as handle:
-        async for chunk in request.stream():
-            size += len(chunk)
-            if size > maximum:
-                raise APIError(413, "file_too_large", "PDF exceeds upload limit")
-            if len(prefix) < 5:
-                prefix = (prefix + chunk)[:5]
-            digest.update(chunk)
-            await run_in_threadpool(handle.write, chunk)
+    with TemporaryDirectory(prefix="legal-upload-") as directory:
+        path = Path(directory) / "source.pdf"
+        with path.open("wb") as handle:
+            async for chunk in request.stream():
+                size += len(chunk)
+                if size > maximum:
+                    raise APIError(413, "file_too_large", "PDF exceeds upload limit")
+                if len(prefix) < 5:
+                    prefix = (prefix + chunk)[:5]
+                digest.update(chunk)
+                await run_in_threadpool(handle.write, chunk)
         if prefix != b"%PDF-":
             raise APIError(415, "invalid_pdf", "PDF signature is required")
-        await run_in_threadpool(handle.flush)
         return await run_in_threadpool(
             store,
             repo,
             bucket,
             doc_id,
-            handle.name,
+            str(path),
             size,
             digest.hexdigest(),
             actor,

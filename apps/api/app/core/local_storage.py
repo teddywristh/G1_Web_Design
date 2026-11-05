@@ -4,7 +4,6 @@ All writers must use this adapter: its lock and generation checks coordinate
 the API and ingestion worker on the same filesystem.
 """
 
-import fcntl
 import os
 import shutil
 import tempfile
@@ -13,6 +12,11 @@ from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
 from google.api_core.exceptions import NotFound, PreconditionFailed
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
 
 
 class LocalBucket:
@@ -24,11 +28,22 @@ class LocalBucket:
     @contextmanager
     def locked(self):
         with (self.root / ".lock").open("a+b") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
+            if os.name == "nt":
+                if os.fstat(lock.fileno()).st_size == 0:
+                    lock.write(b"\0")
+                    lock.flush()
+                lock.seek(0)
+                msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+            else:
+                fcntl.flock(lock, fcntl.LOCK_EX)
             try:
                 yield
             finally:
-                fcntl.flock(lock, fcntl.LOCK_UN)
+                if os.name == "nt":
+                    lock.seek(0)
+                    msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    fcntl.flock(lock, fcntl.LOCK_UN)
 
     def blob(self, name):
         path = PurePosixPath(name)

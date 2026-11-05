@@ -3,7 +3,8 @@ import json
 import logging
 import math
 from datetime import timedelta
-from tempfile import NamedTemporaryFile
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from uuid import uuid4
 
 from app.core.errors import APIError
@@ -13,9 +14,9 @@ from app.search.base import profile_from
 from app.services.documents import normalize
 from app.services.users import check_version
 
-PARSER_VERSION = "p3"
-JOB_PARSER_VERSION = "p1"
-CHUNKER_VERSION = "c1"
+PARSER_VERSION = "p4"
+JOB_PARSER_VERSION = "p2"
+CHUNKER_VERSION = "c2"
 SHARED_KB = "shared"
 logger = logging.getLogger("legal_api")
 
@@ -127,13 +128,15 @@ def kept_review(old):
 def parse_stage(repo, bucket, settings, job, heartbeat=None):
     source = usable_source(repo, job)
     shared = job["kbId"] == SHARED_KB
-    with NamedTemporaryFile(suffix=".pdf") as handle:
+    # Đóng file trước khi parser mở lại để chạy được trên Windows.
+    with TemporaryDirectory(prefix="legal-ingestion-") as directory:
+        path = str(Path(directory) / "source.pdf")
         blob = bucket.blob(source["storagePath"])
-        blob.download_to_filename(handle.name, timeout=settings.storage_timeout_seconds, retry=None)
-        with open(handle.name, "rb") as saved:
+        blob.download_to_filename(path, timeout=settings.storage_timeout_seconds, retry=None)
+        with open(path, "rb") as saved:
             if hashlib.sha256(saved.read()).hexdigest() != job["sourceFence"]["sha256"]:
                 raise validation.Cancelled()
-        pages = parser.extract_pages(handle.name, settings.max_pdf_pages, settings, heartbeat)
+        pages = parser.extract_pages(path, settings.max_pdf_pages, settings, heartbeat)
     quality = validation.check_pages(pages, False)
     provisions = segmenter.segment(pages, settings.max_provision_chars)
     warnings = validation.check_structure(provisions)

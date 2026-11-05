@@ -10,8 +10,16 @@ from app.core.config import get_settings
 from app.core.errors import APIError
 from app.core.security import verify_firebase_token
 from app.dependencies import current_user, get_repository
-from app.schemas.auth import GoogleSignIn, Login, Register, SessionPage, SessionUser
-from app.services import auth_accounts, auth_sessions
+from app.schemas.auth import (
+    GoogleSignIn,
+    Login,
+    PasswordEmail,
+    PasswordReset,
+    Register,
+    SessionPage,
+    SessionUser,
+)
+from app.services import auth_accounts, auth_sessions, password_reset
 
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
 
@@ -34,6 +42,20 @@ def login(body: Login, request: Request, response: Response, repo=Depends(get_re
     auth_sessions.require_json(request)
     user = auth_accounts.login(repo, body)
     return issue(repo, response, user, request.state.request_id)
+
+
+@router.post("/password/otp")
+def password_otp(body: PasswordEmail, request: Request, repo=Depends(get_repository)):
+    auth_sessions.require_json(request)
+    password_reset.request_otp(repo, body.email, request.state.request_id)
+    return {"message": "Nếu email có tài khoản, mã OTP sẽ được gửi. Mã có hiệu lực 10 phút."}
+
+
+@router.post("/password/reset", status_code=204)
+def password_update(body: PasswordReset, request: Request, repo=Depends(get_repository)):
+    auth_sessions.require_json(request)
+    password_reset.reset_password(repo, body, request.state.request_id)
+    return None
 
 
 @router.get("/google/challenge")
