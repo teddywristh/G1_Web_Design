@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "apps/web"
 DEST = ROOT / "dist/hosting"
 ASSET_DIRS = ("html", "css", "js")
+LOGO = Path("assets/logo.png")
 
 
 def main():
@@ -30,11 +31,15 @@ def main():
     for directory in ASSET_DIRS:
         if not (SOURCE / directory).is_dir():
             raise SystemExit(f"Missing frontend directory: {directory}")
+    if not (SOURCE / LOGO).is_file():
+        raise SystemExit(f"Missing frontend logo: {LOGO}")
     if DEST.exists():
         shutil.rmtree(DEST)
     DEST.mkdir(parents=True)
     for directory in ASSET_DIRS:
         shutil.copytree(SOURCE / directory, DEST / directory, ignore=shutil.ignore_patterns(".*", "__pycache__"))
+    (DEST / LOGO).parent.mkdir()
+    shutil.copyfile(SOURCE / LOGO, DEST / LOGO)
     index = DEST / "index.html"
     index.write_text(content.replace(old, f'<meta name="api-base" content="{html.escape(origin, quote=True)}" />'), encoding="utf-8")
     print(f"Hosting assets prepared in {DEST} for {origin}")
