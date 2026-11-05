@@ -49,6 +49,17 @@ class Register(Login):
         return value
 
 
+class PasswordEmail(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    email: str = Field(min_length=3, max_length=254)
+    normalize_email = field_validator("email")(Login.normalize_email.__func__)
+
+
+class PasswordReset(Login):
+    new_password_size = field_validator("password")(Register.new_password_size.__func__)
+    otp: str = Field(pattern=r"^\d{6}$")
+
+
 class GoogleSignIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     credential: SecretStr

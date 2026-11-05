@@ -23,8 +23,20 @@ def split_long(text, limit):
             if current:
                 parts.append(current)
                 current = ""
-            parts.append(line[:limit])
-            line = line[limit:]
+            # Ưu tiên hết câu, sau đó đến khoảng trắng để không cắt giữa từ.
+            sentences = list(re.finditer(r"[.!?;](?=\s)", line[:limit]))
+            cut = (
+                sentences[-1].end()
+                if sentences and sentences[-1].end() >= limit // 2
+                else line.rfind(" ", 0, limit + 1)
+            )
+            if cut <= 0:
+                cut = next(
+                    (match.start() for match in re.finditer(r"\s", line) if match.start() >= limit),
+                    len(line),
+                )
+            parts.append(line[:cut])
+            line = line[cut:].lstrip()
         if current and len(current) + len(line) + 1 > limit:
             parts.append(current)
             current = ""

@@ -14,6 +14,14 @@ class ApiError extends Error {
 }
 
 const ERROR_TEXT = {
+  account_exists: "Email này đã có tài khoản. Hãy đăng nhập hoặc chọn Quên mật khẩu.",
+  account_link_required: "Email đã có tài khoản. Hãy đăng nhập trước khi liên kết Google.",
+  invalid_otp: "Mã OTP không đúng, đã hết hạn hoặc đã được sử dụng.",
+  otp_cooldown: "Vui lòng chờ 60 giây giữa hai lần gửi mã OTP.",
+  mail_not_configured:
+    "Máy chủ chưa cấu hình gửi email. Liên hệ quản trị viên để bật khôi phục mật khẩu.",
+  mail_unavailable: "Chưa gửi được email. Hãy thử lại sau một phút.",
+  rate_limited: "Có quá nhiều yêu cầu. Vui lòng chờ một phút rồi thử lại.",
   unauthenticated: "Vui lòng đăng nhập.",
   ai_not_configured: "Chưa có khóa AI phù hợp. Hãy thêm khóa trong Thiết lập.",
   chatgpt_disconnected:
@@ -47,7 +55,7 @@ function setCsrf(token) {
   csrfToken = token || "";
 }
 
-async function request(method, path, { json, body, headers = {}, version, raw } = {}) {
+async function performRequest(method, path, { json, body, headers = {}, version, raw } = {}) {
   const timeout = path === "/ai/chatgpt/finish" ? 260000 : path === "/rag/ask" ? 120000 : 90000;
   const options = {
     method,
@@ -90,6 +98,43 @@ async function request(method, path, { json, body, headers = {}, version, raw } 
   if (raw) return response;
   if (response.status === 204) return null;
   return response.json();
+}
+
+// Báo trạng thái cho các yêu cầu còn đang chạy, kể cả khi nhiều yêu cầu song song.
+const pending = new Map();
+let statusTimer;
+function updateStatus() {
+  const status = document.querySelector("#system-status");
+  if (!status) return;
+  status.hidden = !pending.size;
+  if (pending.size) {
+    const [path, started] = [...pending.values()][0];
+    const label = path.includes("/rag/")
+      ? "Đang tra cứu tài liệu và tạo câu trả lời"
+      : path.includes("/password/otp")
+        ? "Đang gửi mã xác nhận"
+        : path.endsWith("/file")
+          ? "Đang truyền tài liệu"
+          : path.startsWith("/auth/")
+            ? "Đang xác thực"
+            : "Đang tải dữ liệu";
+    status.textContent = `${label} · ${Math.floor((Date.now() - started) / 1000)} giây`;
+  }
+}
+async function request(method, path, options) {
+  const id = Symbol();
+  pending.set(id, [path, Date.now()]);
+  if (!statusTimer) statusTimer = setInterval(updateStatus, 500);
+  try {
+    return await performRequest(method, path, options);
+  } finally {
+    pending.delete(id);
+    if (!pending.size) {
+      clearInterval(statusTimer);
+      statusTimer = null;
+      updateStatus();
+    }
+  }
 }
 
 const api = {

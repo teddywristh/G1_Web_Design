@@ -8,7 +8,7 @@ dialog {
   padding: 32px;
   background: var(--paper);
   color: var(--ink);
-  box-shadow: 0 20px 90px #28322930;
+  box-shadow: 0 20px 90px #302b2b30;
 }
 dialog::backdrop {
   background: #24302066;
@@ -32,9 +32,9 @@ dialog h2 {
   align-items: center;
   flex-direction: column;
   gap: 10px;
-  border: 1px dashed #b5c2a7;
+  border: 1px dashed #d4b9b3;
   border-radius: 8px;
-  background: #f0f4e9;
+  background: #fcf3ef;
   padding: 25px 12px;
   margin: 24px 0;
   cursor: pointer;
@@ -43,7 +43,7 @@ dialog h2 {
 }
 .upload-zone:focus-within,
 .file-picker:focus-within {
-  outline: 2px solid var(--olive);
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 .upload-zone strong {
@@ -63,7 +63,7 @@ dialog h2 {
 .form-field input,
 .form-field select {
   padding: 11px;
-  border: 1px solid #d6ddcd;
+  border: 1px solid #e1cfca;
   border-radius: 6px;
   background: white;
   color: var(--ink);
@@ -77,7 +77,7 @@ dialog h2 {
   gap: 13px;
 }
 .form-notice {
-  background: #eef2e7;
+  background: #f8eeeb;
   padding: 12px;
   border-radius: 5px;
   font-size: 13px;
@@ -124,9 +124,9 @@ dialog h2 {
   max-width: calc(100% - 28px);
   padding: 14px 18px;
   border-radius: 8px;
-  background: #38482e;
+  background: #69232a;
   color: white;
   z-index: 100;
   font-size: 13px;
-  box-shadow: 0 8px 30px #28322930;
+  box-shadow: 0 8px 30px #302b2b30;
 }

@@ -16,7 +16,7 @@ body:has(#auth-view:not([hidden])) {
   padding: 18px 12px 12px;
   display: flex;
   flex-direction: column;
-  background: #f1f3ed;
+  background: #f6f1ef;
   border-right: 1px solid var(--line);
   z-index: 30;
 }
@@ -36,7 +36,7 @@ body:has(#auth-view:not([hidden])) {
   width: 32px;
   height: 32px;
   border-radius: 10px;
-  background: var(--olive);
+  background: var(--accent);
   color: white;
 }
 .brand small {
@@ -72,7 +72,7 @@ body:has(#auth-view:not([hidden])) {
 }
 .sidebar nav button:hover,
 .sidebar nav button.active {
-  background: #dfe7d5;
+  background: #f1ddda;
 }
 .sidebar nav button[aria-current="page"] {
   font-weight: 600;
@@ -110,7 +110,7 @@ body:has(#auth-view:not([hidden])) {
 }
 .history-item:has([aria-current="page"]),
 .history-item:hover {
-  background: #e3e8dc;
+  background: #f1ddda;
 }
 .history-title {
   min-width: 0;
@@ -180,6 +180,9 @@ body:has(#auth-view:not([hidden])) {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+#login-action {
+  margin-left: auto;
 }
 .topbar strong {
   font-size: 14px;

@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     auth_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     google_oauth_client_id: str = ""
     firebase_web_api_key: str = ""
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str = ""
+    smtp_password: SecretStr = SecretStr("")
+    smtp_from: str = ""
 
     ai_credential_encryption_key: SecretStr = SecretStr("")
     ai_allow_shared_keys: bool = True

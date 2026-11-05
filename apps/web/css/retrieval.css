@@ -35,10 +35,10 @@
   white-space: nowrap;
 }
 .combobox-option.is-active {
-  background: var(--olive-soft);
+  background: var(--accent-soft);
 }
 .combobox-option[aria-selected="true"] {
-  color: var(--olive-dark);
+  color: var(--accent-dark);
   font-weight: 600;
 }
 .combobox-note {
@@ -92,7 +92,7 @@
 }
 .answer-message > span {
   display: block;
-  color: var(--olive);
+  color: var(--accent);
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 10px;
@@ -125,8 +125,8 @@
   line-height: 1.8;
 }
 .cite {
-  color: var(--olive);
-  background: #e8eedd;
+  color: var(--accent);
+  background: #f8e9e7;
   font-size: 13px;
   border-radius: 5px;
   padding: 1px 5px;
@@ -163,7 +163,7 @@
   border-bottom: 0;
 }
 .citation-row:hover {
-  color: var(--olive);
+  color: var(--accent);
 }
 .citation-row small {
   display: block;
@@ -217,11 +217,13 @@
 .evidence-text {
   font-size: 14px;
   line-height: 1.8;
-  white-space: pre-wrap;
+  white-space: pre-line;
+  overflow-wrap: break-word;
+  word-break: normal;
   padding: 18px;
   margin: 20px 0;
-  background: #f5f7f1;
-  border-left: 3px solid var(--olive);
+  background: #fbf5f2;
+  border-left: 3px solid var(--accent);
   max-height: 280px;
   overflow-y: auto;
 }

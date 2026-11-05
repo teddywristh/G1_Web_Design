@@ -1,6 +1,8 @@
+import re
 import subprocess
 import tempfile
 import time
+import unicodedata
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
@@ -109,6 +111,27 @@ def ocr_page(path, number, settings, heartbeat=None):
         return paddle_text
 
 
+def normalize_page(text):
+    # Giữ ranh giới điều khoản, chỉ nối dòng mềm trong cùng đoạn.
+    text = unicodedata.normalize("NFC", text).replace("\u00ad", "").replace("\r\n", "\n")
+    lines = [re.sub(r"[^\S\n]+", " ", line).strip() for line in text.split("\n")]
+    result = []
+    heading = re.compile(r"^(?:Điều\s+\d|Chương\s+|Mục\s+|PHỤ LỤC|\d+[.)]\s|[a-zđ][)]\s)", re.I)
+    for line in lines:
+        if (
+            result
+            and result[-1]
+            and line
+            and not heading.match(line)
+            and not heading.match(result[-1])
+            and not re.search(r"[.!?:;]$", result[-1])
+        ):
+            result[-1] += " " + line
+        else:
+            result.append(line)
+    return "\n".join(result)
+
+
 def extract_pages(path, max_pages, settings=None, heartbeat=None):
     """Extract text and OCR image pages with absent or repeated watermark-only text."""
     try:
@@ -154,4 +177,4 @@ def extract_pages(path, max_pages, settings=None, heartbeat=None):
             raise NeedsOCR()
     elif candidates:
         raise NeedsOCR()
-    return pages
+    return [normalize_page(text) for text in pages]

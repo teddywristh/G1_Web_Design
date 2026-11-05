@@ -127,6 +127,8 @@ def create_app():
                 "/api/v1/auth/login",
                 "/api/v1/auth/register",
                 "/api/v1/auth/google",
+                "/api/v1/auth/password/otp",
+                "/api/v1/auth/password/reset",
             }:
                 group, limit = "auth", 20
             elif request.method == "POST" and path.startswith("/api/v1/rag/"):

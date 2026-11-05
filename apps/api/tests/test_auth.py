@@ -43,6 +43,7 @@ def setup(monkeypatch):
     monkeypatch.setattr(auth, "create_user", create_user)
     monkeypatch.setattr(auth, "delete_user", lambda uid: identities.pop(uid))
     monkeypatch.setattr(auth, "revoke_refresh_tokens", lambda uid: None)
+    monkeypatch.setattr(auth, "update_user", lambda uid, **kwargs: identities[uid])
     monkeypatch.setattr(get_settings(), "google_oauth_client_id", "test-client")
     app = create_app()
     app.dependency_overrides[get_repository] = lambda: repo
@@ -55,6 +56,111 @@ def signup(client, email="test@example.com"):
         "/api/v1/auth/register",
         json={"email": email, "password": "password123", "displayName": "Test"},
     )
+
+
+def test_email_ignores_case_and_names_keep_case(setup):
+    client, repo, identities = setup
+    assert signup(client, "Mixed@Example.com").status_code == 201
+    assert signup(client, "mixed@example.COM").status_code == 409
+    assert (
+        client.post(
+            "/api/v1/auth/login", json={"email": "MIXED@example.com", "password": "password123"}
+        ).status_code
+        == 200
+    )
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": "other@example.com", "password": "password123", "displayName": "test"},
+    )
+    assert response.status_code == 201
+    assert response.json()["user"]["displayName"] == "test"
+    assert len(identities) == 2
+
+
+def test_password_otp_reset_and_replay(setup, monkeypatch):
+    from app.services import password_reset
+
+    client, repo, identities = setup
+    assert signup(client).status_code == 201
+    old_session = client.cookies.get("legal_session")
+    monkeypatch.setattr(password_reset, "initialize_firebase", lambda: {})
+    monkeypatch.setattr(get_settings(), "smtp_host", "smtp.test")
+    monkeypatch.setattr(get_settings(), "smtp_username", "mail@test.com")
+    from pydantic import SecretStr
+
+    monkeypatch.setattr(get_settings(), "smtp_password", SecretStr("test"))
+    sent = []
+    monkeypatch.setattr(password_reset, "send_email", lambda email, otp: sent.append((email, otp)))
+    response = client.post("/api/v1/auth/password/otp", json={"email": "TEST@example.com"})
+    assert response.status_code == 200
+    assert len(sent) == 1 and sent[0][0] == "test@example.com"
+    assert sent[0][1] not in response.text
+    assert (
+        client.post("/api/v1/auth/password/otp", json={"email": "test@example.com"}).status_code
+        == 429
+    )
+    payload = {"email": "test@example.com", "password": "newpassword123", "otp": sent[0][1]}
+    wrong = "000000" if payload["otp"] != "000000" else "111111"
+    assert (
+        client.post("/api/v1/auth/password/reset", json={**payload, "otp": wrong}).status_code
+        == 400
+    )
+    assert client.post("/api/v1/auth/password/reset", json=payload).status_code == 204
+    assert client.post("/api/v1/auth/password/reset", json=payload).status_code == 400
+    client.cookies.set("legal_session", old_session)
+    assert client.get("/api/v1/auth/me").status_code == 401
+    client.cookies.clear()
+    assert (
+        client.post(
+            "/api/v1/auth/login", json={"email": payload["email"], "password": "password123"}
+        ).status_code
+        == 401
+    )
+    assert (
+        client.post(
+            "/api/v1/auth/login", json={"email": payload["email"], "password": payload["password"]}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post("/api/v1/auth/password/otp", json={"email": "missing@example.com"}).status_code
+        == 200
+    )
+    assert len(sent) == 1
+
+
+def test_password_reset_requires_email_configuration(setup, monkeypatch):
+    client, _, _ = setup
+    monkeypatch.setattr(get_settings(), "smtp_host", "")
+    assert (
+        client.post("/api/v1/auth/password/otp", json={"email": "test@example.com"}).status_code
+        == 503
+    )
+
+
+@pytest.mark.parametrize("expired,attempts", [(True, 0), (False, 5)])
+def test_reset_rejects_expired_or_exhausted_code(setup, monkeypatch, expired, attempts):
+    import hashlib
+    from datetime import timedelta
+
+    from app.core.errors import APIError
+    from app.repositories.backend import utcnow
+    from app.schemas.auth import PasswordReset
+    from app.services import password_reset
+
+    _, repo, _ = setup
+    monkeypatch.setattr(password_reset, "initialize_firebase", lambda: {})
+    email = "test@example.com"
+    repo.rows[("password_resets", hashlib.sha256(email.encode()).hexdigest())] = {
+        "consumed": False,
+        "expiresAt": utcnow() + timedelta(minutes=-1 if expired else 10),
+        "attempts": attempts,
+    }
+    with pytest.raises(APIError) as error:
+        password_reset.reset_password(
+            repo, PasswordReset(email=email, password="newpassword123", otp="123456"), "test"
+        )
+    assert error.value.code == "invalid_otp"
 
 
 def test_registration_login_and_csrf(setup):

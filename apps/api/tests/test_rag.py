@@ -11,6 +11,23 @@ from app.ingestion.validation import NeedsOCR, check_pages, check_structure
 from app.search.structured import parse_reference
 from app.services import applicability, qa, web_sources
 
+
+def test_chunks_do_not_cut_words_and_soft_lines_are_joined():
+    from app.ingestion.parser import normalize_page
+    from app.ingestion.segmenter import split_long
+
+    text = "Hợp đồng lao động phải có nội dung rõ ràng. Quyền và nghĩa vụ được thỏa thuận."
+    pieces = split_long(text, 48)
+    assert " ".join(pieces) == text
+    assert all(piece[-1].isspace() is False for piece in pieces)
+    assert (
+        normalize_page(
+            "Điều 1. Nội dung\nHợp đồng lao động\nphải rõ ràng.\n2. Thỏa thuận\nNội dung tiếp."
+        )
+        == "Điều 1. Nội dung\nHợp đồng lao động phải rõ ràng.\n2. Thỏa thuận\nNội dung tiếp."
+    )
+
+
 PACK = {
     "e1": {"sourceType": "official_legal_text", "text": "Thời gian thử việc tối đa là 60 ngày."},
     "e2": {"sourceType": "commentary", "text": "Bài viết bình luận."},

@@ -1,10 +1,10 @@
 /* Màu sắc, font và thành phần dùng chung */
 :root {
-  --paper: #fafbf8;
-  --ink: #283229;
-  --muted: #657060;
-  --olive: #586c43;
-  --line: #e3e7de;
+  --paper: #faf8f7;
+  --ink: #302b2b;
+  --muted: #756a69;
+  --accent: #a5262d;
+  --line: #e9dfdd;
 }
 * {
   box-sizing: border-box;
@@ -68,7 +68,7 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid var(--olive);
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 .primary-button,
@@ -82,17 +82,17 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 .primary-button {
-  background: var(--olive);
+  background: var(--accent);
   color: white;
-  border: 1px solid var(--olive);
+  border: 1px solid var(--accent);
 }
 .secondary-button {
-  border: 1px solid #d7dece;
+  border: 1px solid #d9c9c6;
   background: white;
-  color: var(--olive);
+  color: var(--accent);
 }
 .text-button {
-  color: var(--olive);
+  color: var(--accent);
   font-size: 14px;
   padding: 6px;
 }
@@ -124,4 +124,51 @@ textarea:focus-visible {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Nhận diện và trạng thái hệ thống */
+.system-logo {
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.required-mark {
+  color: var(--accent);
+}
+.system-status {
+  position: fixed;
+  right: 20px;
+  bottom: 18px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 3px 16px #302b2b12;
+  font-size: 14px;
+  pointer-events: none;
+}
+.system-status::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: status-spin 1s linear infinite;
+}
+@keyframes status-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .system-status::before {
+    animation: none;
+  }
 }

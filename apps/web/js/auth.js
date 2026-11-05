@@ -14,9 +14,12 @@ function showAuth(message = "") {
   state.user = null;
   document.dispatchEvent(new Event("close-evidence"));
   $("#auth-view").hidden = false;
+  $("#login-action").hidden = true;
   $("#sidebar").hidden = true;
   $("#app-shell").hidden = true;
-  $("#auth-error").textContent = message;
+  $("#auth-error").textContent = "";
+  $("#auth-notice").textContent = message;
+  $("#auth-notice").hidden = !message;
 }
 
 function showGuest(message = "") {
@@ -31,6 +34,7 @@ function showGuest(message = "") {
   state.chatId = null;
   state.saved = new Set(readStore("saved", []));
   $("#auth-view").hidden = true;
+  $("#login-action").hidden = false;
   $("#sidebar").hidden = false;
   $("#app-shell").hidden = false;
   $("#user-name").textContent = "Khách trải nghiệm";
@@ -46,22 +50,55 @@ function showGuest(message = "") {
 function setAuthMode(mode) {
   state.authMode = mode;
   const register = mode === "register";
-  $("#auth-title").textContent = register ? "Tạo tài khoản" : "Đăng nhập Legal AI";
-  $("#auth-submit").textContent = register ? "Đăng ký" : "Đăng nhập";
+  const recovery = mode === "forgot" || mode === "reset";
+  $("#auth-title").textContent = recovery
+    ? "Khôi phục mật khẩu"
+    : register
+      ? "Tạo tài khoản"
+      : "Đăng nhập Legal AI";
+  $("#auth-submit").textContent =
+    mode === "forgot"
+      ? "Gửi mã OTP"
+      : mode === "reset"
+        ? "Đổi mật khẩu"
+        : register
+          ? "Đăng ký"
+          : "Đăng nhập";
+  $("#auth-description").textContent = recovery
+    ? "Nhận mã xác nhận qua email đã đăng ký."
+    : register
+      ? "Một tài khoản để lưu tài liệu và tra cứu thuận tiện."
+      : "Đăng nhập để hỏi đáp và quản lý tài liệu của bạn.";
   $("#auth-switch").textContent = register
     ? "Đã có tài khoản? Đăng nhập"
     : "Chưa có tài khoản? Đăng ký";
   $("#name-field").hidden = !register;
   $("#name-field input").required = register;
-  $("#confirm-field").hidden = !register;
-  $("#confirm-field input").required = register;
-  $("#auth-form [name=password]").minLength = register ? 8 : 1;
-  $("#auth-form [name=password]").autocomplete = register ? "new-password" : "current-password";
+  $("#name-field input").disabled = !register;
+  $("#confirm-field").hidden = !(register || mode === "reset");
+  $("#confirm-field input").required = register || mode === "reset";
+  $("#confirm-field input").disabled = !(register || mode === "reset");
+  $("#password-field").hidden = mode === "forgot";
+  $("#auth-form [name=password]").required = mode !== "forgot";
+  $("#auth-form [name=password]").disabled = mode === "forgot";
+  $("#auth-form [name=password]").minLength = mode === "login" ? 1 : 8;
+  $("#auth-form [name=password]").autocomplete =
+    mode === "login" ? "current-password" : "new-password";
+  $("#otp-field").hidden = mode !== "reset";
+  $("#otp-field input").required = mode === "reset";
+  $("#otp-field input").disabled = mode !== "reset";
+  $("#auth-forgot").hidden = mode !== "login";
+  $("#google-button").hidden = recovery;
+  $("#resend-otp").hidden = mode !== "reset";
+  $("#auth-error").textContent = "";
+  $("#auth-notice").hidden = true;
+  if (recovery) $("#auth-switch").textContent = "Quay lại đăng nhập";
 }
 
 async function enterSession(session) {
   setCsrf(session.csrfToken);
   state.user = session.user;
+  $("#login-action").hidden = true;
   state.chats = readStore("chats", []);
   state.saved = new Set(readStore("saved", []));
   const prefs = readStore("prefs", {});
@@ -145,20 +182,48 @@ async function setupGoogle() {
 $("#auth-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
+  if (form.getAttribute("aria-busy") === "true") return;
   const data = new FormData(form);
   const register = state.authMode === "register";
-  const body = { email: String(data.get("email")), password: String(data.get("password")) };
+  const mode = state.authMode;
+  const body = {
+    email: String(data.get("email")).trim().toLowerCase(),
+    password: String(data.get("password") || ""),
+  };
   if (register) body.displayName = String(data.get("displayName")).trim();
   if (new TextEncoder().encode(body.password).length > 72) {
     $("#auth-error").textContent = "Mật khẩu tối đa 72 byte UTF-8.";
     return;
   }
-  if (register && body.password !== String(data.get("confirmation"))) {
+  if ((register || mode === "reset") && body.password !== String(data.get("confirmation"))) {
     $("#auth-error").textContent = "Mật khẩu xác nhận không khớp.";
     return;
   }
   $("#auth-submit").disabled = true;
+  $("#auth-error").textContent = "";
+  const label = $("#auth-submit").textContent;
+  $("#auth-submit").textContent = mode === "forgot" ? "Đang gửi mã…" : "Đang xử lý…";
+  form.setAttribute("aria-busy", "true");
+  ["auth-switch", "auth-forgot", "guest-back", "resend-otp"].forEach((id) => {
+    $("#" + id).disabled = true;
+  });
   try {
+    if (mode === "forgot") {
+      const result = await api.post("/auth/password/otp", { email: body.email });
+      setAuthMode("reset");
+      $("#auth-notice").textContent = result.message;
+      $("#auth-notice").hidden = false;
+      $("#otp-field input").focus();
+      return;
+    }
+    if (mode === "reset") {
+      await api.post("/auth/password/reset", { ...body, otp: String(data.get("otp")) });
+      form.reset();
+      setAuthMode("login");
+      $("#auth-notice").textContent = "Đã đổi mật khẩu. Hãy đăng nhập bằng mật khẩu mới.";
+      $("#auth-notice").hidden = false;
+      return;
+    }
     const session = await api.post(register ? "/auth/register" : "/auth/login", body);
     form.reset();
     await enterSession(session);
@@ -167,18 +232,47 @@ $("#auth-form").addEventListener("submit", async (event) => {
       error.status === 401 ? "Email hoặc mật khẩu không đúng." : error.message;
   } finally {
     $("#auth-submit").disabled = false;
+    form.removeAttribute("aria-busy");
+    ["auth-switch", "auth-forgot", "guest-back", "resend-otp"].forEach((id) => {
+      $("#" + id).disabled = false;
+    });
+    if (state.authMode === mode) $("#auth-submit").textContent = label;
   }
 });
 $("#auth-switch").addEventListener("click", () =>
   setAuthMode(state.authMode === "login" ? "register" : "login"),
 );
+$("#auth-forgot").addEventListener("click", () => setAuthMode("forgot"));
+$("#resend-otp").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  $("#auth-error").textContent = "";
+  try {
+    const result = await api.post("/auth/password/otp", {
+      email: $("#auth-form [name=email]").value.trim().toLowerCase(),
+    });
+    $("#auth-notice").textContent = result.message;
+    $("#auth-notice").hidden = false;
+  } catch (error) {
+    $("#auth-error").textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
 $("#guest-back").addEventListener("click", () => showGuest());
+$("#login-action").addEventListener("click", () => {
+  setAuthMode("login");
+  showAuth();
+});
 
 async function logout(all) {
   try {
     await api.post(all ? "/auth/logout-all" : "/auth/logout", {});
-  } catch {
-    /* Even if the server call fails, drop local state. */
+  } catch (error) {
+    if (error.status !== 401) {
+      notify("Chưa đăng xuất được trên máy chủ. " + error.message);
+      return;
+    }
   }
   clearTimeout(state.pollTimer);
   // Chat history and cited text must not outlive the session on a shared computer.

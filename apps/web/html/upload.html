@@ -4,7 +4,10 @@
   <p class="subtitle">Chọn file và nhập thông tin tài liệu.</p>
   <form id="upload-form">
     <label id="drop-zone" class="upload-zone" for="pdf-file">
-      <strong id="file-label">Chọn hoặc kéo thả PDF vào đây</strong>
+      <strong
+        ><span id="file-label">Chọn hoặc kéo thả PDF vào đây</span>
+        <span class="required-mark" aria-hidden="true">*</span></strong
+      >
       <span>PDF · Tối đa 20 MB</span>
       <input
         id="pdf-file"
@@ -29,17 +32,26 @@
           </select>
         </label>
         <label class="form-field">
-          Số hiệu
+          <span
+            >Số hiệu
+            <span class="required-mark" aria-hidden="true">*</span></span
+          >
           <input name="number" maxlength="100" />
         </label>
       </div>
       <label class="form-field">
-        Cơ quan ban hành
+        <span
+          >Cơ quan ban hành
+          <span class="required-mark" aria-hidden="true">*</span></span
+        >
         <input name="authority" maxlength="200" />
       </label>
       <div class="form-grid">
         <label class="form-field">
-          Ngày ban hành
+          <span
+            >Ngày ban hành
+            <span class="required-mark" aria-hidden="true">*</span></span
+          >
           <input name="issueDate" type="date" />
         </label>
         <label class="form-field">

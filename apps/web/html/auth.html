@@ -1,17 +1,39 @@
 <section id="auth-view" class="auth-view" aria-labelledby="auth-title" hidden>
   <form id="auth-form" class="auth-card">
-    <span class="brand-mark">L</span>
+    <span class="logo-container"
+      ><span class="brand-mark">L</span
+      ><img
+        class="system-logo"
+        data-logo
+        src="assets/logo.png"
+        alt="Logo Legal AI"
+        width="64"
+        height="66"
+        hidden
+    /></span>
+    <p class="auth-brand">LEGAL AI</p>
     <h1 id="auth-title">Đăng nhập Legal AI</h1>
+    <p id="auth-description" class="subtitle centered">
+      Đăng nhập để hỏi đáp và quản lý tài liệu của bạn.
+    </p>
+    <p class="small-print">
+      Các trường có dấu <span class="required-mark">*</span> là bắt buộc.
+    </p>
     <label class="form-field" id="name-field" hidden>
-      Tên hiển thị
+      <span
+        >Tên hiển thị
+        <span class="required-mark" aria-hidden="true">*</span></span
+      >
       <input name="displayName" maxlength="120" autocomplete="name" />
     </label>
     <label class="form-field">
-      Email
+      <span>Email <span class="required-mark" aria-hidden="true">*</span></span>
       <input name="email" type="email" required autocomplete="email" />
     </label>
-    <label class="form-field">
-      Mật khẩu
+    <label class="form-field" id="password-field">
+      <span id="password-label"
+        >Mật khẩu <span class="required-mark" aria-hidden="true">*</span></span
+      >
       <input
         name="password"
         type="password"
@@ -22,7 +44,10 @@
       />
     </label>
     <label class="form-field" id="confirm-field" hidden>
-      Xác nhận mật khẩu
+      <span
+        >Xác nhận mật khẩu
+        <span class="required-mark" aria-hidden="true">*</span></span
+      >
       <input
         name="confirmation"
         type="password"
@@ -31,11 +56,31 @@
         autocomplete="new-password"
       />
     </label>
+    <label class="form-field" id="otp-field" hidden>
+      <span
+        >Mã OTP <span class="required-mark" aria-hidden="true">*</span></span
+      >
+      <input
+        name="otp"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        pattern="[0-9]{6}"
+        maxlength="6"
+      />
+      <small>Nhập 6 chữ số trong email. Mã có hiệu lực 10 phút.</small>
+    </label>
+    <button id="auth-forgot" class="text-button auth-forgot" type="button">
+      Quên mật khẩu?
+    </button>
+    <p id="auth-notice" class="auth-notice" role="status" hidden></p>
     <p id="auth-error" class="error" role="alert"></p>
     <button id="auth-submit" class="primary-button" type="submit">
       Đăng nhập
     </button>
     <div id="google-button"></div>
+    <button id="resend-otp" class="text-button" type="button" hidden>
+      Gửi lại mã OTP
+    </button>
     <button id="auth-switch" class="text-button" type="button">
       Chưa có tài khoản? Đăng ký
     </button>
