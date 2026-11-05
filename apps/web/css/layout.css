@@ -28,8 +28,7 @@ body:has(#auth-view:not([hidden])) {
   font-size: 18px;
   font-weight: 650;
 }
-.brand-mark,
-.profile-avatar {
+.brand-mark {
   display: grid;
   place-items: center;
   flex-shrink: 0;

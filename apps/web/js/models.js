@@ -27,6 +27,7 @@ const PROVIDERS = [
 ];
 let entries = [];
 let active = -1;
+let modelsRevision = 0;
 
 function groupOf(id) {
   return state.models.groups.find((group) => group.id === id);
@@ -105,17 +106,22 @@ function renderProviders() {
     const group = groupOf(provider.id);
     const reconnect = group && RECONNECT_ERRORS.has(group.error);
     const usable = group && !reconnect;
+    const connected = provider.id === "chatgpt" && state.chatgpt.connected;
     const status = group
       ? reconnect
         ? "Cần kết nối lại"
         : group.error
           ? "Lỗi tải model"
           : `Đã kết nối · ${SOURCE_TEXT[group.source] || group.source}`
-      : state.models.loading
-        ? "Đang kiểm tra…"
-        : state.models.error
-          ? "Chưa kiểm tra được kết nối"
-          : "Chưa kết nối";
+      : connected
+        ? state.models.loading
+          ? "Đã kết nối · Đang tải model…"
+          : "Đã kết nối · Chưa tải được model"
+        : state.models.loading
+          ? "Đang kiểm tra…"
+          : state.models.error
+            ? "Chưa kiểm tra được kết nối"
+            : "Chưa kết nối";
     const button = element("button", "model-provider");
     button.type = "button";
     button.setAttribute("role", "menuitem");
@@ -131,12 +137,16 @@ function renderProviders() {
       element(
         "span",
         "model-provider-action",
-        usable ? "Chọn model ›" : state.user ? "Thiết lập" : "Đăng nhập",
+        usable ? "Chọn model ›" : connected ? "Tải lại" : state.user ? "Thiết lập" : "Đăng nhập",
       ),
     );
     button.addEventListener("click", () => {
       if (usable) {
         showGroup(group);
+        return;
+      }
+      if (connected) {
+        loadModels({ prefer: "chatgpt" });
         return;
       }
       close();
@@ -239,14 +249,16 @@ function choose(entry) {
 async function loadModels({ prefer } = {}) {
   if (!state.user) return;
   const userId = state.user.id;
+  const revision = ++modelsRevision;
   state.models = { ...state.models, loading: true };
   renderPicker();
+  if (isOpen() && !currentGroup) renderProviders();
   try {
     const result = await api.get("/ai/models");
-    if (state.user?.id !== userId) return;
+    if (state.user?.id !== userId || revision !== modelsRevision) return;
     state.models = { ...result, loading: false };
   } catch (error) {
-    if (state.user?.id !== userId) return;
+    if (state.user?.id !== userId || revision !== modelsRevision) return;
     state.models = { groups: [], apiKeysAvailable: true, loading: false, error: error.message };
     notify(error.message);
   }
@@ -265,6 +277,7 @@ async function loadModels({ prefer } = {}) {
 }
 
 function resetModels() {
+  modelsRevision++;
   state.models = { groups: [], apiKeysAvailable: true, loading: false };
   close();
   renderPicker();
