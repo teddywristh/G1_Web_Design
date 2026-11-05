@@ -1,8 +1,16 @@
 import { api } from "./api.js";
 import { $, element, isAdmin, notify, state } from "./core.js";
 import { loadModels } from "./models.js";
+let connectionsRevision = 0;
 
 // Khóa API và kết nối AI; việc chọn model nằm ở models.js
+function renderConnectionSummary() {
+  const saved = state.connections.filter((item) => item.configured && item.enabled).length;
+  const chatgpt = state.chatgpt.connected ? "ChatGPT đã kết nối." : "ChatGPT chưa kết nối.";
+  $("#connection-summary").textContent =
+    `${chatgpt} ${saved ? `${saved} khóa API đang bật.` : "Chưa lưu khóa API."}`;
+}
+
 function renderChatgpt() {
   const connection = state.chatgpt;
   $("#chatgpt-status").textContent = !connection.available
@@ -22,14 +30,16 @@ function renderChatgpt() {
   $("#chatgpt-start").hidden = !connection.available || connection.connected || connection.pending;
   $("#chatgpt-finish").hidden = !connection.pending || !connection.url;
   $("#chatgpt-disconnect").hidden = !connection.connected && !connection.pending;
+  renderConnectionSummary();
 }
 
 async function loadConnections() {
   if (!state.user) return;
   const userId = state.user.id;
+  const revision = ++connectionsRevision;
   try {
     const options = await api.get("/ai/connections");
-    if (state.user?.id !== userId) return;
+    if (state.user?.id !== userId || revision !== connectionsRevision) return;
     state.aiOptions = options;
     state.connections = options.connections;
     const available = Boolean(
@@ -37,12 +47,13 @@ async function loadConnections() {
     );
     if (available) {
       const status = await api.get("/ai/chatgpt");
-      if (state.user?.id !== userId) return;
+      if (state.user?.id !== userId || revision !== connectionsRevision) return;
       state.chatgpt = { ...state.chatgpt, ...status, available };
     } else {
       state.chatgpt = { available: false, connected: false, pending: false };
     }
   } catch (error) {
+    if (state.user?.id !== userId || revision !== connectionsRevision) return;
     notify(error.message);
     return;
   }
@@ -69,12 +80,12 @@ async function loadConnections() {
     .forEach((item) => {
       const row = element("li");
       const scope = item.scope === "personal" ? "cá nhân" : "dùng chung";
-      row.append(element("span", "", `${names[item.provider]} · ${scope}: `));
+      row.append(element("span", "", `${names[item.provider]} API · ${scope}: `));
       row.append(
         element(
           "strong",
           "",
-          item.configured ? (item.enabled ? "đã cấu hình" : "đang tắt") : "chưa có",
+          item.configured ? (item.enabled ? "đã lưu khóa" : "đang tắt") : "chưa lưu khóa",
         ),
       );
       if ((item.scope === "personal" || isAdmin()) && item.origin === "stored" && item.configured) {
@@ -83,8 +94,7 @@ async function loadConnections() {
           try {
             const prefix = item.scope === "shared" ? "/admin" : "";
             await api.del(`${prefix}/ai/connections/${item.provider}`, item.version);
-            loadConnections();
-            loadModels();
+            await Promise.all([loadConnections(), loadModels()]);
           } catch (error) {
             notify(error.message);
           }
@@ -97,24 +107,44 @@ async function loadConnections() {
 
 $("#connection-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  const form = event.currentTarget;
+  if (form.getAttribute("aria-busy") === "true") return;
+  const submit = form.querySelector('[type="submit"]');
+  form.setAttribute("aria-busy", "true");
+  submit.disabled = true;
+  submit.textContent = "Đang lưu…";
   const provider = $("#connection-provider").value;
+  const userId = state.user?.id;
   const scope = $("#connection-scope").value;
   const current = state.connections.find(
     (item) => item.provider === provider && item.scope === scope,
   );
   try {
-    await api.put(`${scope === "shared" ? "/admin" : ""}/ai/connections/${provider}`, {
-      apiKey: $("#connection-key").value.trim(),
-      expectedVersion: current?.version || 0,
-      enabled: true,
-    });
-    notify("Đã lưu khóa. Khóa không được hiển thị lại.");
-    loadConnections();
-    loadModels({ prefer: provider });
+    const saved = await api.put(
+      `${scope === "shared" ? "/admin" : ""}/ai/connections/${provider}`,
+      {
+        apiKey: $("#connection-key").value.trim(),
+        expectedVersion: current?.version || 0,
+        enabled: true,
+      },
+    );
+    if (state.user?.id !== userId) return;
+    connectionsRevision++;
+    const index = state.connections.findIndex(
+      (item) => item.provider === provider && item.scope === scope,
+    );
+    if (index < 0) state.connections.push(saved);
+    else state.connections[index] = saved;
+    renderConnectionSummary();
+    $("#connection-key").value = "";
+    await Promise.all([loadConnections(), loadModels({ prefer: provider })]);
+    notify("Đã lưu khóa. Kiểm tra model khả dụng trong menu Model.");
   } catch (error) {
     notify(error.message);
   } finally {
-    $("#connection-key").value = "";
+    form.removeAttribute("aria-busy");
+    submit.disabled = false;
+    submit.textContent = "Lưu khóa";
   }
 });
 $("#connection-scope").addEventListener("change", () => {
@@ -123,6 +153,7 @@ $("#connection-scope").addEventListener("change", () => {
 });
 
 async function chatgptAction(action) {
+  connectionsRevision++;
   const userId = state.user?.id;
   const buttons = ["#chatgpt-start", "#chatgpt-finish", "#chatgpt-disconnect"];
   buttons.forEach((selector) => {
@@ -151,14 +182,19 @@ async function chatgptAction(action) {
         instructions: result.instructions,
       };
     } else if (action === "finish") {
-      state.chatgpt = { available: true, pending: false, connected: Boolean(result.connected) };
       if (result.connected) {
-        loadModels({ prefer: "chatgpt" });
-        notify("Đã kết nối ChatGPT cho phiên của bạn.");
+        state.chatgpt = { available: true, pending: false, connected: true };
+        renderChatgpt();
+        await loadModels({ prefer: "chatgpt" });
+        notify("Đã kết nối ChatGPT. Kiểm tra model khả dụng trong menu Model.");
+      } else {
+        notify("Chưa hoàn tất đăng nhập. Hãy hoàn tất trên trang OpenAI rồi xác nhận lại.");
       }
     } else {
       state.chatgpt = { available: true, pending: false, connected: false };
-      loadModels();
+      state.models.groups = state.models.groups.filter((group) => group.id !== "chatgpt");
+      renderChatgpt();
+      await loadModels();
     }
     renderChatgpt();
   } catch (error) {
