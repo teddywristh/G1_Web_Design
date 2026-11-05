@@ -1,5 +1,6 @@
 import { api } from "./api.js";
 import { $, element, notify, persist, state } from "./core.js";
+import { navigate } from "./navigation.js";
 
 // Một combobox duy nhất chọn nhà cung cấp + model từ các kết nối đã cấu hình
 const SOURCE_TEXT = {
@@ -16,6 +17,14 @@ const GROUP_ERROR_TEXT = {
 const MODEL_ID = /^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,199}$/;
 const PREFERRED = { chatgpt: "gpt-5.6-luna" };
 const PAGE = 60;
+const RECONNECT_ERRORS = new Set(["ai_authentication_failed", "chatgpt_disconnected"]);
+const PROVIDERS = [
+  { id: "openai", label: "OpenAI" },
+  { id: "anthropic", label: "Claude (Anthropic)" },
+  { id: "deepseek", label: "DeepSeek" },
+  { id: "openrouter", label: "OpenRouter" },
+  { id: "chatgpt", label: "Tài khoản ChatGPT" },
+];
 let entries = [];
 let active = -1;
 
@@ -31,7 +40,9 @@ function choiceLabel(choice) {
 }
 
 function defaultChoice(prefer) {
-  const groups = state.models.groups.filter((group) => group.models.length);
+  const groups = state.models.groups.filter(
+    (group) => group.models.length && !RECONNECT_ERRORS.has(group.error),
+  );
   const group = groups.find((item) => item.id === prefer) || groups[0];
   if (!group) return null;
   const preferred = group.models.find((model) => model.id === PREFERRED[group.id]);
@@ -50,7 +61,8 @@ function renderPicker() {
   const label = $("#model-label");
   const group = selectedGroup();
   const model = group?.models.find((item) => item.id === state.ai.model);
-  label.textContent = state.models.loading && !group ? "Đang tải…" : group ? model?.name || state.ai.model : "Model";
+  label.textContent =
+    state.models.loading && !group ? "Đang tải…" : group ? model?.name || state.ai.model : "Model";
   $("#model-button").title = group ? choiceLabel(state.ai) : "Chọn nhà cung cấp và model";
 }
 
@@ -72,31 +84,68 @@ function optionNode(entry, index) {
   return node;
 }
 
-// Step 1: the configured connections the server listed.
+// Hiện các nhà cung cấp và hướng dẫn kết nối khi chưa có model.
 function renderProviders() {
   const list = $("#model-providers");
   list.replaceChildren();
   $("#model-panel").hidden = true;
   list.hidden = false;
-  if (!state.models.groups.length) {
-    const note = state.models.apiKeysAvailable
-      ? "Thêm API key hoặc kết nối ChatGPT trong Thiết lập → Kết nối AI."
-      : "Máy chủ chưa bật OpenCode cho API key. Kết nối ChatGPT trong Thiết lập, hoặc liên hệ quản trị viên.";
-    list.append(element("p", "combobox-note", state.models.loading ? "Đang tải model…" : note));
-    return;
+  if (state.models.error) {
+    list.append(element("p", "combobox-note", state.models.error));
+  } else if (!state.models.apiKeysAvailable && state.user && !state.models.loading) {
+    list.append(
+      element(
+        "p",
+        "combobox-note",
+        "Máy chủ chưa bật model qua API key. Liên hệ quản trị viên để bật kết nối này.",
+      ),
+    );
   }
-  state.models.groups.forEach((group) => {
+  PROVIDERS.forEach((provider) => {
+    const group = groupOf(provider.id);
+    const reconnect = group && RECONNECT_ERRORS.has(group.error);
+    const usable = group && !reconnect;
+    const status = group
+      ? reconnect
+        ? "Cần kết nối lại"
+        : group.error
+          ? "Lỗi tải model"
+          : `Đã kết nối · ${SOURCE_TEXT[group.source] || group.source}`
+      : state.models.loading
+        ? "Đang kiểm tra…"
+        : state.models.error
+          ? "Chưa kiểm tra được kết nối"
+          : "Chưa kết nối";
     const button = element("button", "model-provider");
     button.type = "button";
     button.setAttribute("role", "menuitem");
-    if (state.ai?.group === group.id) button.classList.add("is-current");
+    button.disabled = state.models.loading && !group;
+    if (state.ai?.group === provider.id) button.classList.add("is-current");
     const text = element("span");
     text.append(
-      element("strong", "", group.label),
-      element("small", "", group.error ? "Lỗi tải model" : SOURCE_TEXT[group.source] || group.source),
+      element("strong", "", group?.label || provider.label),
+      element("small", "", status),
     );
-    button.append(text, element("span", "model-provider-arrow", "›"));
-    button.addEventListener("click", () => showGroup(group));
+    button.append(
+      text,
+      element(
+        "span",
+        "model-provider-action",
+        usable ? "Chọn model ›" : state.user ? "Thiết lập" : "Đăng nhập",
+      ),
+    );
+    button.addEventListener("click", () => {
+      if (usable) {
+        showGroup(group);
+        return;
+      }
+      close();
+      navigate("settings", "ai");
+      if (state.user && provider.id !== "chatgpt") {
+        $("#connection-provider").value = provider.id;
+        $("#connection-key").focus();
+      }
+    });
     list.append(button);
   });
 }
@@ -111,7 +160,9 @@ function showGroup(group) {
   $("#model-provider-name").textContent = group.label;
   $("#model-filter").value = "";
   renderOptions();
-  setActive(entries.findIndex((entry) => entry.model === state.ai?.model && state.ai?.group === group.id));
+  setActive(
+    entries.findIndex((entry) => entry.model === state.ai?.model && state.ai?.group === group.id),
+  );
   $("#model-filter").focus();
 }
 
@@ -196,7 +247,7 @@ async function loadModels({ prefer } = {}) {
     state.models = { ...result, loading: false };
   } catch (error) {
     if (state.user?.id !== userId) return;
-    state.models = { groups: [], apiKeysAvailable: true, loading: false };
+    state.models = { groups: [], apiKeysAvailable: true, loading: false, error: error.message };
     notify(error.message);
   }
   if (prefer && state.ai?.group !== prefer && groupOf(prefer)?.models.length)
@@ -216,12 +267,13 @@ async function loadModels({ prefer } = {}) {
 function resetModels() {
   state.models = { groups: [], apiKeysAvailable: true, loading: false };
   close();
+  renderPicker();
 }
 
 // Request fields for the chosen connection, or null when nothing usable is selected.
 function selectedModel() {
   const group = selectedGroup();
-  if (!group || !state.ai.model) return null;
+  if (!group || RECONNECT_ERRORS.has(group.error) || !state.ai.model) return null;
   return { provider: group.provider, credential_source: group.source, model: state.ai.model };
 }
 

@@ -304,9 +304,14 @@
 .model-provider.is-current strong {
   color: var(--accent-dark);
 }
-.model-provider-arrow {
-  color: var(--muted);
-  font-size: 18px;
+.model-provider-action {
+  color: var(--accent);
+  font-size: 12px;
+  white-space: nowrap;
+}
+#model-providers {
+  max-height: min(320px, 45dvh);
+  overflow-y: auto;
 }
 .model-panel-head {
   display: flex;

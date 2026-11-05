@@ -61,6 +61,11 @@
   </article>
   <article class="settings-page" id="ai-card" hidden tabindex="-1">
     <h2>Khóa API</h2>
+    <p class="small-print">
+      Không bắt buộc mua ChatGPT Plus/Pro. Bạn có thể dùng khóa API cá nhân hoặc
+      khóa dùng chung do quản trị viên cấu hình. Để thử model miễn phí qua
+      OpenRouter, vẫn cần khóa OpenRouter và tuân theo hạn mức của nhà cung cấp.
+    </p>
     <ul id="connection-list" class="connection-list"></ul>
     <!-- Kết nối dùng để tải danh sách model trong khung chat -->
     <form
@@ -92,7 +97,12 @@
       <button class="primary-button" type="submit">Lưu khóa</button>
     </form>
     <div class="chatgpt-connection">
-      <h3>ChatGPT Plus/Pro qua OpenCode</h3>
+      <h3>Tài khoản ChatGPT qua OpenCode</h3>
+      <p class="small-print">
+        Kết nối này phụ thuộc quyền truy cập model của tài khoản ChatGPT và cấu
+        hình máy chủ. Bạn cũng có thể sử dụng khóa API ở phần trên, không cần
+        kết nối ChatGPT.
+      </p>
       <p id="chatgpt-status" class="small-print">Đang kiểm tra…</p>
       <p id="chatgpt-instructions" class="small-print" hidden></p>
       <a
@@ -110,7 +120,7 @@
           class="secondary-button"
           hidden
         >
-          Kết nối ChatGPT Plus/Pro
+          Kết nối ChatGPT
         </button>
         <button
           id="chatgpt-finish"

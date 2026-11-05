@@ -42,20 +42,23 @@ function navigate(view, settingsPage = "account") {
     settings: "Thiết lập",
   }[view];
   if (settings) {
-    state.settingsPage = settingsPage === "ai" || (settingsPage === "admin" && isAdmin())
-      ? settingsPage
-      : "account";
+    state.settingsPage =
+      settingsPage === "ai" || (settingsPage === "admin" && isAdmin()) ? settingsPage : "account";
     const account = state.settingsPage === "account";
     const admin = state.settingsPage === "admin";
     $("#account-card").hidden = !account;
     $("#ai-card").hidden = account || admin;
     $("#admin-card").hidden = !admin;
-    $("#settings-title").textContent = account ? "Tài khoản" : admin ? "Quản trị hệ thống" : "Kết nối AI";
+    $("#settings-title").textContent = account
+      ? "Tài khoản"
+      : admin
+        ? "Quản trị hệ thống"
+        : "Kết nối AI";
     $("#settings-description").textContent = account
       ? "Thông tin cá nhân, bảo mật và thiết bị đăng nhập."
       : admin
         ? "Quản lý người dùng, tài liệu dùng chung và nhật ký hệ thống."
-      : "Quản lý kết nối và khóa của những nhà cung cấp bạn sử dụng.";
+        : "Quản lý kết nối và khóa của những nhà cung cấp bạn sử dụng.";
     document.querySelectorAll("[data-settings-page]").forEach((button) => {
       const active = button.dataset.settingsPage === state.settingsPage;
       button.classList.toggle("active", active);
