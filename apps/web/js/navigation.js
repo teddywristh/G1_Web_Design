@@ -42,7 +42,9 @@ function navigate(view, settingsPage = "account") {
     settings: "Thiết lập",
   }[view];
   if (settings) {
-    state.settingsPage = ["ai", "admin"].includes(settingsPage) && isAdmin() ? settingsPage : "account";
+    state.settingsPage = settingsPage === "ai" || (settingsPage === "admin" && isAdmin())
+      ? settingsPage
+      : "account";
     const account = state.settingsPage === "account";
     const admin = state.settingsPage === "admin";
     $("#account-card").hidden = !account;
