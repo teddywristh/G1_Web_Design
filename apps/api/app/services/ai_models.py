@@ -167,7 +167,7 @@ def list_models(repo, user, settings, client_host):
                 "chatgpt",
                 "openai",
                 "chatgpt",
-                "ChatGPT Plus/Pro",
+                "ChatGPT",
                 lambda: clean(
                     (item.get("id"), item.get("name"))
                     for item in opencode_oauth.models(user["id"], repo, settings)
