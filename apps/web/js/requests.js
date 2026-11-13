@@ -2,8 +2,19 @@ import { api } from "./api.js";
 
 const API_KB_LIMIT = 5;
 
+// Nhận kết quả theo luồng để hiện nguồn và từng ý ngay khi có. Máy chủ cũ chưa có endpoint
+// stream (404/405) thì quay về yêu cầu thường.
+async function askGroup(body, onEvent) {
+  try {
+    return await api.stream("/rag/ask/stream", body, onEvent);
+  } catch (error) {
+    if ([404, 405].includes(error.status)) return api.post("/rag/ask", body);
+    throw error;
+  }
+}
+
 // API nhận từng nhóm kho nên UI tra cứu lần lượt toàn bộ phạm vi
-async function askSources(body, knowledgeBases, onProgress, isCurrent) {
+async function askSources(body, knowledgeBases, onProgress, isCurrent, onEvent) {
   const groups = [];
   for (let index = 0; index < knowledgeBases.length; index += API_KB_LIMIT)
     groups.push(knowledgeBases.slice(index, index + API_KB_LIMIT));
@@ -16,10 +27,10 @@ async function askSources(body, knowledgeBases, onProgress, isCurrent) {
       `Đã gửi yêu cầu ${index + 1}/${groups.length}${group.length ? ` · ${group.map((kb) => kb.title).join(", ")}` : " · tìm nguồn web nếu được bật"}. Đang chờ máy chủ trả kết quả.`,
     );
     try {
-      const data = await api.post("/rag/ask", {
-        ...body,
-        knowledge_base_ids: group.map((kb) => kb.id),
-      });
+      const data = await askGroup(
+        { ...body, knowledge_base_ids: group.map((kb) => kb.id) },
+        (event) => onEvent?.(event, index, groups.length),
+      );
       if (!isCurrent()) return null;
       results.push({ data, group });
       onProgress(

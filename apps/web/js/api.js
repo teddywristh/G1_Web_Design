@@ -56,7 +56,8 @@ function setCsrf(token) {
 }
 
 async function performRequest(method, path, { json, body, headers = {}, version, raw } = {}) {
-  const timeout = path === "/ai/chatgpt/finish" ? 260000 : path === "/rag/ask" ? 120000 : 90000;
+  const timeout =
+    path === "/ai/chatgpt/finish" ? 260000 : path.startsWith("/rag/ask") ? 120000 : 90000;
   const options = {
     method,
     credentials: "include",
@@ -121,12 +122,13 @@ function updateStatus() {
     status.textContent = `${label} · ${Math.floor((Date.now() - started) / 1000)} giây`;
   }
 }
-async function request(method, path, options) {
+// Giữ bộ đếm "đang xử lý" chạy suốt lúc work() còn chạy.
+async function tracked(path, work) {
   const id = Symbol();
   pending.set(id, [path, Date.now()]);
   if (!statusTimer) statusTimer = setInterval(updateStatus, 500);
   try {
-    return await performRequest(method, path, options);
+    return await work();
   } finally {
     pending.delete(id);
     if (!pending.size) {
@@ -135,6 +137,70 @@ async function request(method, path, options) {
       updateStatus();
     }
   }
+}
+function request(method, path, options) {
+  return tracked(path, () => performRequest(method, path, options));
+}
+
+// Đọc luồng server-sent events: mỗi khối "event:/data:" cách nhau một dòng trống.
+async function* serverEvents(response) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    // Chuẩn hóa trên cả buffer: một chunk có thể cắt giữa "\r" và "\n".
+    buffer = (buffer + decoder.decode(value, { stream: true })).replace(/\r\n/g, "\n");
+    let end;
+    while ((end = buffer.indexOf("\n\n")) >= 0) {
+      const block = buffer.slice(0, end);
+      buffer = buffer.slice(end + 2);
+      const data = block
+        .split("\n")
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trimStart())
+        .join("\n");
+      if (!data) continue; // dòng chú thích giữ kết nối
+      try {
+        yield JSON.parse(data);
+      } catch {
+        /* Bỏ qua khối hỏng; kết quả cuối vẫn đến ở sự kiện "done". */
+      }
+    }
+  }
+}
+
+// POST và nhận kết quả theo từng sự kiện. Trả về phản hồi cuối cùng (sự kiện "done").
+function stream(path, json, onEvent) {
+  return tracked(path, async () => {
+    const response = await performRequest("POST", path, { json, raw: true });
+    let final = null;
+    try {
+      for await (const event of serverEvents(response)) {
+        if (event.type === "error")
+          throw new ApiError(
+            event.status || 502,
+            event.code || "http_error",
+            ERROR_TEXT[event.code] || event.message || "Có lỗi xảy ra.",
+          );
+        if (event.type === "done") final = event.response;
+        onEvent?.(event);
+      }
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(
+        0,
+        "network",
+        error?.name === "TimeoutError"
+          ? "Yêu cầu đã quá thời gian chờ. Hãy thử lại hoặc chọn model khác."
+          : "Kết nối bị ngắt trước khi nhận đủ câu trả lời.",
+      );
+    }
+    if (!final)
+      throw new ApiError(0, "network", "Kết nối bị ngắt trước khi nhận đủ câu trả lời.");
+    return final;
+  });
 }
 
 const api = {
@@ -151,6 +217,7 @@ const api = {
       version,
     }),
   blob: async (path) => (await request("GET", path, { raw: true })).blob(),
+  stream,
 };
 
 export { api, setCsrf };

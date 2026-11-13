@@ -218,6 +218,7 @@ $("#question-form").addEventListener("submit", async (event) => {
     userId,
     startedAt: Date.now(),
     logs: ["Đã tiếp nhận câu hỏi."],
+    live: { stage: "", sources: [], claims: [], citations: [] },
   };
   state.pendingChat = pending;
   state.chatError = null;
@@ -244,6 +245,12 @@ $("#question-form").addEventListener("submit", async (event) => {
         renderProgress();
       },
       isCurrent,
+      (event) => {
+        if (!isCurrent()) return;
+        trackLive(pending, event);
+        renderProgress();
+        if (event.type === "claim" && state.chatId === chatId) scrollToLatest();
+      },
     );
     if (!data || !isCurrent()) return;
     reply = {
@@ -300,16 +307,77 @@ $("#restore-question").addEventListener("click", () => {
   renderComposerError();
 });
 
+const STAGE_TITLE = {
+  retrieving: "Đang tìm nguồn trong kho",
+  web: "Đang tra cứu nguồn web",
+  drafting: "Đang soạn câu trả lời",
+  cached: "Đang kiểm tra lại nguồn của câu trả lời đã lưu",
+};
+const STAGE_LOG = {
+  retrieving: "Đang tìm nguồn trong kho…",
+  web: "Đang tra cứu nguồn web…",
+  drafting: "Đang soạn câu trả lời…",
+  cached: "Câu hỏi này đã được trả lời; đang kiểm tra nguồn còn hiệu lực.",
+};
+
+function elapsed(pending) {
+  return `${((Date.now() - pending.startedAt) / 1000).toFixed(1)} giây`;
+}
+
+// Ghi nhận các sự kiện của luồng trả lời để hiện nguồn và từng ý ngay khi máy chủ gửi.
+function trackLive(pending, event) {
+  const live = pending.live;
+  if (event.type === "stage") {
+    live.stage = event.stage;
+    // Nhóm kho mới bắt đầu: bỏ nội dung của nhóm trước.
+    if (event.stage === "retrieving") Object.assign(live, { sources: [], claims: [], citations: [] });
+    pending.logs.push(`${STAGE_LOG[event.stage] || event.stage} (${elapsed(pending)})`);
+  } else if (event.type === "sources") {
+    live.sources = event.items || [];
+    pending.logs.push(`Tìm thấy ${live.sources.length} nguồn (${elapsed(pending)}).`);
+  } else if (event.type === "claim") {
+    if (!live.claims.length) pending.logs.push(`Ý trả lời đầu tiên đã qua kiểm chứng (${elapsed(pending)}).`);
+    live.claims.push(event.text);
+    live.citations.push(...(event.citations || []));
+  } else if (event.type === "reset") {
+    Object.assign(live, { claims: [], citations: [] });
+    pending.logs.push("Đang soạn lại câu trả lời.");
+  }
+}
+
+function renderLive(pending) {
+  const box = $("#progress-live");
+  const { sources, claims, citations } = pending.live;
+  const parts = [];
+  if (sources.length) {
+    const list = element("ul", "live-sources");
+    sources.forEach((source) => {
+      const place = [source.article, source.clause].filter(Boolean).join(" · ");
+      list.append(element("li", "", `${source.title}${place ? " · " + place : ""}`));
+    });
+    parts.push(element("strong", "", "Nguồn đang xem xét"), list);
+  }
+  if (claims.length) {
+    parts.push(
+      element("strong", "", "Câu trả lời đang hình thành"),
+      answerNode({ answer: claims.join("\n"), citations }),
+    );
+  }
+  box.replaceChildren(...parts);
+  box.hidden = !parts.length;
+}
+
 // Tiến trình chỉ hiển thị các bước mà trình duyệt thực sự biết
 function renderProgress() {
   const pending = state.pendingChat;
   $("#chat-progress").hidden = !pending || state.chatId !== pending.chatId;
   $("#send-question").disabled = Boolean(pending) || !$("#question").value.trim();
   if (!pending || state.chatId !== pending.chatId) return;
-  $("#progress-title").textContent = "Đang xử lý câu hỏi";
+  $("#progress-title").textContent = STAGE_TITLE[pending.live.stage] || "Đang xử lý câu hỏi";
   $("#progress-detail").textContent =
-    `${Math.floor((Date.now() - pending.startedAt) / 1000)} giây · Máy chủ sẽ gửi câu trả lời khi xử lý xong.`;
+    `${Math.floor((Date.now() - pending.startedAt) / 1000)} giây · Mỗi ý chỉ hiện sau khi đã đối chiếu với nguồn; kết quả cuối cùng sẽ thay thế bản nháp này.`;
   $("#progress-log").replaceChildren(...pending.logs.map((text) => element("li", "", text)));
+  renderLive(pending);
 }
 
 function scrollToLatest() {

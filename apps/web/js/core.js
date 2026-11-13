@@ -80,6 +80,7 @@ const LIMIT_TEXT = {
   no_lexical_index: "Chưa có chỉ mục từ khóa; chỉ tra theo số hiệu/điều",
   retrieval_budget_reached: "Đã chạm giới hạn số lượt tìm",
   output_validation_failed: "Câu trả lời không qua bước kiểm chứng nguồn",
+  unsupported_claims_removed: "Một số nhận định không đủ căn cứ nguồn nên đã được loại bỏ",
   web_unavailable_for_provider: "Tra cứu web không khả dụng với nhà cung cấp này",
   web_search_unavailable: "Tra cứu web đang lỗi",
   web_no_results: "Không tìm thấy nguồn web phù hợp",

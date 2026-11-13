@@ -432,3 +432,23 @@
 .chat-progress ol {
   padding-left: 20px;
 }
+/* Nguồn và từng ý trả lời hiện ra trong lúc chờ */
+.progress-live {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.progress-live .live-sources {
+  margin: 6px 0 12px;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+/* .chat-progress p is muted and small; the draft answer should read like the final one. */
+.progress-live .answer-text p {
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--ink);
+}

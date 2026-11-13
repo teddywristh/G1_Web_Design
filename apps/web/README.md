@@ -138,3 +138,11 @@ Get-ChildItem apps/web/js/*.js | ForEach-Object {
 ```
 
 Kiểm tra thêm bằng trình duyệt: tải trang, chuyển Hỏi đáp/Thư viện/Thiết lập, thử desktop/mobile và xem Console/Network. Kiểm tra cú pháp không xác nhận kết nối Firebase, cookie, provider hoặc chất lượng trả lời AI.
+
+## Kiểm thử
+
+Bộ đọc luồng server-sent events của `js/api.js` (chia chunk giữa ký tự UTF-8, CRLF, lỗi, mất kết nối) có test không cần dependency:
+
+```bash
+node --test "apps/web/tests/*.test.mjs"
+```

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useAiSession } from "@/lib/ai-session";
+import { HttpError, useAiSession, type AskEvent } from "@/lib/ai-session";
 import { ArrowUp, MessageSquare, Plus, Trash2 } from "lucide-react";
 import type { Conversation } from "@/lib/workspace";
 
@@ -11,6 +11,39 @@ type Reply = {
   credential_source?: string;
   citations: { document_title: string; article?: string; page_number?: number }[];
 };
+
+// What the answer looks like while it is still being written.
+type Draft = {
+  stage: string;
+  sources: { title: string; article?: string | null; clause?: string | null }[];
+  claims: string[];
+};
+
+const stageTitle: Record<string, string> = {
+  retrieving: "Đang tìm nguồn trong kho…",
+  web: "Đang tra cứu nguồn web…",
+  drafting: "Đang soạn câu trả lời…",
+  cached: "Đang kiểm tra lại nguồn của câu trả lời đã lưu…",
+};
+
+function nextDraft(draft: Draft | undefined, event: AskEvent): Draft {
+  const current = draft ?? { stage: "", sources: [], claims: [] };
+  switch (event.type) {
+    case "stage":
+      // A new knowledge-base group starts from an empty draft.
+      return event.stage === "retrieving"
+        ? { stage: event.stage, sources: [], claims: [] }
+        : { ...current, stage: event.stage };
+    case "sources":
+      return { ...current, sources: event.items };
+    case "claim":
+      return { ...current, claims: [...current.claims, event.text] };
+    case "reset":
+      return { ...current, claims: [] };
+    default:
+      return current;
+  }
+}
 
 const suggestions = [
   "Hợp đồng lao động cần có những nội dung gì?",
@@ -43,14 +76,16 @@ export function QuestionWorkspace({
 }: Props) {
   const [question, setQuestion] = useState("");
   const hasQuestions = Boolean(active?.notes.length);
-  const { profile, choice, request } = useAiSession();
+  const { profile, choice, request, stream } = useAiSession();
   const [replies, setReplies] = useState<Record<string, Reply | { error: string }>>({});
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [pending, setPending] = useState(false);
   const inFlight = useRef(false);
   const owner = useRef(profile?.id);
   owner.current = profile?.id;
   useEffect(() => {
     setReplies({});
+    setDrafts({});
   }, [profile?.id]);
 
   async function submit() {
@@ -65,11 +100,23 @@ export function QuestionWorkspace({
     setPending(true);
     inFlight.current = true;
     try {
-      const response = await request<Reply>("/api/v1/rag/ask", {
-        method: "POST",
-        signal: choice.engine === "opencode" ? AbortSignal.timeout(120000) : undefined,
-        body: JSON.stringify({ question: value, ...choice, model: choice.model || undefined }),
-      });
+      const body = JSON.stringify({ question: value, ...choice, model: choice.model || undefined });
+      const signal = choice.engine === "opencode" ? AbortSignal.timeout(120000) : undefined;
+      let response: Reply;
+      try {
+        response = await stream<Reply>(
+          "/api/v1/rag/ask/stream",
+          { method: "POST", signal, body },
+          (event) => {
+            if (owner.current === account)
+              setDrafts((items) => ({ ...items, [key]: nextDraft(items[key], event) }));
+          },
+        );
+      } catch (error) {
+        // A server without the stream endpoint answers 404/405; use the plain endpoint instead.
+        if (!(error instanceof HttpError) || ![404, 405].includes(error.status)) throw error;
+        response = await request<Reply>("/api/v1/rag/ask", { method: "POST", signal, body });
+      }
       if (owner.current === account) setReplies((items) => ({ ...items, [key]: response }));
     } catch (error) {
       if (owner.current === account)
@@ -78,6 +125,10 @@ export function QuestionWorkspace({
           [key]: { error: error instanceof Error ? error.message : "Không nhận được câu trả lời." },
         }));
     } finally {
+      setDrafts((items) => {
+        const { [key]: _finished, ...rest } = items;
+        return rest;
+      });
       setPending(false);
       inFlight.current = false;
     }
@@ -151,6 +202,28 @@ export function QuestionWorkspace({
                 <div className="question-message" key={`${active!.id}-${index}`}>
                   <span>Bạn</span>
                   <p>{note}</p>
+                  {(() => {
+                    const draft = drafts[`${active!.id}-${index}`];
+                    if (!draft || replies[`${active!.id}-${index}`]) return null;
+                    return (
+                      <div className="ai-reply" aria-live="polite">
+                        <strong>{stageTitle[draft.stage] || "AI đang xử lý câu hỏi…"}</strong>
+                        {draft.sources.length > 0 && (
+                          <ul>
+                            {draft.sources.map((source, i) => (
+                              <li key={i}>
+                                {source.title}
+                                {source.article ? ` · Điều ${source.article}` : ""}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {draft.claims.map((claim, i) => (
+                          <p key={i}>{claim}</p>
+                        ))}
+                      </div>
+                    );
+                  })()}
                   {(() => {
                     const reply = replies[`${active!.id}-${index}`];
                     if (!reply) return null;
