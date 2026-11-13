@@ -28,7 +28,7 @@ nohup python -m uvicorn app.main:app --app-dir apps/api --host 127.0.0.1 --port 
 echo $! > "$state/api.pid"
 nohup env PYTHONPATH=apps/api python -m app.workers.ingestion > "$state/worker.log" 2>&1 < /dev/null &
 echo $! > "$state/worker.pid"
-nohup .data/tools/cloudflared tunnel --url http://127.0.0.1:8002 --no-autoupdate > "$state/tunnel.log" 2>&1 < /dev/null &
+nohup .data/tools/cloudflared tunnel --protocol http2 --url http://127.0.0.1:8002 --no-autoupdate > "$state/tunnel.log" 2>&1 < /dev/null &
 echo $! > "$state/tunnel.pid"
 echo "Services started. Once the tunnel is connected, run:"
 echo 'bash scripts/publish-quick-tunnel.sh'
