@@ -32,7 +32,7 @@ class FakeAI:
         self.reply = reply
         self.calls = 0
 
-    def answer(self, question, chunks):
+    def answer(self, question, chunks, **_options):
         self.calls += 1
         return self.reply(chunks) if callable(self.reply) else self.reply
 

@@ -9,6 +9,7 @@
 - [Verification](backend-verification.md): kết quả test/build và giới hạn trước phát hành.
 - [Backend quickstart](../apps/api/README.md): cài đặt và chạy test.
 - [Knowledge bases & Q&A](knowledge-rag.md): kho tài liệu, worker ingestion, hỏi đáp có trích dẫn.
+- [Q&A latency](qa-latency.md): vì sao câu hỏi chậm, các tối ưu, giao thức stream và cách kiểm tra.
 - [Web app](../apps/web/README.md): chạy giao diện HTML tĩnh.
 - [Conventions](conventions.md): branch, commit và review.
 - [Original project plan](plans.md): bối cảnh sản phẩm rộng hơn backend MVP.

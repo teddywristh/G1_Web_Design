@@ -16,7 +16,18 @@ config = {
 }
 if not os.path.isfile("/opt/models.json") and not os.path.isfile("/tmp/cache/opencode/models.json"):
     # The pinned binary's embedded catalog predates this model.
-    config["provider"] = {"openai": {"models": {"gpt-5.6-luna": {"name": "GPT 5.6 Luna"}}}}
+    # Variants let the backend choose the reasoning effort per request (catalog models have their own).
+    efforts = ("none", "minimal", "low", "medium", "high")
+    config["provider"] = {
+        "openai": {
+            "models": {
+                "gpt-5.6-luna": {
+                    "name": "GPT 5.6 Luna",
+                    "variants": {e: {"reasoningEffort": e} for e in efforts},
+                }
+            }
+        }
+    }
 os.environ.update(
     {
         "HOME": "/tmp/home",

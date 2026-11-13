@@ -13,7 +13,7 @@ def stub_qa(monkeypatch, use_embedder=False):
         status="answered",
     )
 
-    def run(repo, user, request, ai, embedder, settings):
+    def run(repo, user, request, ai, embedder, settings, **_extra):
         if use_embedder:
             embedder.embed([request.question])
         return response

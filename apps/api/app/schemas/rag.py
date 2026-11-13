@@ -84,3 +84,4 @@ class AskResponse(BaseModel):
     claim_citations: list[ClaimCitation] = []
     source_limitations: list[str] = []
     run_id: str | None = None
+    cache_hit: bool = False

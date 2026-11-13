@@ -17,3 +17,11 @@ scripts/opencode_poc/run-private.sh
 ```
 
 It creates two temporary internal Docker networks, a dedicated fake gateway for each, and workers that attempt to connect to the other user's gateway, a metadata address and a public IP. Both workers then send prompts through their own gateway; a third trial tests a malicious shell tool response against the gateway's three-request ceiling. All containers and networks are removed afterwards. The gateway is attached to Docker's bridge but returns synthetic responses and does **not** forward to real providers. This proves only the tested network topology; production still needs verified HTTPS-only allowlisted egress, identity binding, durable lifecycle controls, real provider integration and load testing.
+
+A third check covers latency features of the same workers:
+
+```bash
+scripts/opencode_poc/verify-effort-stream.sh
+```
+
+It runs `worker.py` and `oauth_call.py` against `fake_responses.py`, a synthetic provider stub whose answer reports the reasoning effort it received. It asserts that the effort the backend requests (`variant`) reaches the provider, that OpenCode's default is `medium`, and that stream mode prints text deltas before the final answer line. See [docs/qa-latency.md](../../docs/qa-latency.md).

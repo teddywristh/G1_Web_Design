@@ -93,6 +93,19 @@ class Settings(BaseSettings):
     max_official_searches: int = Field(default=2, ge=0)
     max_fetched_sources: int = Field(default=4, ge=0)
     qa_deadline_seconds: int = Field(default=40, ge=5)
+    # Fast path: questions that look simple use low reasoning effort and a short answer budget.
+    qa_router_enabled: bool = True
+    qa_fast_effort: Literal["none", "minimal", "low", "medium", "high"] = "low"
+    qa_deep_effort: Literal["none", "minimal", "low", "medium", "high"] = "medium"
+    qa_fast_max_claims: int = Field(default=4, ge=1, le=20)
+    qa_deep_max_claims: int = Field(default=8, ge=1, le=20)
+    # "when_empty": search the web only if the knowledge base found nothing (or examples were
+    # requested); the model can still ask for it later. "always": the previous behaviour.
+    qa_web_prefetch: Literal["when_empty", "always"] = "when_empty"
+    # Answer cache keyed by knowledge-base generation, so publishing a new corpus invalidates it.
+    qa_cache_enabled: bool = True
+    qa_cache_ttl_seconds: int = Field(default=6 * 3600, ge=1)
+    qa_cache_max_entries: int = Field(default=500, ge=1)
     evidence_run_retention_days: int = Field(default=30, ge=1)
     max_pdf_pages: int = Field(default=300, ge=1)
     max_provision_chars: int = Field(default=2000, ge=200)

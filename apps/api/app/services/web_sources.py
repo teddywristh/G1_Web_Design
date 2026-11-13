@@ -5,6 +5,7 @@ import ipaddress
 import logging
 import re
 import socket
+from concurrent.futures import ThreadPoolExecutor
 from html.parser import HTMLParser
 from urllib.parse import urlencode, urljoin, urlparse
 
@@ -392,13 +393,24 @@ def gather(ai, settings, query, mode, budget, transport=None):
             continue
         if not urls:
             limits.append("web_no_results")
+        picked = []
         for url in urls:
             if budget["fetches"] >= budget.get("fetch_limit", settings.max_fetched_sources):
                 break
             budget["fetches"] += 1
+            picked.append(url)
+
+        def read(url, fetch_domains=fetch_domains):
             try:
-                final_url, body = fetch(url, settings, fetch_domains, transport)
+                return url, fetch(url, settings, fetch_domains, transport), None
             except (APIError, httpx.HTTPError, ValueError) as exc:
+                return url, None, exc
+
+        # Network time dominates, so the sources are read together; results keep search order.
+        with ThreadPoolExecutor(max_workers=max(1, len(picked))) as pool:
+            fetched = list(pool.map(read, picked))
+        for url, got, exc in fetched:
+            if exc is not None:
                 logger.warning(
                     "web_source_unreadable host=%s error=%s",
                     urlparse(url).hostname or "unknown",
@@ -406,6 +418,7 @@ def gather(ai, settings, query, mode, budget, transport=None):
                 )
                 limits.append("web_source_unreadable")
                 continue
+            final_url, body = got
             host = urlparse(final_url).hostname or ""
             items.append(web_item(final_url, body, query, classify(host, body, settings)))
     return items, limits

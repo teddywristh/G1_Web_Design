@@ -32,7 +32,10 @@ class OpenAIService:
         )
         return [item.embedding for item in response.data]
 
-    def answer(self, question: str, chunks: Sequence[StoredChunk]) -> str:
+    def answer(
+        self, question: str, chunks: Sequence[StoredChunk], effort: str | None = None
+    ) -> str:
+        # effort is accepted for the common adapter interface; this client does not stream or tune it.
         self._require_client()
         context = "\n\n".join(f"[{index}] {chunk.text}" for index, chunk in enumerate(chunks, 1))
         response = self.client.chat.completions.create(

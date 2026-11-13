@@ -13,8 +13,10 @@ The web UI (PR-07, PR-08) and server-side chat history are not part of this chan
 3. `publish` builds a complete new index generation (`search_chunks`), writes a manifest to Storage and moves
    `activeIndexGeneration` with a version check. Private KBs go live at once; the shared KB waits for
    `POST /admin/knowledge-bases/shared/publish` (also used to roll back to an earlier built generation).
-4. `POST /rag/ask` runs `services/qa.py`: scope -> exact lookup + Firestore vector search -> canonical
-   re-validation (tombstone, generation, legal time) -> sibling expansion -> LLM -> claim validation.
+4. `POST /rag/ask` (or `POST /rag/ask/stream`, same workflow as server-sent events) runs `services/qa.py`:
+   scope -> answer cache -> exact lookup + Firestore vector search -> canonical re-validation (tombstone,
+   generation, legal time) -> sibling expansion -> LLM -> claim validation. Latency design, the stream
+   protocol and the cache rules are in [qa-latency.md](qa-latency.md).
 
 ## Decisions (ADR summary)
 

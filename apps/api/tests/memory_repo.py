@@ -21,6 +21,10 @@ class MemoryRepo:
         row = self.rows.get((collection, doc_id))
         return {**deepcopy(row), "id": doc_id} if row is not None else None
 
+    def get_many(self, collection, doc_ids):
+        found = {i: self.get(collection, i) for i in dict.fromkeys(doc_ids) if i}
+        return {i: row for i, row in found.items() if row is not None}
+
     def mutate(self, collection, doc_id, change, *, actor, event, request_id, extra=None):
         current = self.get(collection, doc_id)
         patch = change(current)

@@ -3,14 +3,18 @@
 import json
 import secrets
 import subprocess
+import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from threading import BoundedSemaphore
+from types import SimpleNamespace
 
 from app.core.errors import APIError
 
 WORKER_DIR = Path(__file__).resolve().parents[1] / "opencode_worker"
 SLOTS = BoundedSemaphore(2)
+EFFORTS = {"none", "minimal", "low", "medium", "high"}
 
 
 def worker_access(settings, client_host, *, chatgpt):
@@ -31,6 +35,21 @@ def worker_access(settings, client_host, *, chatgpt):
         raise APIError(403, "forbidden", "OpenCode worker is available only locally")
 
 
+def worker_answer(payload):
+    """The text of a worker's final line, or the safe API error it reports."""
+    error = payload.get("error")
+    if error == "ai_authentication_failed":
+        raise APIError(502, error, "The AI provider rejected the selected key")
+    if error == "ai_rate_limited":
+        raise APIError(429, error, "The AI provider usage limit was reached")
+    if error == "ai_incomplete":
+        raise APIError(502, error, "The AI response did not finish")
+    answer = payload.get("answer")
+    if not isinstance(answer, str) or not answer.strip():
+        raise ValueError("empty answer")
+    return answer
+
+
 class OpenCodeService:
     def __init__(self, settings, api_key, model, provider="openai"):
         self.settings = settings
@@ -40,7 +59,9 @@ class OpenCodeService:
         self.provider = provider
         self.model = model or settings.default_llm_model
 
-    def answer(self, question, chunks):
+    @contextmanager
+    def _sandbox(self):
+        """Private network, provider guard and worker command; everything is removed on exit."""
         if not SLOTS.acquire(blocking=False):
             raise APIError(429, "ai_rate_limited", "OpenCode is busy; retry later")
         name = "legal-opencode-" + secrets.token_hex(8)
@@ -112,67 +133,48 @@ class OpenCodeService:
                 ]
             )
             docker(["network", "connect", "bridge", guard])
-            context = "\n\n".join(f"[{i}] {c.text}" for i, c in enumerate(chunks, 1))
-            job = {
-                "apiKey": self.api_key,
-                "provider": self.provider,
-                "model": self.model,
-                "guardSecret": secret,
-                "serverSecret": secrets.token_urlsafe(32),
-                "prompt": f"Câu hỏi: {question}\n\nNguồn:\n{context}",
-            }
-            result = docker(
-                [
-                    "run",
-                    "--rm",
-                    "-i",
-                    "--name",
-                    worker,
-                    "--network",
-                    name,
-                    "--user",
-                    "10001:10001",
-                    "--read-only",
-                    "--log-driver",
-                    "none",
-                    "--cap-drop",
-                    "ALL",
-                    "--security-opt",
-                    "no-new-privileges",
-                    "--pids-limit",
-                    "80",
-                    "--memory",
-                    "512m",
-                    "--cpus",
-                    "1",
-                    "--tmpfs",
-                    "/tmp:rw,nosuid,size=128m",
-                    "--tmpfs",
-                    "/app:rw,nosuid,size=8m",
-                    "--mount",
-                    f"type=bind,src={binary},dst=/usr/local/bin/opencode,readonly",
-                    "--mount",
-                    f"type=bind,src={worker_script},dst=/opt/worker.py,readonly",
-                    "--entrypoint",
-                    "python",
-                    image,
-                    "/opt/worker.py",
-                ],
-                input=json.dumps(job).encode(),
-                timeout=115,
+            command = [
+                "run",
+                "--rm",
+                "-i",
+                "--name",
+                worker,
+                "--network",
+                name,
+                "--user",
+                "10001:10001",
+                "--read-only",
+                "--log-driver",
+                "none",
+                "--cap-drop",
+                "ALL",
+                "--security-opt",
+                "no-new-privileges",
+                "--pids-limit",
+                "80",
+                "--memory",
+                "512m",
+                "--cpus",
+                "1",
+                "--tmpfs",
+                "/tmp:rw,nosuid,size=128m",
+                "--tmpfs",
+                "/app:rw,nosuid,size=8m",
+                "--mount",
+                f"type=bind,src={binary},dst=/usr/local/bin/opencode,readonly",
+                "--mount",
+                f"type=bind,src={worker_script},dst=/opt/worker.py,readonly",
+                "--entrypoint",
+                "python",
+                image,
+                "/opt/worker.py",
+            ]
+            yield SimpleNamespace(
+                docker=docker,
+                command=command,
+                secret=secret,
+                remaining=lambda: max(1.0, deadline - time.monotonic()),
             )
-            payload = json.loads(result.stdout)
-            error = payload.get("error")
-            if error == "ai_authentication_failed":
-                raise APIError(502, error, "The AI provider rejected the selected key")
-            if error == "ai_rate_limited":
-                raise APIError(429, error, "The AI provider usage limit was reached")
-            if error == "ai_incomplete":
-                raise APIError(502, error, "The AI response did not finish")
-            answer = payload.get("answer")
-            if not isinstance(answer, str) or not answer.strip():
-                raise ValueError("empty answer")
-            return answer
         except APIError:
             raise
         except (OSError, subprocess.SubprocessError, ValueError, TypeError):
@@ -193,3 +195,59 @@ class OpenCodeService:
             except (OSError, subprocess.SubprocessError):
                 pass
             SLOTS.release()
+
+    def _job(self, box, question, chunks, effort, stream):
+        context = "\n\n".join(f"[{i}] {c.text}" for i, c in enumerate(chunks, 1))
+        job = {
+            "apiKey": self.api_key,
+            "provider": self.provider,
+            "model": self.model,
+            "guardSecret": box.secret,
+            "serverSecret": secrets.token_urlsafe(32),
+            "prompt": f"Câu hỏi: {question}\n\nNguồn:\n{context}",
+        }
+        if effort in EFFORTS:
+            job["variant"] = effort
+        if stream:
+            job["stream"] = True
+        return job
+
+    def answer(self, question, chunks, effort=None):
+        with self._sandbox() as box:
+            job = self._job(box, question, chunks, effort, False)
+            result = box.docker(box.command, input=json.dumps(job).encode(), timeout=115)
+            return worker_answer(json.loads(result.stdout))
+
+    def answer_stream(self, question, chunks, effort=None):
+        """Yield text as the model writes it; raises the same safe errors as answer()."""
+        with self._sandbox() as box:
+            job = self._job(box, question, chunks, effort, True)
+            proc = subprocess.Popen(
+                ["docker", *box.command],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+            )
+            watchdog = threading.Timer(box.remaining(), proc.kill)
+            watchdog.start()
+            sent, final = "", None
+            try:
+                proc.stdin.write(json.dumps(job).encode())
+                proc.stdin.close()
+                for raw in proc.stdout:
+                    line = json.loads(raw)
+                    if isinstance(line.get("delta"), str):
+                        sent += line["delta"]
+                        yield line["delta"]
+                    else:
+                        final = line
+            finally:
+                watchdog.cancel()
+                if proc.poll() is None:
+                    proc.kill()
+                proc.wait()
+            if final is None:
+                raise ValueError("worker ended without an answer")
+            answer = worker_answer(final)
+            if answer.startswith(sent) and len(answer) > len(sent):
+                yield answer[len(sent) :]

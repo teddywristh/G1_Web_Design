@@ -54,6 +54,18 @@ class BackendRepository:
         snap = self.db.collection(collection).document(doc_id).get(timeout=5, retry=None)
         return {**snap.to_dict(), "id": snap.id} if snap.exists else None
 
+    def get_many(self, collection, doc_ids):
+        """One batched read. Missing documents are absent from the result."""
+        ids = [i for i in dict.fromkeys(doc_ids) if i]
+        if not ids:
+            return {}
+        refs = [self.db.collection(collection).document(i) for i in ids]
+        found = {}
+        for snap in self.db.get_all(refs, timeout=10, retry=None):
+            if snap.exists:
+                found[snap.id] = {**snap.to_dict(), "id": snap.id}
+        return found
+
     def mutate(self, collection, doc_id, change, *, actor, event, request_id, extra=None):
         """Callback receives current state; data and success audit commit together.
 

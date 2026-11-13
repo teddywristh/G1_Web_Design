@@ -1,5 +1,6 @@
 """Isolated OpenCode workers with encrypted per-user OAuth recovery."""
 
+import hashlib
 import json
 import secrets
 import subprocess
@@ -12,6 +13,8 @@ from app.core.errors import APIError
 from app.services import oauth_store
 
 WORKER_DIR = Path(__file__).resolve().parents[1] / "opencode_worker"
+EFFORTS = {"none", "minimal", "low", "medium", "high"}
+SESSION_CHECK_SECONDS = 30
 SESSIONS = {}
 LOCK = threading.RLock()
 RESTORE_LOCK = threading.RLock()
@@ -46,6 +49,27 @@ def expire():
         cleanup(session)
 
 
+def worker_failed(session):
+    """Translate a failed worker call: a stopped worker means the connection is gone."""
+    try:
+        running = (
+            docker(
+                ["inspect", "-f", "{{.State.Running}}", session["worker"]], timeout=5
+            ).stdout.strip()
+            == b"true"
+        )
+    except (OSError, subprocess.SubprocessError):
+        running = False
+    if not running:
+        with LOCK:
+            for key, value in list(SESSIONS.items()):
+                if value is session:
+                    SESSIONS.pop(key, None)
+        cleanup(session)
+        raise APIError(409, "chatgpt_disconnected", "ChatGPT worker stopped; reconnect to continue")
+    raise APIError(503, "opencode_unavailable", "OpenCode OAuth worker failed")
+
+
 def invoke(session, payload, timeout):
     try:
         result = docker(
@@ -58,25 +82,40 @@ def invoke(session, payload, timeout):
             raise ValueError()
         return data
     except (OSError, ValueError, subprocess.SubprocessError):
+        worker_failed(session)
+
+
+def invoke_stream(session, payload, timeout):
+    """Like invoke(), but yields each JSON line the worker prints as soon as it is printed."""
+    proc = None
+    failed = False
+    try:
+        proc = subprocess.Popen(
+            ["docker", "exec", "-i", session["worker"], "python", "/opt/oauth_call.py"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+        watchdog = threading.Timer(timeout, proc.kill)
+        watchdog.start()
         try:
-            running = (
-                docker(
-                    ["inspect", "-f", "{{.State.Running}}", session["worker"]], timeout=5
-                ).stdout.strip()
-                == b"true"
-            )
-        except (OSError, subprocess.SubprocessError):
-            running = False
-        if not running:
-            with LOCK:
-                for key, value in list(SESSIONS.items()):
-                    if value is session:
-                        SESSIONS.pop(key, None)
-            cleanup(session)
-            raise APIError(
-                409, "chatgpt_disconnected", "ChatGPT worker stopped; reconnect to continue"
-            ) from None
-        raise APIError(503, "opencode_unavailable", "OpenCode OAuth worker failed") from None
+            proc.stdin.write(json.dumps(payload).encode())
+            proc.stdin.close()
+            for raw in proc.stdout:
+                line = json.loads(raw)
+                if not isinstance(line, dict):
+                    raise ValueError()
+                yield line
+        finally:
+            watchdog.cancel()
+            if proc.poll() is None:
+                proc.kill()
+            proc.wait()
+        failed = proc.returncode != 0
+    except (OSError, ValueError, subprocess.SubprocessError):
+        failed = True
+    if failed:
+        worker_failed(session)
 
 
 def start(user_id, settings, credential=None):
@@ -294,43 +333,74 @@ class OAuthAnswer:
         self.model = model or "gpt-5.6-luna"
         self.repo = repo
         self.settings = settings
+        self._session = None
+        self._checked = 0.0
 
     def require_session(self):
         session = get(self.user_id, self.repo, self.settings) if self.repo else get(self.user_id)
         if not session or not session["connected"]:
             raise APIError(409, "chatgpt_disconnected", "Reconnect ChatGPT in AI connections")
+        self._session, self._checked = session, time.monotonic()
         return session
 
-    def answer(self, question, chunks):
-        session = self.require_session()
+    def current_session(self):
+        """The worker was checked a moment ago for this very request; do not ask Docker again."""
+        if self._session is not None and time.monotonic() - self._checked < SESSION_CHECK_SECONDS:
+            return self._session
+        return self.require_session()
+
+    def payload(self, question, chunks, effort, stream):
         context = "\n\n".join(f"[{i}] {c.text}" for i, c in enumerate(chunks, 1))
-        with session["lock"]:
-            try:
-                data = invoke(
-                    session,
-                    {
-                        "action": "answer",
-                        "model": self.model,
-                        "prompt": f"Câu hỏi: {question}\n\nNguồn:\n{context}",
-                    },
-                    90,
-                )
-            except APIError:
-                # A provider error can occur after a successful token rotation.
-                # Persist the latest credential if the worker is still alive.
-                if self.repo is not None and self.settings is not None:
-                    with LOCK:
-                        still_active = SESSIONS.get(self.user_id) is session
-                    if still_active:
-                        try:
-                            credential = invoke(session, {"action": "export"}, 15).get("credential")
-                            oauth_store.save(self.repo, self.settings, self.user_id, credential)
-                        except APIError:
-                            pass
-                raise
-            if self.repo is not None and self.settings is not None:
-                credential = invoke(session, {"action": "export"}, 15).get("credential")
-                oauth_store.save(self.repo, self.settings, self.user_id, credential)
+        payload = {
+            "action": "answer",
+            "model": self.model,
+            "prompt": f"Câu hỏi: {question}\n\nNguồn:\n{context}",
+        }
+        if effort in EFFORTS:
+            payload["variant"] = effort
+        if stream:
+            payload["stream"] = True
+        return payload
+
+    def persist(self, session, data=None):
+        """Save the OAuth credential if the provider rotated it; unchanged ones cost no write."""
+        if self.repo is None or self.settings is None:
+            return
+        credential = (data or {}).get("credential")
+        if credential is None:  # a worker started before the combined call: ask for it
+            credential = invoke(session, {"action": "export"}, 15).get("credential")
+        if credential is None:
+            return
+        digest = hashlib.sha256(json.dumps(credential, sort_keys=True).encode()).hexdigest()
+        if session.get("saved") == digest:
+            return
+        oauth_store.save(self.repo, self.settings, self.user_id, credential)
+        session["saved"] = digest
+
+    def settle(self, session, data):
+        """Persist the credential after a call. A saving problem must not hide a provider error."""
+        if not data.get("error"):
+            self.persist(session, data)
+            return
+        try:
+            self.persist(session, data)
+        except APIError:
+            pass
+
+    def persist_after_failure(self, session):
+        # A provider error can occur after a successful token rotation.
+        # Persist the latest credential if the worker is still alive.
+        if self.repo is not None and self.settings is not None:
+            with LOCK:
+                still_active = SESSIONS.get(self.user_id) is session
+            if still_active:
+                try:
+                    self.persist(session)
+                except APIError:
+                    pass
+
+    @staticmethod
+    def text_of(data):
         error = data.get("error")
         if error:
             raise APIError(
@@ -340,3 +410,38 @@ class OAuthAnswer:
         if not isinstance(answer, str) or not answer.strip():
             raise APIError(502, "ai_incomplete", "ChatGPT returned an incomplete response")
         return answer
+
+    def answer(self, question, chunks, effort=None):
+        session = self.current_session()
+        with session["lock"]:
+            try:
+                data = invoke(session, self.payload(question, chunks, effort, False), 90)
+            except APIError:
+                self.persist_after_failure(session)
+                raise
+            self.settle(session, data)
+        return self.text_of(data)
+
+    def answer_stream(self, question, chunks, effort=None):
+        """Yield text as the model writes it; raises the same safe errors as answer()."""
+        session = self.current_session()
+        with session["lock"]:
+            sent, final = "", None
+            try:
+                for line in invoke_stream(
+                    session, self.payload(question, chunks, effort, True), 90
+                ):
+                    if isinstance(line.get("delta"), str):
+                        sent += line["delta"]
+                        yield line["delta"]
+                    else:
+                        final = line
+            except APIError:
+                self.persist_after_failure(session)
+                raise
+            if final is None:
+                raise APIError(503, "opencode_unavailable", "OpenCode OAuth worker failed")
+            self.settle(session, final)
+        text = self.text_of(final)
+        if text.startswith(sent) and len(text) > len(sent):
+            yield text[len(sent) :]
