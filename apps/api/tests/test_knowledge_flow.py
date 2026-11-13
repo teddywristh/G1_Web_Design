@@ -261,6 +261,43 @@ def test_embedding_failure_falls_back_to_exact_search(env, tmp_path):
     assert answer.status == "answered" and "embedding_unavailable" in answer.source_limitations
 
 
+def test_a_busy_embedding_host_degrades_to_exact_search_instead_of_failing(env, tmp_path):
+    repo, bucket = env
+    kb, _ = upload(repo, bucket, tmp_path)
+    process(repo, bucket)
+
+    class Busy:
+        def embed(self, _):
+            raise APIError(503, "embedding_busy", "busy")
+
+    answer = qa.answer(
+        repo,
+        user(repo, "alice"),
+        AskRequest(question="Điều 2 thử việc bao lâu?", knowledge_base_ids=[kb["id"]]),
+        FakeAI(good_reply),
+        Busy(),
+        SETTINGS,
+    )
+    assert answer.status == "answered" and "embedding_unavailable" in answer.source_limitations
+
+
+def test_the_shared_library_exists_for_everyone_so_an_admin_can_upload_into_it(env):
+    repo, _ = env
+    assert repo.get("knowledge_bases", knowledge.SHARED) is None
+    listed = knowledge.list_kbs(repo, user(repo, "alice"), SETTINGS)
+    assert [kb["id"] for kb in listed] == [knowledge.SHARED]
+    assert listed[0]["kind"] == "shared" and listed[0]["ready"] is False
+    again = knowledge.list_kbs(repo, user(repo, "bob"), SETTINGS)
+    assert [kb["id"] for kb in again] == [knowledge.SHARED]
+
+
+def test_an_empty_shared_library_adds_no_noise_to_answers(env):
+    repo, _ = env
+    knowledge.list_kbs(repo, user(repo, "alice"), SETTINGS)
+    kbs, notes = qa.resolve_scope(repo, user(repo, "bob"), None, SETTINGS)
+    assert kbs == [] and notes == []
+
+
 def test_embedding_indexes_all_chunks_even_with_legacy_limit(env, tmp_path, monkeypatch):
     repo, bucket = env
     monkeypatch.setattr(
@@ -655,7 +692,8 @@ def test_routes_hide_other_users_private_knowledge_bases(env, monkeypatch):
         assert client.get(url + "/download").status_code == 200
 
         app.dependency_overrides[verify_firebase_token] = lambda: {"uid": "bob"}
-        assert client.get("/api/v1/knowledge-bases").json() == []
+        # Bob sees the shared library and none of Alice's private knowledge bases.
+        assert [kb["kind"] for kb in client.get("/api/v1/knowledge-bases").json()] == ["shared"]
         assert client.get(url + "/processing").status_code == 404
         assert client.get(url + "/download").status_code == 404
         assert client.delete(url, headers={"if-match": '"2"'}).status_code == 404

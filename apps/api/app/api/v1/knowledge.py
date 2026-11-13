@@ -39,8 +39,8 @@ def uploads_enabled():
 
 
 @router.get("/knowledge-bases", response_model=list[KnowledgeBaseOut])
-def kb_list(user=Depends(current_user), repo=Depends(get_repository)):
-    return knowledge.list_kbs(repo, user, get_settings())
+def kb_list(request: Request, user=Depends(current_user), repo=Depends(get_repository)):
+    return knowledge.list_kbs(repo, user, get_settings(), request.state.request_id)
 
 
 @router.post("/knowledge-bases", response_model=KnowledgeBaseOut, status_code=201)

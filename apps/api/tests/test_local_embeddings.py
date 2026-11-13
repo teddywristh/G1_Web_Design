@@ -66,9 +66,50 @@ def test_local_adapter_rejects_incompatible_output(payload):
 
 def test_busy_is_short_retry_failure_not_openrouter_quota():
     transport = httpx.MockTransport(lambda _: httpx.Response(429))
+    patient = settings().model_copy(update={"local_embedding_busy_wait_seconds": 0})
     with pytest.raises(APIError) as error:
-        LocalEmbedding(settings(), input_type="query", transport=transport).embed(["x"])
+        LocalEmbedding(patient, input_type="query", transport=transport).embed(["x"])
     assert error.value.code == "embedding_busy"
+
+
+def test_a_question_waits_for_its_turn_while_the_worker_holds_the_gpu(monkeypatch):
+    config = settings()
+    busy = iter([429, 429, 429])
+    calls = []
+
+    def handler(request):
+        calls.append(json.loads(request.content)["input_type"])
+        status = next(busy, 200)
+        if status == 429:
+            return httpx.Response(429)
+        return httpx.Response(
+            200,
+            json={
+                "model": config.local_embedding_model,
+                "data": [{"index": 0, "embedding": [1.0, 0.0, 0.0]}],
+            },
+        )
+
+    monkeypatch.setattr("app.services.embeddings.time.sleep", lambda _: None)
+    vectors = LocalEmbedding(
+        config, input_type="query", transport=httpx.MockTransport(handler)
+    ).embed(["x"])
+    assert vectors == [[1.0, 0.0, 0.0]] and len(calls) == 4
+
+
+def test_the_ingestion_worker_is_not_made_to_wait_in_line(monkeypatch):
+    calls = []
+
+    def handler(request):
+        calls.append(1)
+        return httpx.Response(429)
+
+    monkeypatch.setattr("app.services.embeddings.time.sleep", lambda _: None)
+    with pytest.raises(APIError) as error:
+        LocalEmbedding(
+            settings(), input_type="passage", transport=httpx.MockTransport(handler)
+        ).embed(["x"])
+    assert error.value.code == "embedding_busy" and len(calls) == 1
 
 
 def test_authenticated_embedding_route_uses_local_adapter(monkeypatch):

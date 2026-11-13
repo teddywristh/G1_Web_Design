@@ -39,11 +39,37 @@ class EmbeddingRequest(BaseModel):
 
 
 class Runtime:
+    """One GPU, one inference at a time, shared by two kinds of callers.
+
+    A question (input_type "query") is interactive: it queues for the GPU for up to
+    EMBEDDING_QUERY_WAIT_SECONDS and goes ahead of the ingestion worker. Ingestion sends
+    passages one at a time and only takes the GPU when no question is waiting; otherwise it
+    gets 429 and retries on its own schedule. A question therefore waits for at most the
+    passage that is already running (tens to hundreds of milliseconds).
+    """
+
     def __init__(self):
         self.model = None
         self.torch = None
         self.lock = threading.Lock()
         self.failure = None
+        self.gate = threading.Lock()
+        self.waiting_queries = 0
+        self.query_wait = float(os.getenv("EMBEDDING_QUERY_WAIT_SECONDS", "15"))
+
+    def take_gpu(self, interactive):
+        if interactive:
+            with self.gate:
+                self.waiting_queries += 1
+            try:
+                return self.lock.acquire(timeout=self.query_wait)
+            finally:
+                with self.gate:
+                    self.waiting_queries -= 1
+        with self.gate:
+            if self.waiting_queries:
+                return False
+        return self.lock.acquire(blocking=False)
 
     def load(self):
         try:
@@ -80,7 +106,8 @@ class Runtime:
     def encode(self, body):
         if self.model is None:
             raise HTTPException(503, "Model unavailable; inspect service logs")
-        if not self.lock.acquire(blocking=False):
+        queued = time.monotonic()
+        if not self.take_gpu(body.input_type == "query"):
             raise HTTPException(
                 429, "Inference busy; retry later", headers={"Retry-After": "1"}
             )
@@ -138,8 +165,10 @@ class Runtime:
             if self.torch is not None and self.torch.cuda.is_available():
                 gpu_bytes = self.torch.cuda.max_memory_allocated()
             logger.info(
-                "embedding count=%d duration_ms=%d gpu_peak_bytes=%d",
+                "embedding type=%s count=%d waited_ms=%d duration_ms=%d gpu_peak_bytes=%d",
+                body.input_type,
                 len(texts),
+                (started - queued) * 1000,
                 (time.monotonic() - started) * 1000,
                 gpu_bytes,
             )

@@ -82,8 +82,10 @@ def create_kb(repo, user, title, request_id, settings):
     return kb_out(created)
 
 
-def list_kbs(repo, user, settings):
-    shared = repo.get("knowledge_bases", SHARED)
+def list_kbs(repo, user, settings, request_id="kb-list"):
+    # The upload form only offers a knowledge base that is listed, and the shared one used to be
+    # created by the first upload: an administrator could never add the first shared document.
+    shared = repo.get("knowledge_bases", SHARED) or ensure_shared_kb(repo, request_id)
     private = repo.query(
         "knowledge_bases",
         [("ownerUid", "==", user["id"]), ("deletedAt", "==", None)],

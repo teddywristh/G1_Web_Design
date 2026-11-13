@@ -3,6 +3,8 @@
 import hashlib
 import logging
 import math
+import random
+import time
 from datetime import timedelta
 from uuid import uuid4
 
@@ -156,6 +158,29 @@ class LocalEmbedding:
             raise ValueError("Invalid embedding input type")
         self.transport = transport
 
+    def post(self, client, key, text):
+        """One embedding request. The host answers 429 while it serves someone else.
+
+        A question is interactive, so it keeps asking for a short while until its turn comes;
+        the ingestion worker (passages) has its own retry schedule and gets the 429 at once.
+        """
+        patience = self.settings.local_embedding_busy_wait_seconds
+        give_up = time.monotonic() + (patience if self.input_type == "query" else 0)
+        while True:
+            response = client.post(
+                self.settings.local_embedding_url.rstrip("/") + "/v1/embeddings",
+                headers={"Authorization": "Bearer " + key} if key else {},
+                json={
+                    "model": self.settings.local_embedding_model,
+                    "input": [text],
+                    "input_type": self.input_type,
+                    "dimensions": self.settings.embedding_dimensions,
+                },
+            )
+            if response.status_code != 429 or time.monotonic() >= give_up:
+                return response
+            time.sleep(random.uniform(0.05, 0.15))
+
     def embed(self, texts):
         vectors = []
         key = self.settings.local_embedding_api_key.get_secret_value()
@@ -166,16 +191,7 @@ class LocalEmbedding:
             ) as client:
                 # One text per call keeps lease heartbeats frequent and avoids large GPU batches.
                 for text in texts:
-                    response = client.post(
-                        self.settings.local_embedding_url.rstrip("/") + "/v1/embeddings",
-                        headers={"Authorization": "Bearer " + key} if key else {},
-                        json={
-                            "model": self.settings.local_embedding_model,
-                            "input": [text],
-                            "input_type": self.input_type,
-                            "dimensions": self.settings.embedding_dimensions,
-                        },
-                    )
+                    response = self.post(client, key, text)
                     if response.status_code == 429:
                         raise APIError(
                             503, "embedding_busy", "Local embedding host is busy; retry shortly"

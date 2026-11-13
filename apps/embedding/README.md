@@ -35,7 +35,12 @@ are applied by Sentence Transformers. Prefix truncation is followed by L2
 normalization. Default output is 1536 dimensions, allowed range 1–2048.
 GET /health reports process health and model_loaded; GET /ready returns 503 until
 loaded. Missing dependencies, CUDA or weights keep the process alive but unready.
-429 means another inference is running; retry after 1 second. 503 also covers GPU
+The GPU serves one inference at a time and is shared by a priority queue: a `query` request waits
+for its turn (up to `EMBEDDING_QUERY_WAIT_SECONDS`, default 15) and goes ahead of ingestion, while
+`passage` requests take the GPU only when no query is waiting. 429 therefore means "the GPU is
+taken (or a question is queued); retry after 1 second", and a question sees it only after its full
+wait. The card is too small to hold a second model copy, so the GPU is shared by time, not split.
+503 also covers GPU
 OOM and invalid model output. Logs contain timing/counts, never input content.
 
 ## Expose the port

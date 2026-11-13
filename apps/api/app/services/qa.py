@@ -175,6 +175,8 @@ def resolve_scope(repo, user, kb_ids, settings):
             raise
         if kb.get("activeIndexGeneration"):
             kbs.append({"id": kb["id"], "generation": kb["activeIndexGeneration"]})
+        elif kb["kind"] == "shared" and not kb.get("latestGeneration"):
+            continue  # the shared library exists but no document has ever been built into it
         else:
             notes.append("knowledge_base_not_ready:" + kb["id"])
             kbs.append({"id": kb["id"], "generation": None})
@@ -249,6 +251,7 @@ def retrieve(repo, kbs, request, embedder, profile, as_of, settings, notes, run)
                     "ai_unavailable",
                     "ai_not_configured",
                     "embedding_quota_wait",
+                    "embedding_busy",
                 }:
                     raise
                 notes.append("embedding_unavailable")

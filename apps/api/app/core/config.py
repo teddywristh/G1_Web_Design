@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     local_embedding_model: str = "nvidia/Nemotron-3.5-Embed-1B-BF16"
     local_embedding_api_key: SecretStr = SecretStr("")
     local_embedding_timeout_seconds: int = Field(default=120, ge=1, le=300)
+    # The GPU host serves one request at a time; a question waits this long for its turn while
+    # the ingestion worker is embedding a document, instead of failing at once.
+    local_embedding_busy_wait_seconds: float = Field(default=8.0, ge=0, le=30)
     local_embedding_profile_version: str = "bf16-sdpa-512-l2-v1"
     openrouter_embedding_model: str = ""
     openrouter_embedding_api_key: SecretStr = SecretStr("")
