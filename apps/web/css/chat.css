@@ -22,7 +22,8 @@
   overflow-y: auto;
 }
 .question-workspace {
-  height: 100%;
+  height: auto;
+  flex: 1 1 auto;
   min-height: 0;
   max-width: 880px;
   margin: 0 auto;

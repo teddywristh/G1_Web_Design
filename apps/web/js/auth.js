@@ -17,6 +17,7 @@ function showAuth(message = "") {
   $("#login-action").hidden = true;
   $("#sidebar").hidden = true;
   $("#app-shell").hidden = true;
+  $("#landing-view").hidden = true;
   $("#auth-error").textContent = "";
   $("#auth-notice").textContent = message;
   $("#auth-notice").hidden = !message;
@@ -43,8 +44,25 @@ function showGuest(message = "") {
   renderScope();
   renderKbSelect();
   renderChat();
-  navigate("chat");
+  showLanding();
   if (message) notify(message);
+}
+
+function showLanding() {
+  closeMenu();
+  $("#auth-view").hidden = true;
+  $("#landing-view").hidden = false;
+  $("#sidebar").hidden = true;
+  $("#app-shell").hidden = true;
+  $("#login-action").hidden = true;
+}
+
+function showGuestWorkspace(view = "chat") {
+  $("#landing-view").hidden = true;
+  $("#sidebar").hidden = false;
+  $("#app-shell").hidden = false;
+  $("#login-action").hidden = false;
+  navigate(view);
 }
 
 function setAuthMode(mode) {
@@ -105,6 +123,7 @@ async function enterSession(session) {
   state.ai = prefs.ai || null;
   $("#as-of").value = "";
   $("#auth-view").hidden = true;
+  $("#landing-view").hidden = true;
   $("#sidebar").hidden = false;
   $("#app-shell").hidden = false;
   $("#user-name").textContent = state.user.displayName;
@@ -122,10 +141,13 @@ async function enterSession(session) {
 
 async function boot() {
   setAuthMode("login");
+  showLanding();
   try {
     await enterSession(await api.get("/auth/me"));
   } catch (error) {
-    showGuest(error.status === 0 ? error.message : "");
+    // Backend không chạy vẫn cho phép mở landing và dùng chế độ trải nghiệm.
+    // Chỉ báo lỗi khi người dùng thực hiện thao tác cần máy chủ.
+    showGuest();
   }
   setupGoogle();
 }
@@ -259,7 +281,16 @@ $("#resend-otp").addEventListener("click", async (event) => {
     button.disabled = false;
   }
 });
-$("#guest-back").addEventListener("click", () => showGuest());
+$("#guest-back").addEventListener("click", () => showGuestWorkspace());
+$("#landing-start").addEventListener("click", () => showGuestWorkspace());
+document.querySelectorAll('[data-action="landing-start"]').forEach((button) => {
+  button.addEventListener("click", () => showGuestWorkspace());
+});
+$("#landing-library").addEventListener("click", () => showGuestWorkspace("library"));
+$("#landing-login").addEventListener("click", () => {
+  setAuthMode("login");
+  showAuth();
+});
 $("#login-action").addEventListener("click", () => {
   setAuthMode("login");
   showAuth();
@@ -297,4 +328,4 @@ async function logout(all) {
 $("#logout").addEventListener("click", () => logout(false));
 $("#logout-all").addEventListener("click", () => logout(true));
 
-export { boot, setAuthMode, showAuth };
+export { boot, setAuthMode, showAuth, showGuestWorkspace };

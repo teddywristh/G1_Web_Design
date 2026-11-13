@@ -41,6 +41,15 @@ function navigate(view, settingsPage = "account") {
     library: "Thư viện tài liệu",
     settings: "Thiết lập",
   }[view];
+  const footnote = {
+    chat: "Hỏi đáp: câu trả lời có thể có sai sót; hãy kiểm tra nguồn trước khi sử dụng.",
+    library: "Thư viện: tài liệu và metadata chỉ mang tính tham khảo, cần đối chiếu bản gốc.",
+    settings: {
+      account: "Tài khoản: lịch sử hội thoại được lưu trên thiết bị này và có thể xóa bất cứ lúc nào.",
+      ai: "Kết nối AI: khóa API được xử lý qua máy chủ; không chia sẻ khóa với người khác.",
+      admin: "Quản trị: các thao tác quản trị có thể ảnh hưởng đến người dùng và tài liệu dùng chung.",
+    },
+  };
   if (settings) {
     state.settingsPage =
       settingsPage === "ai" || (settingsPage === "admin" && isAdmin()) ? settingsPage : "account";
@@ -65,16 +74,19 @@ function navigate(view, settingsPage = "account") {
       if (active) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
     });
+    $("#route-footnote").textContent = footnote.settings[state.settingsPage];
     if (account) loadSessions();
     else if (admin) loadAdmin();
     else loadConnections();
   } else if (view === "library") {
+    $("#route-footnote").textContent = footnote.library;
     if (state.user) loadDocs(true);
     else {
       renderKbControls();
       renderDocuments();
     }
   } else if (state.user) loadKbs();
+  if (view === "chat") $("#route-footnote").textContent = footnote.chat;
   closeMenu();
 }
 
