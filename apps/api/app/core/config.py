@@ -61,7 +61,8 @@ class Settings(BaseSettings):
     openrouter_api_key: str = Field(default="", repr=False)
     anthropic_model: str = ""
     anthropic_api_version: str = "2023-06-01"
-    ai_max_output_tokens: int = Field(default=2048, ge=128, le=8192)
+    # Reasoning tokens count against this cap, so a full legal answer needs real headroom.
+    ai_max_output_tokens: int = Field(default=6000, ge=128, le=8192)
     openai_api_key: str = Field(default="", repr=False)
     default_llm_model: str = "gpt-4o-mini"
     default_embedding_model: str = "text-embedding-3-small"
@@ -92,15 +93,13 @@ class Settings(BaseSettings):
     max_related_provisions: int = Field(default=12, ge=0)
     max_official_searches: int = Field(default=2, ge=0)
     max_fetched_sources: int = Field(default=4, ge=0)
-    qa_deadline_seconds: int = Field(default=40, ge=5)
-    # Fast path: questions that look simple use low reasoning effort and a short answer budget.
+    # The router picks the reasoning effort. Raise QA_DEEP_EFFORT to "high" for slower, more
+    # careful answers (the OpenCode worker gives up after about 75 seconds).
     qa_router_enabled: bool = True
-    qa_fast_effort: Literal["none", "minimal", "low", "medium", "high"] = "low"
+    qa_fast_effort: Literal["none", "minimal", "low", "medium", "high"] = "medium"
     qa_deep_effort: Literal["none", "minimal", "low", "medium", "high"] = "medium"
-    qa_fast_max_claims: int = Field(default=4, ge=1, le=20)
-    qa_deep_max_claims: int = Field(default=8, ge=1, le=20)
     # "when_empty": search the web only if the knowledge base found nothing (or examples were
-    # requested); the model can still ask for it later. "always": the previous behaviour.
+    # requested). "always": search it on every question when web search is switched on.
     qa_web_prefetch: Literal["when_empty", "always"] = "when_empty"
     # Answer cache keyed by knowledge-base generation, so publishing a new corpus invalidates it.
     qa_cache_enabled: bool = True

@@ -34,48 +34,41 @@ PACK = {
 }
 
 
-def output(**claim):
-    base = {"claim_id": "c1", "kind": "legal_rule", "text": "x", "evidence_ids": ["e1"]}
-    return json.dumps({"status": "answered", "claims": [{**base, **claim}]})
+def test_markers_become_numbers_in_order_of_first_use():
+    numbers = {}
+    text, fresh = qa.link("Tối đa 60 ngày [e2]. Xem thêm [e1, e2].", PACK, numbers)
+    assert text == "Tối đa 60 ngày [1]. Xem thêm [2][1]."
+    assert fresh == ["e2", "e1"] and numbers == {"e2": 1, "e1": 2}
 
 
-def test_valid_output_is_accepted_even_inside_code_fence():
-    raw = "```json\n" + output(quote="tối đa là 60 ngày") + "\n```"
-    assert qa.parse_output(raw, PACK, "").claims[0].claim_id == "c1"
+def test_unknown_markers_are_dropped_and_plain_text_is_untouched():
+    text, fresh = qa.link("Điều 40 [e9] và khoản [1] của Bộ luật.", PACK, {})
+    assert text == "Điều 40  và khoản [1] của Bộ luật." and fresh == []
 
 
-@pytest.mark.parametrize(
-    "claim",
-    [
-        {"evidence_ids": ["e9"]},  # invented evidence id
-        {"evidence_ids": []},  # legal rule without any source
-        {"evidence_ids": ["e2"]},  # commentary cannot back a legal rule
-        {"quote": "một đoạn không có trong nguồn"},
-        {"kind": "user_fact", "evidence_ids": [], "quote": "tôi làm 5 năm"},
-        {"kind": "application_inference"},  # inference needs stated assumptions
-    ],
-)
-def test_unsupported_claims_are_rejected(claim):
-    with pytest.raises(ValueError):
-        qa.parse_output(output(**claim), PACK, "tôi làm việc")
+def test_numbers_are_shared_so_streamed_lines_match_the_final_text():
+    numbers = {}
+    first, _ = qa.link("Một [e2].", PACK, numbers)
+    second, _ = qa.link("Hai [e1] và [e2].", PACK, numbers)
+    whole, _ = qa.link("Một [e2].\nHai [e1] và [e2].", PACK, {})
+    assert first + "\n" + second == whole
 
 
-def test_user_fact_must_come_from_the_user():
-    claim = {"kind": "user_fact", "evidence_ids": [], "quote": "tôi làm việc"}
-    assert qa.parse_output(output(**claim), PACK, "Tôi làm việc 5 năm")
+def test_a_follow_up_is_looked_up_together_with_the_question_before_it():
+    from app.schemas.rag import AskRequest
 
-
-def test_clarification_needs_questions():
-    with pytest.raises(ValueError):
-        qa.parse_output('{"status": "needs_clarification"}', PACK, "")
-
-
-def test_conflicting_versions_of_same_article_are_detected():
-    base = {"number": "01/2026/QH", "identifier": "dieu-1", "provisionVersionId": "a"}
-    one = {**base, "documentId": "d1", "text": "mức 10"}
-    two = {**base, "documentId": "d2", "text": "mức 20", "provisionVersionId": "b"}
-    assert qa.conflicts([one, two]) == [one, two]
-    assert qa.conflicts([one, {**two, "number": "02/2026/QH"}]) == []
+    alone = AskRequest(question="tất cả các loại luôn")
+    assert qa.search_request(alone) is alone
+    follow = AskRequest(
+        question="tất cả các loại luôn",
+        history=[
+            {"role": "user", "text": "Vi phạm gì bị xử lý hình sự nặng nhất?"},
+            {"role": "assistant", "text": "Tội phạm bị tử hình."},
+        ],
+    )
+    assert qa.search_request(follow).question == (
+        "Vi phạm gì bị xử lý hình sự nặng nhất? tất cả các loại luôn"
+    )
 
 
 def test_reference_parsing():

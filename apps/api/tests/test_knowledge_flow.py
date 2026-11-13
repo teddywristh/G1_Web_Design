@@ -84,21 +84,10 @@ def ask(repo, who, kb_ids, ai, question="Điều 2 thử việc bao lâu?"):
 
 
 def good_reply(chunks):
-    key = next(c.text[1 : c.text.index("]")] for c in chunks if "60 ngày" in c.text)
-    return json.dumps(
-        {
-            "status": "answered",
-            "claims": [
-                {
-                    "claim_id": "c1",
-                    "kind": "legal_rule",
-                    "text": "Thử việc tối đa 60 ngày.",
-                    "evidence_ids": [key],
-                    "quote": "tối đa là 60 ngày",
-                }
-            ],
-        }
-    )
+    key = next((c.text[1 : c.text.index("]")] for c in chunks if "60 ngày" in c.text), None)
+    if key is None:
+        return "Thử việc tối đa 60 ngày theo quy định chung của luật lao động."
+    return f"Thử việc tối đa 60 ngày [{key}]."
 
 
 def test_upload_creates_one_job_and_processing_reaches_ready(env, tmp_path):
@@ -128,95 +117,6 @@ def test_upload_and_download_with_local_storage(env, tmp_path):
     assert process(repo, bucket)["status"] == "succeeded"
 
 
-def test_missing_evidence_triggers_one_more_web_search(env, monkeypatch):
-    from app.services import web_sources
-
-    repo, _ = env
-    first = web_sources.web_item(
-        "https://vbpl.vn/first", "Văn bản đầu", "câu hỏi", "official_legal_text"
-    )
-    second = web_sources.web_item(
-        "https://vbpl.vn/second", "Quy định cần tìm", "câu hỏi", "official_legal_text"
-    )
-    searches = []
-
-    def find_sources(ai, settings, query, mode, budget):
-        searches.append(query)
-        budget["searches"] += 1
-        return ([first] if len(searches) == 1 else [second]), []
-
-    monkeypatch.setattr(web_sources, "gather", find_sources)
-    calls = []
-
-    def reply(chunks):
-        calls.append(chunks)
-        if len(calls) == 1:
-            return json.dumps(
-                {
-                    "status": "insufficient_evidence",
-                    "claims": [],
-                    "search_queries": ["quy định cần tìm"],
-                }
-            )
-        return json.dumps(
-            {
-                "status": "answered",
-                "claims": [
-                    {
-                        "claim_id": "c1",
-                        "kind": "legal_rule",
-                        "text": "Quy định cần tìm",
-                        "evidence_ids": ["e1"],
-                        "quote": "Quy định cần tìm",
-                    }
-                ],
-            }
-        )
-
-    request = AskRequest(question="câu hỏi pháp luật", knowledge_base_ids=[], web_mode="official")
-    result = qa.answer(
-        repo,
-        user(repo, "alice"),
-        request,
-        FakeAI(reply),
-        None,
-        SETTINGS.model_copy(update={"official_web_enabled": True}),
-    )
-    assert searches == ["câu hỏi pháp luật", "quy định cần tìm"]
-    assert result.status == "answered"
-    assert result.citations[0].source_url == "https://vbpl.vn/second"
-
-
-def test_insufficient_answer_explains_evidence_reference(env, monkeypatch):
-    from app.services import web_sources
-
-    repo, _ = env
-    item = web_sources.web_item(
-        "https://vbpl.vn/source", "Nguồn chưa đủ", "câu hỏi", "official_legal_text"
-    )
-    monkeypatch.setattr(web_sources, "gather", lambda *_: ([item], []))
-    ai = FakeAI(
-        json.dumps(
-            {
-                "status": "insufficient_evidence",
-                "claims": [],
-                "unresolved_sources": ["e1 thiếu nội dung"],
-            }
-        )
-    )
-    request = AskRequest(question="câu hỏi pháp luật", knowledge_base_ids=[], web_mode="official")
-    result = qa.answer(
-        repo,
-        user(repo, "alice"),
-        request,
-        ai,
-        None,
-        SETTINGS.model_copy(update={"official_web_enabled": True}),
-    )
-    assert "nguồn [1]" in result.answer
-    assert result.citations[0].source_url == "https://vbpl.vn/source"
-
-
 def test_parsed_document_is_searchable_while_embedding_waits(env, tmp_path, monkeypatch):
     repo, bucket = env
     kb, doc = upload(repo, bucket, tmp_path)
@@ -228,7 +128,7 @@ def test_parsed_document_is_searchable_while_embedding_waits(env, tmp_path, monk
     job = process(repo, bucket)
     assert job["status"] == "retry_wait" and job["stage"] == "embed"
     response = ask(repo, "alice", [kb["id"]], FakeAI(good_reply))
-    assert response.status == "answered" and "document_processing" in response.source_limitations
+    assert response.status == "answered" and response.citations
     monkeypatch.setattr(evidence, "get_settings", lambda: SETTINGS)
     provision_id = response.citations[0].provision_version_id
     assert evidence.read(repo, user(repo, "alice"), provision_id)["id"] == provision_id
@@ -259,7 +159,7 @@ def test_empty_kb_can_use_opted_in_web_without_embedding(env, monkeypatch):
         SETTINGS.model_copy(update={"official_web_enabled": True}),
     )
     assert answer.status == "answered" and answer.citations[0].source_url == "https://vbpl.vn/test"
-    assert "web_validity_unverified" in answer.source_limitations
+    assert not any("unverified" in note for note in answer.source_limitations)
 
 
 def test_web_workflow_broadens_query_and_answers_with_verified_source(env, monkeypatch):
@@ -337,7 +237,8 @@ def test_web_is_never_searched_without_opt_in(env, monkeypatch):
         None,
         SETTINGS.model_copy(update={"official_web_enabled": True}),
     )
-    assert result.status == "insufficient_evidence"
+    assert result.status == "answered" and result.citations == []
+    assert "no_sources_general_knowledge" in result.source_limitations
 
 
 def test_embedding_failure_falls_back_to_exact_search(env, tmp_path):
@@ -564,7 +465,8 @@ def test_deleted_document_stops_serving_immediately(env, tmp_path):
     ai = FakeAI(good_reply)
     provision = ask(repo, "alice", [kb["id"]], ai).citations[0].provision_version_id
     repo.rows[("knowledge_documents", doc["id"])].update(deletedAt=date.today())
-    assert ask(repo, "alice", [kb["id"]], ai).status == "insufficient_evidence"
+    after = ask(repo, "alice", [kb["id"]], ai)
+    assert after.citations == [] and "no_sources_general_knowledge" in after.source_limitations
     with pytest.raises(APIError):
         evidence.read(repo, user(repo, "alice"), provision)
 
@@ -688,7 +590,8 @@ def test_shared_generation_needs_admin_publish(env, tmp_path):
     assert process(repo, bucket)["status"] == "needs_review"
     kb = repo.get("knowledge_bases", "shared")
     assert kb["activeIndexGeneration"] is None
-    assert ask(repo, "bob", None, FakeAI(good_reply)).status == "insufficient_evidence"
+    unpublished = ask(repo, "bob", None, FakeAI(good_reply))
+    assert unpublished.citations == []  # nothing is served from a corpus that is not published
     generation, version = kb["latestGeneration"], kb["version"]
     knowledge.publish_generation(repo, "shared", generation, version, "alice", "t", SETTINGS)
     assert repo.query("processing_jobs")[0]["status"] == "succeeded"
@@ -697,22 +600,14 @@ def test_shared_generation_needs_admin_publish(env, tmp_path):
     assert "validity_unverified" not in answer.source_limitations
 
 
-def test_hallucinated_or_unsupported_output_is_downgraded(env, tmp_path):
+def test_the_models_answer_is_not_checked_against_the_sources(env, tmp_path):
     repo, bucket = env
     kb, _ = upload(repo, bucket, tmp_path)
     process(repo, bucket)
-    fake_id = json.dumps(
-        {
-            "status": "answered",
-            "claims": [
-                {"claim_id": "c1", "kind": "legal_rule", "text": "x", "evidence_ids": ["e99"]}
-            ],
-        }
-    )
-    ai = FakeAI(fake_id)
+    ai = FakeAI("Điều 99 quy định mức phạt riêng [e99].")
     response = ask(repo, "alice", [kb["id"]], ai)
-    assert response.status == "insufficient_evidence" and ai.calls == 2
-    assert response.citations == []
+    assert response.status == "answered" and ai.calls == 1
+    assert "Điều 99 quy định mức phạt riêng" in response.answer and "[e99]" not in response.answer
 
 
 def test_exact_lookup_finds_article_without_vector(env, tmp_path):
@@ -726,7 +621,7 @@ def test_exact_lookup_finds_article_without_vector(env, tmp_path):
     assert response.status == "answered"
     plain = AskRequest(question="thử việc", knowledge_base_ids=[kb["id"]], retrieval_mode="keyword")
     result = qa.answer(repo, user(repo, "alice"), plain, FakeAI(good_reply), None, SETTINGS)
-    assert result.status == "insufficient_evidence"
+    assert result.status == "answered" and result.citations == []
     assert "no_lexical_index" in result.source_limitations
 
 

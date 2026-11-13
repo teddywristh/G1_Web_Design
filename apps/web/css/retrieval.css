@@ -115,6 +115,18 @@
 .answer-text p + p {
   margin-top: 14px;
 }
+.answer-text .answer-heading {
+  margin-top: 20px;
+  font-weight: 700;
+}
+.answer-text .answer-bullet {
+  margin-top: 6px;
+  padding-left: 1.2em;
+  text-indent: -0.9em;
+}
+.answer-text .answer-bullet + .answer-bullet {
+  margin-top: 6px;
+}
 .answer-block {
   margin-top: 18px;
   font-size: 14px;

@@ -154,9 +154,10 @@ def ask_stream(
 ):
     """Same workflow as /ask, as server-sent events.
 
-    Events: stage, sources (evidence found), claim (an answer sentence that passed validation),
-    reset (discard claims shown so far), done (the final, complete AskResponse) and error.
-    The `done` response is authoritative and replaces whatever was streamed.
+    Events: stage, sources (evidence found), text (a piece of the answer as the model writes it,
+    with its source markers already numbered), reset (discard the text shown so far), done (the
+    final, complete AskResponse) and error. The `done` response is authoritative and replaces whatever
+    was streamed.
     """
     settings, selected, ai, embedder, scope = prepare(request, http_request, user, repo)
 

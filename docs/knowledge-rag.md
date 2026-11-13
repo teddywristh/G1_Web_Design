@@ -15,7 +15,7 @@ The web UI (PR-07, PR-08) and server-side chat history are not part of this chan
    `POST /admin/knowledge-bases/shared/publish` (also used to roll back to an earlier built generation).
 4. `POST /rag/ask` (or `POST /rag/ask/stream`, same workflow as server-sent events) runs `services/qa.py`:
    scope -> answer cache -> exact lookup + Firestore vector search -> canonical re-validation (tombstone,
-   generation, legal time) -> sibling expansion -> LLM -> claim validation. Latency design, the stream
+   generation, legal time) -> sibling expansion -> one free-form LLM answer (no claim validation since policy `qa-3`). Latency design, the stream
    protocol and the cache rules are in [qa-latency.md](qa-latency.md).
 
 ## Decisions (ADR summary)

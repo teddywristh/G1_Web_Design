@@ -224,6 +224,19 @@
   color: var(--accent-dark);
   filter: none;
 }
+.effort-chip {
+  padding: 0 4px;
+}
+.effort-chip select {
+  height: 100%;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 17px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
 .model-popover {
   position: absolute;
   left: 0;

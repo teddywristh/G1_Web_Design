@@ -56,7 +56,7 @@ const STAGE_TEXT = {
   publish: "tạo chỉ mục",
 };
 const STATUS_TEXT = {
-  answered: "Có căn cứ",
+  answered: "Đã trả lời",
   needs_clarification: "Cần bổ sung thông tin",
   insufficient_evidence: "Chưa đủ căn cứ",
   conflicting_sources: "Nguồn mâu thuẫn",
@@ -76,6 +76,7 @@ const LIMIT_TEXT = {
   partially_expired: "Hết hiệu lực một phần",
   user_document_unverified: "Tài liệu người dùng, chưa xác minh nguồn",
   web_validity_unverified: "Nguồn web, chưa xác minh hiệu lực",
+  no_sources_general_knowledge: "Không có nguồn trong kho, trả lời từ kiến thức chung của model",
   no_published_corpus: "Kho luật dùng chung chưa được xuất bản",
   no_lexical_index: "Chưa có chỉ mục từ khóa; chỉ tra theo số hiệu/điều",
   retrieval_budget_reached: "Đã chạm giới hạn số lượt tìm",

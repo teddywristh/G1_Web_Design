@@ -33,22 +33,34 @@ function newChat() {
   $("#question").focus();
 }
 
-// Turn "[1]" markers in an answer into buttons that open the cited evidence.
-function answerNode(data) {
-  const box = element("div", "answer-text");
-  (data.answer || "").split("\n").forEach((line) => {
-    const paragraph = element("p");
-    line.split(/(\[\d+\])/).forEach((part) => {
-      const match = part.match(/^\[(\d+)\]$/);
-      const citation = match && data.citations?.[Number(match[1]) - 1];
-      if (!citation) {
-        paragraph.append(part);
-        return;
-      }
+// Render the answer: headings, bullet lines and **bold** from Markdown, and "[1]" markers as
+// buttons that open the cited evidence. Everything goes through textContent, never innerHTML.
+function appendInline(parent, text, data) {
+  text.split(/(\[\d+\]|\*\*[^*]+\*\*)/).forEach((part) => {
+    if (!part) return;
+    const cite = part.match(/^\[(\d+)\]$/);
+    const citation = cite && data.citations?.[Number(cite[1]) - 1];
+    if (citation) {
       const button = element("button", "cite", part);
       button.addEventListener("click", () => openEvidence(citation));
-      paragraph.append(button);
-    });
+      parent.append(button);
+    } else if (/^\*\*[^*]+\*\*$/.test(part)) {
+      parent.append(element("strong", "", part.slice(2, -2)));
+    } else {
+      parent.append(part);
+    }
+  });
+}
+
+function answerNode(data) {
+  const box = element("div", "answer-text");
+  (data.answer || "").split("\n").forEach((raw) => {
+    const line = raw.trim();
+    if (!line || /^[-*_]{3,}$/.test(line)) return;
+    const heading = line.match(/^#{1,6}\s+(.*)$/);
+    const bullet = line.match(/^[-*•]\s+(.*)$/);
+    const paragraph = element("p", heading ? "answer-heading" : bullet ? "answer-bullet" : "");
+    appendInline(paragraph, heading ? heading[1] : bullet ? "• " + bullet[1] : line, data);
     box.append(paragraph);
   });
   return box;
@@ -163,10 +175,23 @@ function renderChat() {
   renderCounts();
 }
 
+// The last turns of this conversation, so a follow-up ("tất cả các loại luôn") has its context.
+function historyFor(chat) {
+  return (chat?.messages || [])
+    .filter((message) => message.role === "user" || message.data)
+    .slice(-6)
+    .map((message) => ({
+      role: message.role,
+      text: String((message.role === "user" ? message.text : message.data.answer) || "").slice(0, 3000),
+    }))
+    .filter((turn) => turn.text.trim());
+}
+
 function requestBody(question, selection) {
   const body = {
     question,
     ...selection,
+    history: historyFor(activeChat()),
     web_mode: $("#web-search").checked ? "official" : "off",
     public_embedding_input_confirmed: $("#query-public-confirm").checked,
   };
@@ -218,7 +243,7 @@ $("#question-form").addEventListener("submit", async (event) => {
     userId,
     startedAt: Date.now(),
     logs: ["Đã tiếp nhận câu hỏi."],
-    live: { stage: "", sources: [], claims: [], citations: [] },
+    live: { stage: "", sources: [], text: "", citations: [] },
   };
   state.pendingChat = pending;
   state.chatError = null;
@@ -230,6 +255,7 @@ $("#question-form").addEventListener("submit", async (event) => {
   renderChat();
   scrollToLatest();
   const timer = setInterval(renderProgress, 1000);
+  let frame = 0;
   const isCurrent = () =>
     state.user?.id === userId &&
     state.pendingChat === pending &&
@@ -248,8 +274,15 @@ $("#question-form").addEventListener("submit", async (event) => {
       (event) => {
         if (!isCurrent()) return;
         trackLive(pending, event);
-        renderProgress();
-        if (event.type === "claim" && state.chatId === chatId) scrollToLatest();
+        if (event.type !== "text") return renderProgress();
+        // Từng đoạn chữ đến rất nhanh: gộp lại, mỗi khung hình vẽ một lần.
+        if (!frame)
+          frame = requestAnimationFrame(() => {
+            frame = 0;
+            if (!isCurrent()) return;
+            renderProgress();
+            if (state.chatId === chatId) scrollToLatest();
+          });
       },
     );
     if (!data || !isCurrent()) return;
@@ -330,24 +363,25 @@ function trackLive(pending, event) {
   if (event.type === "stage") {
     live.stage = event.stage;
     // Nhóm kho mới bắt đầu: bỏ nội dung của nhóm trước.
-    if (event.stage === "retrieving") Object.assign(live, { sources: [], claims: [], citations: [] });
+    if (event.stage === "retrieving") Object.assign(live, { sources: [], text: "", citations: [] });
     pending.logs.push(`${STAGE_LOG[event.stage] || event.stage} (${elapsed(pending)})`);
   } else if (event.type === "sources") {
     live.sources = event.items || [];
     pending.logs.push(`Tìm thấy ${live.sources.length} nguồn (${elapsed(pending)}).`);
-  } else if (event.type === "claim") {
-    if (!live.claims.length) pending.logs.push(`Ý trả lời đầu tiên đã qua kiểm chứng (${elapsed(pending)}).`);
-    live.claims.push(event.text);
+  } else if (event.type === "text" || event.type === "claim") {
+    // "claim" là một dòng hoàn chỉnh của máy chủ cũ; "text" là từng đoạn khi model đang viết.
+    if (!live.text) pending.logs.push(`Bắt đầu viết câu trả lời (${elapsed(pending)}).`);
+    live.text += event.type === "claim" && live.text ? "\n" + event.text : event.text;
     live.citations.push(...(event.citations || []));
   } else if (event.type === "reset") {
-    Object.assign(live, { claims: [], citations: [] });
+    Object.assign(live, { text: "", citations: [] });
     pending.logs.push("Đang soạn lại câu trả lời.");
   }
 }
 
 function renderLive(pending) {
   const box = $("#progress-live");
-  const { sources, claims, citations } = pending.live;
+  const { sources, text, citations } = pending.live;
   const parts = [];
   if (sources.length) {
     const list = element("ul", "live-sources");
@@ -357,10 +391,10 @@ function renderLive(pending) {
     });
     parts.push(element("strong", "", "Nguồn đang xem xét"), list);
   }
-  if (claims.length) {
+  if (text) {
     parts.push(
       element("strong", "", "Câu trả lời đang hình thành"),
-      answerNode({ answer: claims.join("\n"), citations }),
+      answerNode({ answer: text, citations }),
     );
   }
   box.replaceChildren(...parts);
@@ -375,7 +409,7 @@ function renderProgress() {
   if (!pending || state.chatId !== pending.chatId) return;
   $("#progress-title").textContent = STAGE_TITLE[pending.live.stage] || "Đang xử lý câu hỏi";
   $("#progress-detail").textContent =
-    `${Math.floor((Date.now() - pending.startedAt) / 1000)} giây · Mỗi ý chỉ hiện sau khi đã đối chiếu với nguồn; kết quả cuối cùng sẽ thay thế bản nháp này.`;
+    `${Math.floor((Date.now() - pending.startedAt) / 1000)} giây · Câu trả lời hiện dần khi được viết; bản cuối cùng sẽ thay thế bản nháp này.`;
   $("#progress-log").replaceChildren(...pending.logs.map((text) => element("li", "", text)));
   renderLive(pending);
 }

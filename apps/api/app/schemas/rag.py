@@ -52,6 +52,13 @@ AnswerStatus = Literal[
 ]
 
 
+class HistoryTurn(BaseModel):
+    """An earlier message of the same conversation, so a follow-up is read in context."""
+
+    role: Literal["user", "assistant"]
+    text: str = Field(min_length=1, max_length=4000)
+
+
 class AskRequest(BaseModel):
     question: str = Field(min_length=3, max_length=4000)
     top_k: int = Field(default=5, ge=1, le=20)
@@ -66,6 +73,9 @@ class AskRequest(BaseModel):
     knowledge_base_ids: list[str] | None = Field(default=None, max_length=5)
     as_of: date | None = None
     session_facts: list[str] = Field(default_factory=list, max_length=10)
+    history: list[HistoryTurn] = Field(default_factory=list, max_length=12)
+    # "auto" lets the router decide; the others fix the reasoning effort (OpenAI models only).
+    effort: Literal["auto", "low", "medium", "high"] = "auto"
     web_mode: Literal["off", "official", "examples"] = "off"
 
 

@@ -65,7 +65,25 @@ function renderPicker() {
   label.textContent =
     state.models.loading && !group ? "Đang tải…" : group ? model?.name || state.ai.model : "Model";
   $("#model-button").title = group ? choiceLabel(state.ai) : "Chọn nhà cung cấp và model";
+  // Mức suy luận chỉ có tác dụng với model OpenAI; các nhà cung cấp khác tự quyết định.
+  $("#effort-chip").hidden = group?.provider !== "openai";
 }
+
+const EFFORT_KEY = "legal-ai-effort";
+try {
+  const saved = localStorage.getItem(EFFORT_KEY);
+  if (saved && [...$("#effort-select").options].some((option) => option.value === saved))
+    $("#effort-select").value = saved;
+} catch {
+  /* Không đọc được bộ nhớ trình duyệt thì dùng "tự động". */
+}
+$("#effort-select").addEventListener("change", (event) => {
+  try {
+    localStorage.setItem(EFFORT_KEY, event.target.value);
+  } catch {
+    /* Lựa chọn vẫn áp dụng cho phiên hiện tại. */
+  }
+});
 
 function matches(text, terms) {
   const value = text.toLowerCase();
@@ -287,7 +305,13 @@ function resetModels() {
 function selectedModel() {
   const group = selectedGroup();
   if (!group || RECONNECT_ERRORS.has(group.error) || !state.ai.model) return null;
-  return { provider: group.provider, credential_source: group.source, model: state.ai.model };
+  const effort = $("#effort-select").value;
+  return {
+    provider: group.provider,
+    credential_source: group.source,
+    model: state.ai.model,
+    ...(group.provider === "openai" && effort !== "auto" ? { effort } : {}),
+  };
 }
 
 function focusPicker() {

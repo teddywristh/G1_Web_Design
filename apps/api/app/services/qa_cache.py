@@ -72,6 +72,7 @@ def key_for(kbs, request, as_of, policy):
             str(request.top_k),
             request.provider,
             request.model or "",
+            request.effort,
             canonical(request.question),
         ]
     )

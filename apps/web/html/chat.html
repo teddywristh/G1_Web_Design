@@ -186,6 +186,20 @@
             </div>
           </div>
         </div>
+        <label
+          id="effort-chip"
+          class="model-chip effort-chip"
+          title="Mức suy luận của model: cao thì kỹ hơn nhưng chậm hơn (chỉ áp dụng cho model OpenAI)"
+          hidden
+        >
+          <span class="sr-only">Mức suy luận</span>
+          <select id="effort-select" aria-label="Mức suy luận">
+            <option value="auto">Suy luận: tự động</option>
+            <option value="low">Suy luận: thấp</option>
+            <option value="medium">Suy luận: vừa</option>
+            <option value="high">Suy luận: cao</option>
+          </select>
+        </label>
         <button
           id="send-question"
           class="send-button"
