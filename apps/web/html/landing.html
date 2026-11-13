@@ -26,16 +26,37 @@
       <div class="preview-window-body">
         <div class="preview-sidebar">
           <strong><i>L</i> Legal AI</strong>
-          <span class="preview-active">Hỏi đáp</span>
-          <span>Thư viện tài liệu</span>
-          <span>Thiết lập</span>
+          <button class="preview-active" type="button" data-demo-view="chat">Hỏi đáp</button>
+          <button type="button" data-demo-view="library">Thư viện tài liệu</button>
+          <button type="button" data-demo-view="settings">Thiết lập</button>
         </div>
-        <div class="preview-main">
+        <div class="preview-main" data-demo-panel="chat">
           <small>LEGAL AI / HỎI ĐÁP</small>
-          <h2>Bạn muốn tìm hiểu điều gì?</h2>
-          <p>Mô tả tình huống của bạn. Cùng tìm hiểu từ những nguồn có thể kiểm chứng.</p>
-          <div class="preview-input">Nhập câu hỏi pháp luật của bạn… <b>↑</b></div>
+          <h2 data-demo-title>Bạn muốn tìm hiểu điều gì?</h2>
+          <p data-demo-description>Mô tả tình huống của bạn. Cùng tìm hiểu từ những nguồn có thể kiểm chứng.</p>
+          <form class="preview-input" data-demo-form>
+            <label class="sr-only" for="landing-demo-question">Câu hỏi pháp luật</label>
+            <input id="landing-demo-question" maxlength="160" placeholder="Nhập câu hỏi pháp luật của bạn…" autocomplete="off" />
+            <button type="submit" aria-label="Gửi câu hỏi">↑</button>
+          </form>
+          <div class="preview-answer" data-demo-answer hidden>
+            <strong>Gợi ý trả lời mẫu</strong>
+            <p>Hãy bắt đầu bằng việc xác định loại quan hệ pháp lý và kiểm tra văn bản áp dụng. Đây chỉ là nội dung minh họa.</p>
+            <button type="button" data-demo-reset>Đặt câu hỏi khác</button>
+          </div>
           <div class="preview-tags"><span>Tra cứu có nguồn</span><span>Lịch sử riêng tư</span></div>
+        </div>
+        <div class="preview-main preview-static-panel" data-demo-panel="library" hidden>
+          <small>LEGAL AI / THƯ VIỆN</small>
+          <h2>Gọn gàng hơn. Dễ tìm hơn.</h2>
+          <p>Lưu trữ, tìm kiếm và đọc tài liệu pháp lý trong một không gian riêng.</p>
+          <div class="preview-list"><span>◉ Bộ luật Lao động</span><span>◉ Luật Doanh nghiệp</span><span>◉ Nghị định mới nhất</span></div>
+        </div>
+        <div class="preview-main preview-static-panel" data-demo-panel="settings" hidden>
+          <small>LEGAL AI / THIẾT LẬP</small>
+          <h2>Thiết lập không gian của bạn.</h2>
+          <p>Quản lý tài khoản, kết nối AI và các tùy chọn tra cứu.</p>
+          <div class="preview-settings"><span>Trạng thái tài khoản</span><b>Khách trải nghiệm</b></div>
         </div>
       </div>
     </div>

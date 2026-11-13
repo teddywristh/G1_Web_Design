@@ -41,6 +41,7 @@ async function start() {
       caption.append(mark);
       label.prepend(caption);
     });
+  await import("./landing-demo.js?v=landing-4");
   await import("./app.js");
   document.querySelector("#loading-status").remove();
 }
