@@ -85,7 +85,7 @@ class FakeBlob:
         self.store[self.name] = open(path, "rb").read()
 
     def upload_from_string(self, data, **_):
-        self.store[self.name] = data
+        self.store[self.name] = data.encode() if isinstance(data, str) else data
 
     def download_to_filename(self, path, **_):
         open(path, "wb").write(self.store[self.name])

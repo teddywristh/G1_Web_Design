@@ -28,6 +28,33 @@ def job_id(kb_id, source_id, content_hash, profile_id):
     return hashlib.sha256(raw.encode()).hexdigest()[:40]
 
 
+def new_job(kb_id, collection, source_id, owner_uid, credential_source, profile, sha, path, **more):
+    return {
+        "kbId": kb_id,
+        "sourceCollection": collection,
+        "sourceId": source_id,
+        "ownerUid": owner_uid,
+        "credentialSource": credential_source,
+        "publicEmbeddingInputConfirmed": False,
+        "sourceFence": {"sha256": sha, "storagePath": path},
+        "embeddingProfileId": profile.id,
+        "stage": "parse",
+        "status": "queued",
+        "fence": 0,
+        "failures": 0,
+        "leaseOwner": None,
+        "leaseUntil": None,
+        "nextRunAt": utcnow(),
+        "errorCode": None,
+        "documentVersionId": None,
+        "generationId": None,
+        "warnings": [],
+        "quality": {},
+        "version": 1,
+        **more,
+    }
+
+
 def job_outbox(
     kb_id,
     collection,
@@ -42,29 +69,40 @@ def job_outbox(
 
     def rows(patch):
         key = job_id(kb_id, source_id, patch["sha256"], profile.id)
-        job = {
-            "kbId": kb_id,
-            "sourceCollection": collection,
-            "sourceId": source_id,
-            "ownerUid": owner_uid,
-            "credentialSource": credential_source,
-            "publicEmbeddingInputConfirmed": public_input_confirmed,
-            "sourceFence": {"sha256": patch["sha256"], "storagePath": patch["storagePath"]},
-            "embeddingProfileId": profile.id,
-            "stage": "parse",
-            "status": "queued",
-            "fence": 0,
-            "failures": 0,
-            "leaseOwner": None,
-            "leaseUntil": None,
-            "nextRunAt": utcnow(),
-            "errorCode": None,
-            "documentVersionId": None,
-            "generationId": None,
-            "warnings": [],
-            "quality": {},
-            "version": 1,
-        }
+        job = new_job(
+            kb_id,
+            collection,
+            source_id,
+            owner_uid,
+            credential_source,
+            profile,
+            patch["sha256"],
+            patch["storagePath"],
+            publicEmbeddingInputConfirmed=public_input_confirmed,
+        )
+        return [("processing_jobs", key, job)]
+
+    return rows
+
+
+def adopt_outbox(new_id, path, sha, owner_uid, settings, origin):
+    """Job that gives an already indexed private document to the shared library."""
+    profile = profile_from(settings)
+
+    def rows(_patch):
+        key = job_id(SHARED_KB, new_id, sha, profile.id)
+        job = new_job(
+            SHARED_KB,
+            "legal_documents",
+            new_id,
+            owner_uid,
+            "auto",
+            profile,
+            sha,
+            path,
+            stage="adopt",
+            adoptFrom=origin,
+        )
         return [("processing_jobs", key, job)]
 
     return rows
@@ -287,6 +325,155 @@ def embed_stage(repo, settings, job, embedder, heartbeat=None, progress=None):
             "indexed": indexed,
             "start": 1 if total else 0,
         },
+    }
+
+
+def adopt_stage(repo, bucket, settings, job, heartbeat=None):
+    """Copy an indexed private document into the shared library. Nothing is embedded again.
+
+    The PDF, the parsed provisions and the stored vectors are copied under the new document, so
+    the next stage (publish) builds the shared generation exactly as it does after an upload.
+    Every write is keyed by the new ids, so a retry overwrites instead of duplicating.
+    """
+    origin, fence = job["adoptFrom"], job["sourceFence"]
+    private = repo.get("knowledge_documents", origin["documentId"])
+    target = repo.get("legal_documents", job["sourceId"])
+    if (
+        not private
+        or private.get("deletedAt") is not None
+        or private.get("fileState") != "available"
+        or private.get("sha256") != fence["sha256"]
+        or not target
+        or target.get("deletedAt") is not None
+    ):
+        raise validation.Cancelled()
+    profile = profile_from(settings)
+    if job["embeddingProfileId"] != profile.id:
+        raise validation.PermanentError("embedding_profile_changed")
+    old_version = origin["documentVersionId"]
+    new_version = f"{job['sourceId']}-{fence['sha256'][:16]}-{PARSER_VERSION}"
+    stage = "stage-" + hashlib.sha256(f"{new_version}|{profile.id}|full".encode()).hexdigest()[:40]
+
+    def new_id(old_id):
+        return new_version + old_id[len(old_version) :]
+
+    provisions = {}
+    for row in repo.scan("provision_versions", filters=[("documentVersionId", "==", old_version)]):
+        item = {key: value for key, value in row.items() if key != "id"}
+        provisions[new_id(row["id"])] = {
+            **item,
+            **validity_fields(target, True),
+            "version": 1,
+            "createdAt": utcnow(),
+            "updatedAt": utcnow(),
+            "documentVersionId": new_version,
+            "kbId": SHARED_KB,
+            "sourceCollection": "legal_documents",
+            "sourceId": job["sourceId"],
+            "documentTitle": target["title"],
+            "documentNumber": target["documentNumber"],
+            "documentNumberNormalized": normalize(target["documentNumber"]),
+            "sourceType": "official_legal_text",
+            "sourceUrl": target.get("sourceUrl"),
+        }
+    chunks = {}
+    for row in repo.scan(
+        "search_chunks",
+        filters=[
+            ("documentVersionId", "==", old_version),
+            ("indexGeneration", "==", origin["generation"]),
+        ],
+    ):
+        if row.get("embeddingProfileId") != profile.id:
+            raise validation.PermanentError("embedding_profile_changed")
+        pid = new_id(row["provisionVersionId"])
+        item = {key: value for key, value in row.items() if key != "id"}
+        parent = item.get("parentId")
+        chunks[f"{stage}-{pid}"] = {
+            **item,
+            "kbId": SHARED_KB,
+            "indexGeneration": stage,
+            "documentVersionId": new_version,
+            "provisionVersionId": pid,
+            "documentId": job["sourceId"],
+            "sourceCollection": "legal_documents",
+            "parentId": new_id(parent) if parent else None,
+            "state": "active",
+        }
+    if not provisions or set(provisions) != {c["provisionVersionId"] for c in chunks.values()}:
+        raise validation.PermanentError("indexed_copy_incomplete")
+
+    if heartbeat:
+        heartbeat()
+    with TemporaryDirectory(prefix="legal-adopt-") as directory:
+        path = str(Path(directory) / "source.pdf")
+        bucket.blob(private["storagePath"]).download_to_filename(
+            path, timeout=settings.storage_timeout_seconds, retry=None
+        )
+        with open(path, "rb") as saved:
+            if hashlib.sha256(saved.read()).hexdigest() != fence["sha256"]:
+                raise validation.Cancelled()
+        bucket.blob(fence["storagePath"]).upload_from_filename(
+            path,
+            content_type="application/pdf",
+            timeout=settings.storage_timeout_seconds,
+            retry=None,
+        )
+        old_version_row = repo.get("document_versions", old_version) or {}
+        artifact = None
+        old_artifact = old_version_row.get("extractedTextRef")
+        if old_artifact:
+            artifact = f"knowledge-artifacts/{SHARED_KB}/{new_version}/pages.json"
+            pages = str(Path(directory) / "pages.json")
+            bucket.blob(old_artifact).download_to_filename(
+                pages, timeout=settings.storage_timeout_seconds, retry=None
+            )
+            bucket.blob(artifact).upload_from_filename(
+                pages,
+                content_type="application/json",
+                timeout=settings.storage_timeout_seconds,
+                retry=None,
+            )
+    repo.put(
+        "document_versions",
+        new_version,
+        {
+            **{k: v for k, v in old_version_row.items() if k != "id"},
+            "sourceCollection": "legal_documents",
+            "sourceId": job["sourceId"],
+            "kbId": SHARED_KB,
+            "contentHash": fence["sha256"],
+            "extractedTextRef": artifact,
+            "createdAt": utcnow(),
+        },
+    )
+    repo.put_many("provision_versions", provisions)
+    repo.put_many("search_chunks", chunks)
+    # Last: the shared document becomes available only once everything it needs is in place.
+    repo.mutate(
+        "legal_documents",
+        job["sourceId"],
+        lambda current: (
+            {
+                "storagePath": fence["storagePath"],
+                "fileState": "available",
+                "fileSize": private.get("fileSize"),
+                "sha256": fence["sha256"],
+                "contentType": "application/pdf",
+                "uploadLease": None,
+            }
+            if current.get("fileState") != "available"
+            else None
+        ),
+        actor="worker",
+        event="document.adopted",
+        request_id=job["id"],
+    )
+    return {
+        "documentVersionId": new_version,
+        "stagingGeneration": stage,
+        "quality": old_version_row.get("quality", {}),
+        "warnings": [],
     }
 
 

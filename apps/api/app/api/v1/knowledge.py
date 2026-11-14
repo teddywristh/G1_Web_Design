@@ -12,6 +12,7 @@ from app.dependencies import (
     get_bucket,
     get_repository,
 )
+from app.schemas import DocumentCreate, DocumentOut
 from app.schemas.knowledge import (
     EvidenceOut,
     KnowledgeBaseCreate,
@@ -211,6 +212,34 @@ def kb_publish(
         user["id"],
         request.state.request_id,
         get_settings(),
+    )
+    return tagged(response, result)
+
+
+@router.post(
+    "/admin/knowledge-bases/{kb_id}/documents/{doc_id}/promote",
+    response_model=DocumentOut,
+    status_code=202,
+    tags=["admin"],
+)
+def document_promote(
+    kb_id: str,
+    doc_id: str,
+    body: DocumentCreate,
+    request: Request,
+    response: Response,
+    user=Depends(admin_user),
+    repo=Depends(get_repository),
+):
+    """Move one of the administrator's indexed private documents to the shared library."""
+    result = knowledge.promote_document(
+        repo,
+        user,
+        kb_id,
+        doc_id,
+        body.model_dump(mode="json"),
+        get_settings(),
+        request.state.request_id,
     )
     return tagged(response, result)
 

@@ -25,6 +25,49 @@ def test_stopped_worker_invalidates_oauth_session(monkeypatch):
     cleanup.assert_called_once_with(session)
 
 
+def test_a_session_that_is_still_starting_is_not_judged_by_another_request(monkeypatch):
+    session = {"expires": float("inf"), "worker": "w", "guard": "g", "starting": True}
+    monkeypatch.setattr(opencode_oauth, "SESSIONS", {"user": session})
+    docker = Mock(return_value=Mock(stdout=b"false\n"))  # the worker is not up yet
+    cleanup = Mock()
+    monkeypatch.setattr(opencode_oauth, "docker", docker)
+    monkeypatch.setattr(opencode_oauth, "cleanup", cleanup)
+    assert opencode_oauth.get("user") is session
+    docker.assert_not_called()
+    cleanup.assert_not_called()
+    assert opencode_oauth.SESSIONS == {"user": session}
+
+
+def test_a_request_waits_for_the_restore_in_progress_instead_of_tearing_it_down(monkeypatch):
+    import threading
+
+    session = {"expires": float("inf"), "worker": "w", "guard": "g", "starting": True}
+    monkeypatch.setattr(opencode_oauth, "SESSIONS", {"user": session})
+    monkeypatch.setattr(opencode_oauth, "docker", Mock(return_value=Mock(stdout=b"true\n")))
+    cleanup = Mock()
+    monkeypatch.setattr(opencode_oauth, "cleanup", cleanup)
+    result = {}
+    opencode_oauth.RESTORE_LOCK.acquire()  # the restoring request holds this while it starts
+    thread = threading.Thread(
+        target=lambda: result.update(session=opencode_oauth.get("user", object(), object()))
+    )
+    thread.start()
+    thread.join(timeout=0.3)
+    assert thread.is_alive()  # it waits; it does not judge the half-started worker
+    session["starting"] = False
+    opencode_oauth.RESTORE_LOCK.release()
+    thread.join(timeout=5)
+    assert result["session"] is session
+    cleanup.assert_not_called()
+
+
+def test_a_session_lost_during_restore_is_reported_as_none_not_a_crash(monkeypatch):
+    monkeypatch.setattr(opencode_oauth, "SESSIONS", {})
+    monkeypatch.setattr(opencode_oauth.oauth_store, "load", lambda *_: {"token": "x"})
+    monkeypatch.setattr(opencode_oauth, "start", lambda *_a, **_k: {"connected": True})
+    assert opencode_oauth.get("user", object(), object()) is None
+
+
 def test_hosted_chatgpt_requires_flag_and_authenticated_user(api, repo, monkeypatch):
     client, app, _ = api
     settings = get_settings()

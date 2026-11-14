@@ -55,6 +55,7 @@ class KnowledgeDocumentOut(Out):
     updatedAt: datetime
     deletedAt: datetime | None = None
     version: int
+    promotedTo: str | None = None
 
 
 class KnowledgeDocumentPage(Out):

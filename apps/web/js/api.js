@@ -14,6 +14,9 @@ class ApiError extends Error {
 }
 
 const ERROR_TEXT = {
+  not_indexed: "Tài liệu cần xử lý và embedding xong (trạng thái Sẵn sàng) trước khi chuyển.",
+  already_shared: "Tài liệu này đã được chuyển sang kho dùng chung.",
+  profile_mismatch: "Tài liệu dùng mô hình embedding khác với cấu hình hiện tại nên không chuyển được.",
   account_exists: "Email này đã có tài khoản. Hãy đăng nhập hoặc chọn Quên mật khẩu.",
   account_link_required: "Email đã có tài khoản. Hãy đăng nhập trước khi liên kết Google.",
   invalid_otp: "Mã OTP không đúng, đã hết hạn hoặc đã được sử dụng.",

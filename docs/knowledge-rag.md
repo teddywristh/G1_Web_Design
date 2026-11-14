@@ -79,3 +79,16 @@ The web UI (PR-07, PR-08) and server-side chat history are not part of this chan
 - DNS is resolved before each fetch but the connection is not pinned to that address.
 - The semantic claim check (LLM judge) and human review are not automated; the gold set and the vector-index
   spike on a real project still have to be produced by the team.
+
+## Moving a private document to the shared library (admin)
+
+An administrator can give one of their own, fully indexed private documents to the shared library
+without embedding it again: `POST /api/v1/admin/knowledge-bases/{kb}/documents/{doc}/promote` (body:
+the same metadata as a shared upload; the library dialog has a "Chuyển sang kho dùng chung" button).
+The request creates the `legal_documents` row (state `pending_upload`) and a job at stage `adopt`.
+The worker's `adopt` stage copies the PDF, the parsed provisions (now `official_legal_text` with
+reviewed validity from the metadata) and the stored vectors under the new document id, makes the
+document `available`, then runs the normal `publish` stage. As for any shared upload, the new
+generation is built but only serves after the administrator presses "Xuất bản". The private copy is
+kept and marked `promotedTo`. Only the administrator's own documents qualify, the document must be
+indexed with the current embedding profile, and a retry overwrites rather than duplicates.

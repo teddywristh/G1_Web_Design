@@ -131,6 +131,8 @@ def start(user_id, settings, credential=None):
         "expires": time.monotonic() + 3300,
         "connected": False,
         "lock": threading.Lock(),
+        # Registered before its containers exist; other requests must not judge it until then.
+        "starting": True,
     }
     with LOCK:
         if user_id in SESSIONS:
@@ -221,6 +223,7 @@ def start(user_id, settings, credential=None):
             if not result.get("restored"):
                 raise ValueError("OAuth restore failed")
             session["connected"] = True
+            session["starting"] = False
             return {"connected": True}
         result = invoke(session, {"action": "start"}, 90)
         url = result.get("url", "")
@@ -235,6 +238,7 @@ def start(user_id, settings, credential=None):
         instructions = result.get("instructions")
         if not isinstance(instructions, str) or len(instructions) > 2000:
             raise ValueError("unexpected instructions")
+        session["starting"] = False
         return {"url": url, "instructions": instructions, "connected": False}
     except Exception:
         with LOCK:
@@ -248,6 +252,19 @@ def get(user_id, repo=None, settings=None, _restored=False):
     expire()
     with LOCK:
         session = SESSIONS.get(user_id)
+    if (
+        session is not None
+        and session.get("starting")
+        and repo is not None
+        and settings is not None
+    ):
+        # Another request is restoring this session right now. Without this wait, the first page
+        # load (which asks for the models and the ChatGPT status at once) would find a worker that
+        # is still starting, take it for dead, tear it down and crash on the session it lost.
+        with RESTORE_LOCK:
+            pass
+        with LOCK:
+            session = SESSIONS.get(user_id)
     if not session:
         if repo is None or settings is None:
             return None
@@ -262,6 +279,10 @@ def get(user_id, repo=None, settings=None, _restored=False):
                 _restored = True
                 with LOCK:
                     session = SESSIONS.get(user_id)
+    if session is None:  # removed again while it was being restored
+        return None
+    if session.get("starting"):
+        return session  # being started by another request; not ours to judge
     try:
         running = (
             docker(

@@ -36,6 +36,7 @@ function normalizeDoc(raw, kb) {
     effectiveDate: raw.effectiveDate,
     status: raw.status,
     sourceUrl: raw.sourceUrl,
+    promotedTo: raw.promotedTo,
   };
 }
 
@@ -263,6 +264,20 @@ async function openDocument(id) {
   $("#delete-document").hidden = doc.shared && !isAdmin();
   $("#edit-document").hidden = !doc.shared || !isAdmin();
   $("#shared-edit-form").hidden = true;
+  $("#promote-form").hidden = true;
+  // Quản trị viên có thể chuyển tài liệu riêng đã embedding xong sang kho chung, không embedding lại.
+  $("#promote-document").hidden = !(
+    isAdmin() &&
+    !doc.shared &&
+    !doc.promotedTo &&
+    doc.processing?.status === "ready"
+  );
+  if (!doc.shared) {
+    const form = $("#promote-form");
+    form.elements.title.value = doc.title || "";
+    form.elements.documentType.value = "Bộ luật";
+    form.elements.status.value = "effective";
+  }
   if (doc.shared) {
     const form = $("#shared-edit-form");
     Object.entries({
@@ -329,6 +344,33 @@ $("#detail-bookmark").addEventListener("click", () => toggleSaved(state.document
 $("#edit-document").addEventListener("click", () => {
   $("#shared-edit-form").hidden = false;
   $("#edit-document").hidden = true;
+});
+$("#promote-document").addEventListener("click", () => {
+  $("#promote-form").hidden = false;
+  $("#promote-document").hidden = true;
+});
+$("#cancel-promote-document").addEventListener("click", () => {
+  $("#promote-form").hidden = true;
+  $("#promote-document").hidden = false;
+});
+$("#promote-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const doc = state.docs.find((item) => item.id === state.documentId);
+  if (!doc) return;
+  const body = Object.fromEntries(new FormData(event.currentTarget).entries());
+  body.effectiveDate ||= null;
+  body.sourceUrl ||= null;
+  try {
+    await api.post(`/admin/knowledge-bases/${doc.kbId}/documents/${doc.id}/promote`, body);
+    doc.promotedTo = "pending";
+    $("#promote-form").hidden = true;
+    $("#document-dialog").close();
+    notify(
+      'Đã chuyển sang kho dùng chung (không embedding lại). Mở "Kho luật dùng chung" và bấm "Xuất bản" sau khi xử lý xong để mọi người dùng được.',
+    );
+  } catch (error) {
+    $("#pdf-error").textContent = error.message;
+  }
 });
 $("#cancel-edit-document").addEventListener("click", () => {
   $("#shared-edit-form").hidden = true;

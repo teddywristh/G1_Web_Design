@@ -386,3 +386,71 @@ def reconcile(repo, bucket, *, dry_run=True):
             if not dry_run:
                 repo.remove("search_chunks", chunk["id"])
     return results
+
+
+def promote_document(repo, user, kb_id, doc_id, data, settings, request_id):
+    """Give an administrator's own indexed private document to the shared library.
+
+    The vectors that already exist are copied by the worker (stage "adopt"); nothing is embedded
+    again. The private copy stays until the administrator deletes it, and the shared copy goes
+    live with the usual publish step. Returns the new shared document.
+    """
+    kb = kb_for_user(repo, user, kb_id)
+    document = private_document(repo, user, kb_id, doc_id)
+    if document.get("fileState") != "available":
+        raise APIError(409, "not_available", "The document has no file yet")
+    if document.get("promotedTo"):
+        raise APIError(
+            409, "already_shared", "This document was already moved to the shared library"
+        )
+    job = find_job(repo, document, settings)
+    profile = profile_from(settings)
+    if (
+        not job
+        or job.get("stage") != "publish"
+        or job.get("status") != "succeeded"
+        or not job.get("documentVersionId")
+        or not kb.get("activeIndexGeneration")
+    ):
+        raise APIError(409, "not_indexed", "Only a document that is fully indexed can be moved")
+    if job["embeddingProfileId"] != profile.id:
+        raise APIError(409, "profile_mismatch", "The document uses another embedding profile")
+    ensure_shared_kb(repo, request_id)
+    new_id = uuid4().hex
+    path = f"legal-documents/{new_id}/{uuid4().hex}.pdf"
+    origin = {
+        "kbId": kb_id,
+        "documentId": doc_id,
+        "documentVersionId": job["documentVersionId"],
+        "generation": kb["activeIndexGeneration"],
+    }
+    fields = {
+        **documents.metadata(data),
+        "fileState": "pending_upload",
+        "deletedAt": None,
+        "createdBy": user["id"],
+        "updatedBy": user["id"],
+        "storagePath": None,
+        "fileSize": None,
+        "contentType": None,
+        "uploadLease": None,
+        "promotedFrom": {"kbId": kb_id, "documentId": doc_id},
+    }
+    created = repo.mutate(
+        "legal_documents",
+        new_id,
+        lambda _: fields,
+        actor=user["id"],
+        event="document.promote",
+        request_id=request_id,
+        extra=pipeline.adopt_outbox(new_id, path, document["sha256"], user["id"], settings, origin),
+    )
+    repo.mutate(
+        "knowledge_documents",
+        doc_id,
+        lambda _: {"promotedTo": new_id},
+        actor=user["id"],
+        event="document.promoted",
+        request_id=request_id,
+    )
+    return created

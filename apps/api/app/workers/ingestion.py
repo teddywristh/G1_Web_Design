@@ -115,6 +115,8 @@ def run_stage(repo, bucket, settings, job, worker_id):
             heartbeat(repo, settings, job, worker_id)
             last_heartbeat = now
 
+    if job["stage"] == "adopt":
+        return pipeline.adopt_stage(repo, bucket, settings, job, heartbeat=keep_lease)
     if job["stage"] == "parse":
         return pipeline.parse_stage(repo, bucket, settings, job, heartbeat=keep_lease)
     if job["stage"] == "embed":
@@ -161,7 +163,7 @@ def run_stage(repo, bucket, settings, job, worker_id):
 def process(repo, bucket, settings, job, worker_id):
     """Run the remaining stages; each stage result is committed under the lease."""
     try:
-        while job["stage"] in STAGES:
+        while job["stage"] in STAGES or job["stage"] == "adopt":
             logger.info(
                 json.dumps(
                     {"event": "job_stage_started", "jobId": job["id"], "stage": job["stage"]}
@@ -169,7 +171,8 @@ def process(repo, bucket, settings, job, worker_id):
             )
             heartbeat(repo, settings, job, worker_id)
             result = run_stage(repo, bucket, settings, job, worker_id)
-            index = STAGES.index(job["stage"])
+            # "adopt" (a private document given to the shared library) skips parse and embed.
+            index = STAGES.index("embed" if job["stage"] == "adopt" else job["stage"])
             patch = {"failures": 0, "rateLimitFailures": 0, "errorCode": None}
             for key in (
                 "documentVersionId",
